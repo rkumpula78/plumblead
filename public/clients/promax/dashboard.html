@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ProMax Leads — PlumbLead Dashboard</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f8fafc; color: #1e293b; min-height: 100vh; }
+
+.dashboard { max-width: 1100px; margin: 0 auto; padding: 24px 16px; }
+
+/* Auth Screen */
+.auth-screen { max-width: 400px; margin: 120px auto; text-align: center; }
+.auth-screen h1 { font-size: 24px; font-weight: 700; color: #1e3a5f; margin-bottom: 8px; }
+.auth-screen p { color: #64748b; margin-bottom: 24px; }
+.auth-screen input { width: 100%; padding: 14px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 16px; text-align: center; margin-bottom: 12px; }
+.auth-screen input:focus { outline: none; border-color: #1e3a5f; }
+.auth-screen .error { color: #ef4444; font-size: 14px; display: none; margin-bottom: 12px; }
+
+/* Header */
+.header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
+.header h1 { font-size: 22px; font-weight: 700; color: #1e3a5f; }
+.header .company { font-size: 13px; color: #64748b; }
+.header-actions { display: flex; gap: 8px; }
+
+/* Stats Row */
+.stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+.stat-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+.stat-card .stat-value { font-size: 28px; font-weight: 800; color: #1e3a5f; }
+.stat-card .stat-label { font-size: 13px; color: #64748b; margin-top: 4px; }
+.stat-card.green .stat-value { color: #059669; }
+
+/* Leads Table */
+.leads-table-wrap { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); overflow-x: auto; }
+.leads-table { width: 100%; border-collapse: collapse; min-width: 800px; }
+.leads-table th { background: #1e3a5f; color: white; padding: 12px 14px; text-align: left; font-size: 13px; font-weight: 600; white-space: nowrap; }
+.leads-table td { padding: 12px 14px; border-bottom: 1px solid #f1f5f9; font-size: 14px; vertical-align: middle; }
+.leads-table tr:hover { background: #f8fafc; }
+.leads-table tr:last-child td { border-bottom: none; }
+
+/* Status badges */
+.badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+.badge-new { background: #dbeafe; color: #1e40af; }
+.badge-contacted { background: #fef3c7; color: #92400e; }
+.badge-quoted { background: #e0e7ff; color: #3730a3; }
+.badge-won { background: #d1fae5; color: #065f46; }
+.badge-lost { background: #fee2e2; color: #991b1b; }
+
+/* Inline edit */
+.edit-row { display: none; background: #f0f4f8; }
+.edit-row.active { display: table-row; }
+.edit-form { padding: 16px; display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+.edit-field { display: flex; flex-direction: column; gap: 4px; }
+.edit-field label { font-size: 12px; font-weight: 600; color: #64748b; }
+.edit-field select, .edit-field input { padding: 8px 12px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 14px; }
+.edit-field input[type="number"] { width: 120px; }
+.edit-field input[type="date"] { width: 160px; }
+.edit-field textarea { width: 200px; height: 60px; padding: 8px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 13px; resize: vertical; font-family: inherit; }
+
+/* Buttons */
+.btn { padding: 8px 16px; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+.btn-primary { background: #1e3a5f; color: white; }
+.btn-primary:hover { background: #15304d; }
+.btn-danger { background: #fee2e2; color: #991b1b; }
+.btn-success { background: #d1fae5; color: #065f46; }
+.btn-small { padding: 4px 10px; font-size: 12px; }
+.btn-outline { background: white; color: #1e3a5f; border: 1px solid #e2e8f0; }
+.btn-outline:hover { background: #f0f4f8; }
+
+/* Empty state */
+.empty-state { text-align: center; padding: 60px 20px; color: #94a3b8; }
+.empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+
+/* Loading */
+.loading { text-align: center; padding: 40px; color: #94a3b8; }
+
+.powered-by { text-align: center; padding: 20px; font-size: 12px; color: #cbd5e1; }
+.powered-by a { color: #94a3b8; text-decoration: none; }
+
+@media (max-width: 640px) {
+  .stats-row { grid-template-columns: repeat(2, 1fr); }
+  .header { flex-direction: column; align-items: flex-start; }
+}
+</style>
+</head>
+<body>
+
+<!-- Auth Screen -->
+<div id="authScreen" class="auth-screen">
+  <h1>🔧 ProMax Lead Dashboard</h1>
+  <p>Enter your access code to view your leads</p>
+  <input type="password" id="accessCode" placeholder="Access code" onkeydown="if(event.key==='Enter')login()">
+  <div class="error" id="authError">Invalid access code</div>
+  <button class="btn btn-primary" style="width:100%;padding:14px;" onclick="login()">View My Leads</button>
+</div>
+
+<!-- Dashboard -->
+<div id="dashboardScreen" class="dashboard" style="display:none;">
+  <div class="header">
+    <div>
+      <h1>📊 Lead Dashboard</h1>
+      <div class="company" id="companyLabel">ProMax Water Heaters & Plumbing</div>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-outline" onclick="loadLeads()">↻ Refresh</button>
+      <button class="btn btn-outline" onclick="logout()">Logout</button>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-value" id="statTotal">—</div>
+      <div class="stat-label">Total Leads</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="statNew">—</div>
+      <div class="stat-label">New / Pending</div>
+    </div>
+    <div class="stat-card green">
+      <div class="stat-value" id="statConverted">—</div>
+      <div class="stat-label">Jobs Won</div>
+    </div>
+    <div class="stat-card green">
+      <div class="stat-value" id="statRevenue">—</div>
+      <div class="stat-label">Revenue Booked</div>
+    </div>
+  </div>
+
+  <!-- Filter -->
+  <div style="margin-bottom: 16px; display: flex; gap: 8px; flex-wrap: wrap;">
+    <select id="filterStatus" onchange="renderLeads()" style="padding: 8px 12px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 13px;">
+      <option value="all">All Statuses</option>
+      <option value="New">New</option>
+      <option value="Contacted">Contacted</option>
+      <option value="Quoted">Quoted</option>
+      <option value="Won">Won</option>
+      <option value="Lost">Lost</option>
+    </select>
+    <select id="filterService" onchange="renderLeads()" style="padding: 8px 12px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 13px;">
+      <option value="all">All Services</option>
+    </select>
+  </div>
+
+  <!-- Leads Table -->
+  <div class="leads-table-wrap">
+    <table class="leads-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Name</th>
+          <th>Phone</th>
+          <th>Service</th>
+          <th>Urgency</th>
+          <th>Status</th>
+          <th>Converted</th>
+          <th>Job $</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="leadsBody">
+        <tr><td colspan="9" class="loading">Loading leads...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="powered-by">
+    Powered by <a href="https://plumblead.ai" target="_blank">PlumbLead.ai</a>
+  </div>
+</div>
+
+<script>
+const API_URL = 'https://api.plumblead.ai/webhook/plumblead-dashboard';
+const CLIENT_ID = 'promax';
+
+// Simple access codes per client (in production, use server-side auth)
+const ACCESS_CODES = {
+  'promax2026': { clientId: 'promax', company: 'ProMax Water Heaters & Plumbing' },
+  'plumblead-admin': { clientId: null, company: 'PlumbLead Admin', isAdmin: true }
+};
+
+let currentAuth = null;
+let allLeads = [];
+
+// ============================================
+// Auth
+// ============================================
+
+function login() {
+  const code = document.getElementById('accessCode').value.trim();
+  if (ACCESS_CODES[code]) {
+    currentAuth = ACCESS_CODES[code];
+    document.getElementById('authScreen').style.display = 'none';
+    document.getElementById('dashboardScreen').style.display = 'block';
+    document.getElementById('companyLabel').textContent = currentAuth.company;
+    sessionStorage.setItem('plumblead_code', code);
+    loadLeads();
+  } else {
+    document.getElementById('authError').style.display = 'block';
+  }
+}
+
+function logout() {
+  sessionStorage.removeItem('plumblead_code');
+  currentAuth = null;
+  document.getElementById('authScreen').style.display = 'block';
+  document.getElementById('dashboardScreen').style.display = 'none';
+  document.getElementById('accessCode').value = '';
+}
+
+// Auto-login from session
+(function() {
+  const saved = sessionStorage.getItem('plumblead_code');
+  if (saved && ACCESS_CODES[saved]) {
+    document.getElementById('accessCode').value = saved;
+    login();
+  }
+})();
+
+// ============================================
+// Load Leads
+// ============================================
+
+async function loadLeads() {
+  try {
+    const resp = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'query',
+        clientId: currentAuth.clientId || CLIENT_ID,
+        isAdmin: currentAuth.isAdmin || false
+      })
+    });
+    const data = await resp.json();
+    if (data.success) {
+      allLeads = data.results.map(parseNotionLead);
+      updateStats();
+      populateFilters();
+      renderLeads();
+    }
+  } catch (err) {
+    document.getElementById('leadsBody').innerHTML = '<tr><td colspan="9" class="empty-state"><div class="icon">⚠️</div>Failed to load leads</td></tr>';
+  }
+}
+
+function parseNotionLead(page) {
+  const p = page.properties;
+  return {
+    id: page.id,
+    name: p['Name']?.title?.[0]?.text?.content || '—',
+    phone: p['Phone']?.phone_number || '—',
+    email: p['Email']?.email || '',
+    service: p['Service']?.select?.name || '—',
+    urgency: p['Urgency']?.select?.name || '—',
+    status: p['Status']?.select?.name || 'New',
+    zipCode: p['Zip Code']?.rich_text?.[0]?.text?.content || '',
+    details: p['Details']?.rich_text?.[0]?.text?.content || '',
+    converted: p['Converted']?.checkbox || false,
+    jobAmount: p['Job Amount']?.number || null,
+    notes: p['Conversion Notes']?.rich_text?.[0]?.text?.content || '',
+    followUp: p['Follow Up Date']?.date?.start || '',
+    source: p['Source']?.select?.name || '',
+    date: p['Date']?.date?.start || '',
+    client: p['Client']?.rich_text?.[0]?.text?.content || ''
+  };
+}
+
+// ============================================
+// Stats
+// ============================================
+
+function updateStats() {
+  const total = allLeads.length;
+  const newLeads = allLeads.filter(l => l.status === 'New').length;
+  const converted = allLeads.filter(l => l.converted).length;
+  const revenue = allLeads.reduce((sum, l) => sum + (l.jobAmount || 0), 0);
+
+  document.getElementById('statTotal').textContent = total;
+  document.getElementById('statNew').textContent = newLeads;
+  document.getElementById('statConverted').textContent = converted;
+  document.getElementById('statRevenue').textContent = '$' + revenue.toLocaleString();
+}
+
+function populateFilters() {
+  const services = [...new Set(allLeads.map(l => l.service))].sort();
+  const select = document.getElementById('filterService');
+  select.innerHTML = '<option value="all">All Services</option>';
+  services.forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s; opt.textContent = s;
+    select.appendChild(opt);
+  });
+}
+
+// ============================================
+// Render
+// ============================================
+
+function renderLeads() {
+  const statusFilter = document.getElementById('filterStatus').value;
+  const serviceFilter = document.getElementById('filterService').value;
+
+  let filtered = allLeads;
+  if (statusFilter !== 'all') filtered = filtered.filter(l => l.status === statusFilter);
+  if (serviceFilter !== 'all') filtered = filtered.filter(l => l.service === serviceFilter);
+
+  if (filtered.length === 0) {
+    document.getElementById('leadsBody').innerHTML = '<tr><td colspan="9" class="empty-state"><div class="icon">📭</div>No leads found</td></tr>';
+    return;
+  }
+
+  const rows = filtered.map(lead => {
+    const date = lead.date ? new Date(lead.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '—';
+    const statusClass = { 'New': 'badge-new', 'Contacted': 'badge-contacted', 'Quoted': 'badge-quoted', 'Won': 'badge-won', 'Lost': 'badge-lost' }[lead.status] || 'badge-new';
+
+    return `
+      <tr onclick="toggleEdit('${lead.id}')" style="cursor:pointer;">
+        <td>${date}</td>
+        <td><strong>${lead.name}</strong></td>
+        <td><a href="tel:${lead.phone}" style="color:#1e3a5f;">${lead.phone}</a></td>
+        <td>${lead.service}</td>
+        <td>${lead.urgency}</td>
+        <td><span class="badge ${statusClass}">${lead.status}</span></td>
+        <td>${lead.converted ? '✅' : '—'}</td>
+        <td>${lead.jobAmount ? '$' + lead.jobAmount.toLocaleString() : '—'}</td>
+        <td><button class="btn btn-small btn-outline" onclick="event.stopPropagation();toggleEdit('${lead.id}')">✏️</button></td>
+      </tr>
+      <tr class="edit-row" id="edit-${lead.id}">
+        <td colspan="9">
+          <div class="edit-form">
+            <div class="edit-field">
+              <label>Status</label>
+              <select id="status-${lead.id}">
+                <option ${lead.status === 'New' ? 'selected' : ''}>New</option>
+                <option ${lead.status === 'Contacted' ? 'selected' : ''}>Contacted</option>
+                <option ${lead.status === 'Quoted' ? 'selected' : ''}>Quoted</option>
+                <option ${lead.status === 'Won' ? 'selected' : ''}>Won</option>
+                <option ${lead.status === 'Lost' ? 'selected' : ''}>Lost</option>
+              </select>
+            </div>
+            <div class="edit-field">
+              <label>Converted to Job?</label>
+              <select id="converted-${lead.id}" onchange="document.getElementById('amount-${lead.id}').style.display = this.value === 'yes' ? '' : 'none'">
+                <option value="no" ${!lead.converted ? 'selected' : ''}>No</option>
+                <option value="yes" ${lead.converted ? 'selected' : ''}>Yes ✅</option>
+              </select>
+            </div>
+            <div class="edit-field" id="amount-${lead.id}" style="${lead.converted ? '' : 'display:none'}">
+              <label>Job Amount ($)</label>
+              <input type="number" id="jobamt-${lead.id}" value="${lead.jobAmount || ''}" placeholder="2500" step="100">
+            </div>
+            <div class="edit-field">
+              <label>Follow Up Date</label>
+              <input type="date" id="followup-${lead.id}" value="${lead.followUp || ''}">
+            </div>
+            <div class="edit-field">
+              <label>Notes</label>
+              <textarea id="notes-${lead.id}" placeholder="e.g., Quoted $3,200 for tankless install...">${lead.notes}</textarea>
+            </div>
+            <div class="edit-field" style="align-self: flex-end;">
+              <button class="btn btn-success" onclick="event.stopPropagation();saveLead('${lead.id}')">💾 Save</button>
+            </div>
+          </div>
+          ${lead.details ? `<div style="padding: 0 16px 16px; font-size: 13px; color: #64748b;"><strong>Customer notes:</strong> ${lead.details}</div>` : ''}
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  document.getElementById('leadsBody').innerHTML = rows;
+}
+
+function toggleEdit(id) {
+  const row = document.getElementById('edit-' + id);
+  if (row) row.classList.toggle('active');
+}
+
+// ============================================
+// Save Lead Update
+// ============================================
+
+async function saveLead(id) {
+  const status = document.getElementById('status-' + id).value;
+  const converted = document.getElementById('converted-' + id).value === 'yes';
+  const jobAmount = converted ? parseFloat(document.getElementById('jobamt-' + id).value) || 0 : null;
+  const followUp = document.getElementById('followup-' + id).value || null;
+  const notes = document.getElementById('notes-' + id).value || '';
+
+  try {
+    const resp = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'update-lead',
+        pageId: id,
+        status,
+        converted,
+        jobAmount,
+        followUpDate: followUp,
+        notes
+      })
+    });
+    const data = await resp.json();
+    if (data.success) {
+      // Update local data
+      const lead = allLeads.find(l => l.id === id);
+      if (lead) {
+        lead.status = status;
+        lead.converted = converted;
+        lead.jobAmount = jobAmount;
+        lead.followUp = followUp;
+        lead.notes = notes;
+      }
+      updateStats();
+      renderLeads();
+    } else {
+      alert('Error saving: ' + (data.error || 'Unknown error'));
+    }
+  } catch (err) {
+    alert('Network error — try again');
+  }
+}
+</script>
+</body>
+</html>
