@@ -700,6 +700,27 @@ generateWaterReportHTML = function(zipCode) {
         `).join('')}
       </div>
 
+      <!-- Water Treatment Add-On Section -->
+      <div style="background: linear-gradient(135deg, #1e3a5f 0%, #2d5a8e 100%); border-radius: 12px; padding: 24px; margin: 20px 0; color: white;">
+        <div style="text-align: center; margin-bottom: 16px;">
+          <div style="font-size: 16px; font-weight: 800;">💧 Protect Your Family's Water</div>
+          <div style="font-size: 13px; opacity: 0.85; margin-top: 4px;">ProMax installs professional water treatment systems — add one to any service call</div>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;">
+          ${report.recommendation.map(r => \`
+            <div style="background: rgba(255,255,255,0.12); border-radius: 8px; padding: 14px; text-align: center;">
+              <div style="font-size: 15px; font-weight: 700;">\${r.product}</div>
+              <div style="font-size: 20px; font-weight: 800; margin: 8px 0; color: #10b981;">\${r.priceRange}</div>
+              <div style="font-size: 11px; opacity: 0.8;">\${r.priority === 'high' ? '⭐ Recommended for your area' : 'Optional upgrade'}</div>
+            </div>
+          \`).join('')}
+        </div>
+        <div style="text-align: center; margin-top: 16px;">
+          <div style="font-size: 13px; opacity: 0.85; margin-bottom: 8px;">✓ Free on-site water test &nbsp;•&nbsp; ✓ Same-day install available &nbsp;•&nbsp; ✓ Licensed & insured</div>
+          <a href="tel:+14254951961" style="display: inline-block; padding: 12px 32px; background: #e63946; color: white; border-radius: 8px; font-weight: 700; font-size: 15px; text-decoration: none; margin-top: 4px;">Call (425) 495-1961 →</a>
+        </div>
+      </div>
+
       <div style="text-align: center; margin-top: 24px;">
         <div style="font-size: 14px; color: #64748b; margin-bottom: 8px;">${_wt('wantPersonalized')}</div>
         <div style="font-size: 13px; color: #10b981; font-weight: 600;">${_wt('freeOnsite')}</div>
