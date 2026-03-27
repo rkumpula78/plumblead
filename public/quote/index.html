@@ -1123,6 +1123,12 @@
         if (btn.textContent.includes('Back') || btn.textContent.includes('Atrás')) btn.textContent = t.back;
       });
 
+      // Re-render water report if already showing (Step 4)
+      const wrContainer = document.getElementById('waterReportContainer');
+      if (wrContainer && wrContainer.style.display === 'block') {
+        showWaterReport();
+      }
+
       // Water report nudge
       const nudgeTitle = document.getElementById('nudgeTitle');
       const nudgeSubtitle = document.getElementById('nudgeSubtitle');
