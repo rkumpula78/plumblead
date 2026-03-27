@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PlumbLead.ai — Convert More Leads Into Booked Jobs</title>
+  <meta name="description" content="AI-powered instant quotes and speed-to-lead for plumbing contractors. Respond to every lead in under 60 seconds. Book more jobs automatically.">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --blue: #0ea5e9;
+      --blue-dark: #0284c7;
+      --blue-light: #f0f9ff;
+      --green: #10b981;
+      --navy: #0f172a;
+      --gray-900: #1e293b;
+      --gray-700: #334155;
+      --gray-500: #64748b;
+      --gray-300: #cbd5e1;
+      --gray-100: #f1f5f9;
+      --white: #ffffff;
+      --red: #ef4444;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      color: var(--gray-900);
+      line-height: 1.6;
+      background: var(--white);
+    }
+
+    .container {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* ========== NAV ========== */
+    nav {
+      padding: 16px 0;
+      border-bottom: 1px solid var(--gray-100);
+      position: sticky;
+      top: 0;
+      background: rgba(255,255,255,0.95);
+      backdrop-filter: blur(8px);
+      z-index: 100;
+    }
+
+    nav .container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--navy);
+      text-decoration: none;
+    }
+
+    .logo span { color: var(--blue); }
+
+    .nav-cta {
+      padding: 10px 24px;
+      background: var(--blue);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background 0.2s;
+    }
+
+    .nav-cta:hover { background: var(--blue-dark); }
+
+    /* ========== HERO ========== */
+    .hero {
+      padding: 80px 0 60px;
+      text-align: center;
+    }
+
+    .hero-badge {
+      display: inline-block;
+      padding: 6px 16px;
+      background: var(--blue-light);
+      color: var(--blue);
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 20px;
+    }
+
+    .hero h1 {
+      font-size: 48px;
+      font-weight: 800;
+      color: var(--navy);
+      line-height: 1.1;
+      max-width: 700px;
+      margin: 0 auto 20px;
+    }
+
+    .hero h1 .highlight {
+      color: var(--blue);
+    }
+
+    .hero p {
+      font-size: 20px;
+      color: var(--gray-500);
+      max-width: 560px;
+      margin: 0 auto 32px;
+    }
+
+    .hero-cta {
+      display: inline-block;
+      padding: 16px 40px;
+      background: var(--blue);
+      color: white;
+      border-radius: 10px;
+      font-size: 18px;
+      font-weight: 700;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+
+    .hero-cta:hover {
+      background: var(--blue-dark);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(14, 165, 233, 0.3);
+    }
+
+    .hero-sub {
+      font-size: 14px;
+      color: var(--gray-300);
+      margin-top: 12px;
+    }
+
+    /* ========== PROBLEM ========== */
+    .problem {
+      padding: 60px 0;
+      background: var(--navy);
+      color: white;
+    }
+
+    .problem h2 {
+      font-size: 32px;
+      font-weight: 800;
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .problem h2 .red { color: var(--red); }
+
+    .problem-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 32px;
+    }
+
+    .problem-card {
+      text-align: center;
+      padding: 24px;
+    }
+
+    .problem-card .stat {
+      font-size: 48px;
+      font-weight: 800;
+      color: var(--red);
+      margin-bottom: 8px;
+    }
+
+    .problem-card .stat-label {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .problem-card p {
+      font-size: 14px;
+      color: var(--gray-300);
+    }
+
+    /* ========== HOW IT WORKS ========== */
+    .how-it-works {
+      padding: 80px 0;
+    }
+
+    .section-label {
+      text-align: center;
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--blue);
+      margin-bottom: 12px;
+    }
+
+    .section-title {
+      text-align: center;
+      font-size: 36px;
+      font-weight: 800;
+      color: var(--navy);
+      margin-bottom: 48px;
+    }
+
+    .steps-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 40px;
+    }
+
+    .step-card {
+      text-align: center;
+    }
+
+    .step-number {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 48px;
+      height: 48px;
+      background: var(--blue);
+      color: white;
+      border-radius: 50%;
+      font-size: 20px;
+      font-weight: 800;
+      margin-bottom: 16px;
+    }
+
+    .step-card h3 {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .step-card p {
+      font-size: 15px;
+      color: var(--gray-500);
+    }
+
+    /* ========== FEATURES ========== */
+    .features {
+      padding: 60px 0 80px;
+      background: var(--gray-100);
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 24px;
+      margin-top: 48px;
+    }
+
+    .feature-card {
+      background: white;
+      border-radius: 12px;
+      padding: 32px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .feature-card .feature-icon {
+      font-size: 32px;
+      margin-bottom: 12px;
+    }
+
+    .feature-card h3 {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .feature-card p {
+      font-size: 15px;
+      color: var(--gray-500);
+    }
+
+    /* ========== COMPARISON ========== */
+    .comparison {
+      padding: 80px 0;
+    }
+
+    .comparison-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 48px;
+    }
+
+    .comparison-table th,
+    .comparison-table td {
+      padding: 16px 20px;
+      text-align: left;
+      border-bottom: 1px solid var(--gray-100);
+    }
+
+    .comparison-table th {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--gray-500);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .comparison-table th:nth-child(2) {
+      color: var(--blue);
+    }
+
+    .comparison-table td {
+      font-size: 15px;
+    }
+
+    .comparison-table td:nth-child(2) {
+      font-weight: 600;
+      color: var(--blue);
+    }
+
+    .comparison-table .check { color: var(--green); font-weight: bold; }
+    .comparison-table .x { color: var(--gray-300); }
+
+    /* ========== ROI CALCULATOR ========== */
+    .roi {
+      padding: 80px 0;
+      background: var(--blue-light);
+    }
+
+    .roi-card {
+      max-width: 560px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 16px;
+      padding: 40px;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+      margin-top: 40px;
+    }
+
+    .roi-slider-group {
+      margin-bottom: 28px;
+    }
+
+    .roi-slider-group label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .roi-slider-group label span {
+      color: var(--blue);
+      font-weight: 700;
+    }
+
+    .roi-slider-group input[type="range"] {
+      width: 100%;
+      height: 6px;
+      -webkit-appearance: none;
+      background: var(--gray-100);
+      border-radius: 3px;
+      outline: none;
+    }
+
+    .roi-slider-group input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 24px;
+      height: 24px;
+      background: var(--blue);
+      border-radius: 50%;
+      cursor: pointer;
+    }
+
+    .roi-result {
+      text-align: center;
+      padding: 24px;
+      background: var(--blue-light);
+      border-radius: 12px;
+      margin-top: 8px;
+    }
+
+    .roi-result .roi-label { font-size: 14px; color: var(--gray-500); }
+    .roi-result .roi-number {
+      font-size: 42px;
+      font-weight: 800;
+      color: var(--blue);
+    }
+    .roi-result .roi-sub { font-size: 14px; color: var(--gray-500); margin-top: 4px; }
+
+    /* ========== TESTIMONIAL ========== */
+    .testimonial {
+      padding: 80px 0;
+    }
+
+    .testimonial-card {
+      max-width: 640px;
+      margin: 0 auto;
+      text-align: center;
+      padding: 40px;
+    }
+
+    .testimonial-card .stars {
+      font-size: 24px;
+      color: #fbbf24;
+      margin-bottom: 16px;
+    }
+
+    .testimonial-card blockquote {
+      font-size: 20px;
+      font-style: italic;
+      color: var(--gray-700);
+      line-height: 1.6;
+      margin-bottom: 20px;
+    }
+
+    .testimonial-card .author {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--navy);
+    }
+
+    .testimonial-card .author-title {
+      font-size: 14px;
+      color: var(--gray-500);
+    }
+
+    /* ========== CTA ========== */
+    .final-cta {
+      padding: 80px 0;
+      background: var(--navy);
+      color: white;
+      text-align: center;
+    }
+
+    .final-cta h2 {
+      font-size: 36px;
+      font-weight: 800;
+      margin-bottom: 16px;
+    }
+
+    .final-cta p {
+      font-size: 18px;
+      color: var(--gray-300);
+      max-width: 480px;
+      margin: 0 auto 32px;
+    }
+
+    .final-cta .hero-cta {
+      background: var(--blue);
+    }
+
+    .final-cta .hero-cta:hover {
+      background: var(--blue-dark);
+    }
+
+    /* ========== FOOTER ========== */
+    footer {
+      padding: 32px 0;
+      text-align: center;
+      font-size: 14px;
+      color: var(--gray-300);
+      border-top: 1px solid var(--gray-100);
+    }
+
+    /* ========== RESPONSIVE ========== */
+    @media (max-width: 768px) {
+      .hero h1 { font-size: 32px; }
+      .problem-grid { grid-template-columns: 1fr; }
+      .steps-grid { grid-template-columns: 1fr; gap: 32px; }
+      .features-grid { grid-template-columns: 1fr; }
+      .comparison-table { font-size: 13px; }
+      .comparison-table th, .comparison-table td { padding: 12px 8px; }
+      .section-title { font-size: 28px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav>
+    <div class="container">
+      <a href="/" class="logo">Plumb<span>Lead</span>.ai</a>
+      <a href="/quote/" class="nav-cta">See It In Action</a>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="container">
+      <div class="hero-badge">🚀 Built for Plumbing Contractors</div>
+      <h1>Stop Letting Leads<br><span class="highlight">Drip Away.</span></h1>
+      <p>PlumbLead responds to every customer in under 60 seconds — so you close the job before your competitor even calls back.</p>
+      <a href="/quote/" class="hero-cta">See How It Works →</a>
+      <div class="hero-sub">No contracts · Cancel anytime · Pays for itself in one job</div>
+    </div>
+  </section>
+
+  <!-- PROBLEM -->
+  <section class="problem">
+    <div class="container">
+      <h2>Right now, you're <span class="red">losing money</span> every hour</h2>
+      <div class="problem-grid">
+        <div class="problem-card">
+          <div class="stat">78%</div>
+          <div class="stat-label">of jobs go to the first responder</div>
+          <p>The plumber who responds first wins the job. Not the cheapest. Not the best. The fastest.</p>
+        </div>
+        <div class="problem-card">
+          <div class="stat">2hrs</div>
+          <div class="stat-label">average response time</div>
+          <p>Most plumbing companies take over 2 hours to respond to a web lead. By then, the homeowner has already booked someone else.</p>
+        </div>
+        <div class="problem-card">
+          <div class="stat">$3,200</div>
+          <div class="stat-label">lost per missed lead</div>
+          <p>Every water heater install or sewer repair you miss is thousands in revenue. How many are you missing each month?</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="how-it-works" id="demo">
+    <div class="container">
+      <div class="section-label">How It Works</div>
+      <div class="section-title">Three steps. Sixty seconds. More jobs.</div>
+      <div class="steps-grid">
+        <div class="step-card">
+          <div class="step-number">1</div>
+          <h3>Homeowner Gets a Quote</h3>
+          <p>They visit your website, select their service, and see a price range instantly. No waiting. No phone tag.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-number">2</div>
+          <h3>AI Responds in Seconds</h3>
+          <p>Within 60 seconds, they get a personalized text confirming their quote and offering appointment times. 24/7.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-number">3</div>
+          <h3>You Get a Booked Job</h3>
+          <p>The lead shows up in your CRM — qualified, quoted, and scheduled. You just send the plumber.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section class="features">
+    <div class="container">
+      <div class="section-label">Everything You Need</div>
+      <div class="section-title">One system. No employees. More jobs.</div>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">⚡</div>
+          <h3>Instant Quote Tool</h3>
+          <p>Embeds on your website. Homeowners pick their service and see a price range in seconds. Pre-qualifies before you ever talk to them.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">💬</div>
+          <h3>Speed-to-Lead AI</h3>
+          <p>Every lead gets a personalized text within 60 seconds — with your company name, their quote, and a booking link. 24/7/365.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🤖</div>
+          <h3>AI Chatbot</h3>
+          <p>Answers common questions, qualifies leads, and books appointments directly from your website. Never miss an after-hours inquiry again.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🔗</div>
+          <h3>CRM Integration</h3>
+          <p>Plugs directly into ServiceTitan or Housecall Pro. Leads land in your system — quoted, scored, and ready to dispatch.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- COMPARISON -->
+  <section class="comparison">
+    <div class="container">
+      <div class="section-label">Why PlumbLead</div>
+      <div class="section-title">Stop playing phone tag</div>
+      <table class="comparison-table">
+        <thead>
+          <tr>
+            <th></th>
+            <th>PlumbLead.ai</th>
+            <th>Answering Service</th>
+            <th>Doing It Yourself</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Response time</td>
+            <td>&lt; 60 seconds</td>
+            <td>2–5 minutes</td>
+            <td>30 min – never</td>
+          </tr>
+          <tr>
+            <td>Available 24/7</td>
+            <td><span class="check">✓</span></td>
+            <td><span class="check">✓</span></td>
+            <td><span class="x">✗</span></td>
+          </tr>
+          <tr>
+            <td>Instant price quotes</td>
+            <td><span class="check">✓</span></td>
+            <td><span class="x">✗</span></td>
+            <td><span class="x">✗</span></td>
+          </tr>
+          <tr>
+            <td>Books appointments</td>
+            <td><span class="check">✓</span> Automatic</td>
+            <td>Sometimes</td>
+            <td>Manual</td>
+          </tr>
+          <tr>
+            <td>CRM integration</td>
+            <td><span class="check">✓</span> ServiceTitan / HCP</td>
+            <td><span class="x">✗</span></td>
+            <td>Manual entry</td>
+          </tr>
+          <tr>
+            <td>Lead scoring</td>
+            <td><span class="check">✓</span> AI-powered</td>
+            <td><span class="x">✗</span></td>
+            <td><span class="x">✗</span></td>
+          </tr>
+          <tr>
+            <td>Monthly cost</td>
+            <td>$500/mo</td>
+            <td>$800–2,000/mo</td>
+            <td>"Free" (but you're the employee)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ROI CALCULATOR -->
+  <section class="roi">
+    <div class="container">
+      <div class="section-label">Your Numbers</div>
+      <div class="section-title">How much is PlumbLead worth to you?</div>
+      <div class="roi-card">
+        <div class="roi-slider-group">
+          <label>Leads per month you're missing <span id="missedLeadsVal">5</span></label>
+          <input type="range" id="missedLeads" min="1" max="30" value="5" oninput="calcROI()">
+        </div>
+        <div class="roi-slider-group">
+          <label>Average job value <span id="avgJobVal">$1,500</span></label>
+          <input type="range" id="avgJob" min="200" max="10000" step="100" value="1500" oninput="calcROI()">
+        </div>
+        <div class="roi-slider-group">
+          <label>Close rate on responded leads <span id="closeRateVal">40%</span></label>
+          <input type="range" id="closeRate" min="10" max="80" value="40" oninput="calcROI()">
+        </div>
+        <div class="roi-result">
+          <div class="roi-label">Revenue you're leaving on the table each month</div>
+          <div class="roi-number" id="roiResult">$3,000</div>
+          <div class="roi-sub">PlumbLead costs $500/mo — <strong id="roiMultiple">6x</strong> return</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TESTIMONIAL -->
+  <section class="testimonial">
+    <div class="container">
+      <div class="testimonial-card">
+        <div class="stars">★★★★★</div>
+        <blockquote>"We were losing leads every night and weekend. PlumbLead responded to a burst pipe inquiry at 2 AM and had the job booked before my guys even woke up. Paid for itself the first week."</blockquote>
+        <div class="author">— Coming Soon</div>
+        <div class="author-title">Beta program launching in Arizona</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FINAL CTA -->
+  <section class="final-cta">
+    <div class="container">
+      <h2>Ready to stop losing leads?</h2>
+      <p>Join our Arizona beta program. Free 30-day trial. See the results before you pay a dime.</p>
+      <a href="mailto:ryan@plumblead.ai?subject=PlumbLead%20Beta%20Interest&body=Hey%20Ryan%2C%0A%0AI%27m%20interested%20in%20trying%20PlumbLead%20for%20my%20plumbing%20company.%0A%0ACompany%20name%3A%0ACity%3A%0ANumber%20of%20trucks%3A%0ACurrent%20CRM%3A" class="hero-cta">Start Free 30-Day Trial →</a>
+      <div class="hero-sub" style="color: var(--gray-300); margin-top: 12px;">No credit card required · Setup in 30 minutes · Cancel anytime</div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="container">
+      © 2026 PlumbLead.ai — Built in Arizona 🌵
+    </div>
+  </footer>
+
+  <script>
+    function calcROI() {
+      const leads = parseInt(document.getElementById('missedLeads').value);
+      const job = parseInt(document.getElementById('avgJob').value);
+      const rate = parseInt(document.getElementById('closeRate').value);
+
+      document.getElementById('missedLeadsVal').textContent = leads;
+      document.getElementById('avgJobVal').textContent = '$' + job.toLocaleString();
+      document.getElementById('closeRateVal').textContent = rate + '%';
+
+      const revenue = leads * job * (rate / 100);
+      document.getElementById('roiResult').textContent = '$' + Math.round(revenue).toLocaleString();
+
+      const multiple = Math.round(revenue / 500);
+      document.getElementById('roiMultiple').textContent = multiple + 'x';
+    }
+
+    // Init calculator
+    calcROI();
+  </script>
+</body>
+</html>

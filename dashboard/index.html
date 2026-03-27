@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PlumbLead Dashboard</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f1f5f9; color: #1e293b; }
+
+    .topbar {
+      background: white; border-bottom: 1px solid #e2e8f0; padding: 16px 24px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .topbar .logo { font-size: 20px; font-weight: 700; color: #0ea5e9; }
+    .topbar .logo span { color: #0f172a; }
+    .topbar .client-name { font-size: 14px; color: #64748b; }
+
+    .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+
+    /* Stats Cards */
+    .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .stat-card {
+      background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    .stat-card .stat-label { font-size: 12px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
+    .stat-card .stat-value { font-size: 32px; font-weight: 800; color: #0f172a; margin-top: 4px; }
+    .stat-card .stat-change { font-size: 12px; margin-top: 4px; }
+    .stat-card .stat-change.up { color: #10b981; }
+    .stat-card .stat-change.down { color: #ef4444; }
+
+    /* Lead Table */
+    .table-card {
+      background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); overflow: hidden;
+    }
+    .table-header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 16px 20px; border-bottom: 1px solid #e2e8f0;
+    }
+    .table-header h2 { font-size: 16px; font-weight: 700; }
+    .filter-row { display: flex; gap: 8px; }
+    .filter-btn {
+      padding: 6px 14px; border-radius: 20px; border: 1px solid #e2e8f0;
+      font-size: 12px; font-weight: 500; background: white; cursor: pointer; color: #64748b;
+    }
+    .filter-btn.active { background: #0ea5e9; color: white; border-color: #0ea5e9; }
+
+    table { width: 100%; border-collapse: collapse; }
+    th { text-align: left; padding: 12px 16px; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #e2e8f0; }
+    td { padding: 14px 16px; font-size: 14px; border-bottom: 1px solid #f1f5f9; }
+    tr:hover td { background: #f8fafc; }
+
+    .badge {
+      display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600;
+    }
+    .badge-new { background: #dbeafe; color: #1d4ed8; }
+    .badge-contacted { background: #fef3c7; color: #92400e; }
+    .badge-quoted { background: #fed7aa; color: #9a3412; }
+    .badge-won { background: #d1fae5; color: #065f46; }
+    .badge-lost { background: #fee2e2; color: #991b1b; }
+    .badge-emergency { background: #fee2e2; color: #991b1b; }
+    .badge-soon { background: #fef3c7; color: #92400e; }
+    .badge-routine { background: #d1fae5; color: #065f46; }
+
+    .source-tag { font-size: 11px; color: #94a3b8; }
+
+    .status-select {
+      padding: 4px 8px; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 12px;
+      background: white; cursor: pointer;
+    }
+
+    .loading { text-align: center; padding: 60px; color: #94a3b8; }
+    .error { text-align: center; padding: 40px; color: #ef4444; }
+
+    /* Auth Screen */
+    .auth-screen {
+      display: flex; align-items: center; justify-content: center; min-height: 100vh;
+      background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%);
+    }
+    .auth-card {
+      background: white; border-radius: 16px; padding: 40px; width: 380px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3); text-align: center;
+    }
+    .auth-card .logo { font-size: 28px; font-weight: 800; color: #0ea5e9; margin-bottom: 8px; }
+    .auth-card .logo span { color: #0f172a; }
+    .auth-card p { color: #64748b; font-size: 14px; margin-bottom: 24px; }
+    .auth-card input {
+      width: 100%; padding: 12px 16px; border: 2px solid #e2e8f0; border-radius: 10px;
+      font-size: 16px; text-align: center; letter-spacing: 2px; margin-bottom: 16px;
+    }
+    .auth-card input:focus { outline: none; border-color: #0ea5e9; }
+    .auth-card button {
+      width: 100%; padding: 14px; background: #0ea5e9; color: white; border: none;
+      border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer;
+    }
+    .auth-card button:hover { background: #0284c7; }
+    .auth-error { color: #ef4444; font-size: 13px; margin-top: 8px; display: none; }
+
+    @media (max-width: 768px) {
+      .stats-row { grid-template-columns: repeat(2, 1fr); }
+      .filter-row { flex-wrap: wrap; }
+      td, th { padding: 10px 12px; font-size: 13px; }
+      .hide-mobile { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Auth Screen -->
+  <div id="authScreen" class="auth-screen">
+    <div class="auth-card">
+      <div class="logo">Plumb<span>Lead</span></div>
+      <p>Enter your dashboard access code</p>
+      <input type="text" id="accessCode" placeholder="Access code" maxlength="32" autofocus>
+      <button onclick="authenticate()">View Dashboard →</button>
+      <div class="auth-error" id="authError">Invalid access code</div>
+    </div>
+  </div>
+
+  <!-- Dashboard -->
+  <div id="dashboard" style="display: none;">
+    <div class="topbar">
+      <div>
+        <div class="logo">Plumb<span>Lead</span></div>
+      </div>
+      <div style="text-align: right;">
+        <div class="client-name" id="dashClientName">—</div>
+        <div style="font-size: 12px; color: #94a3b8;" id="dashDateRange">—</div>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-label">Total Leads</div>
+          <div class="stat-value" id="statTotal">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">New (Uncontacted)</div>
+          <div class="stat-value" id="statNew">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Won</div>
+          <div class="stat-value" id="statWon" style="color: #10b981;">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Close Rate</div>
+          <div class="stat-value" id="statCloseRate">—</div>
+        </div>
+      </div>
+
+      <!-- Source Breakdown -->
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-label">From Website</div>
+          <div class="stat-value" id="statWebsite">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">From Google Ads</div>
+          <div class="stat-value" id="statGoogle">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">From Google Business</div>
+          <div class="stat-value" id="statGbp">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Other Sources</div>
+          <div class="stat-value" id="statOther">—</div>
+        </div>
+      </div>
+
+      <div class="table-card">
+        <div class="table-header">
+          <h2>Leads</h2>
+          <div class="filter-row">
+            <button class="filter-btn active" data-filter="all" onclick="filterLeads('all', this)">All</button>
+            <button class="filter-btn" data-filter="New" onclick="filterLeads('New', this)">New</button>
+            <button class="filter-btn" data-filter="Contacted" onclick="filterLeads('Contacted', this)">Contacted</button>
+            <button class="filter-btn" data-filter="Won" onclick="filterLeads('Won', this)">Won</button>
+            <button class="filter-btn" data-filter="Lost" onclick="filterLeads('Lost', this)">Lost</button>
+          </div>
+        </div>
+        <div id="leadsTableContainer">
+          <div class="loading">Loading leads...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ============================================
+    // PlumbLead Dashboard
+    // ============================================
+
+    // Dashboard API — proxied through n8n (no API keys exposed)
+    const API_URL = 'https://api.plumblead.ai/webhook/plumblead-dashboard';
+
+    // Client configs — maps access tokens to client details
+    const CLIENTS = {
+      'demo-2024': { id: 'demo', name: 'Demo Plumbing Co', isAdmin: false },
+      'plumblead-admin': { id: '*', name: 'PlumbLead Admin', isAdmin: true }
+      // Add client tokens here:
+      // 'acme-abc123': { id: 'acme-plumbing', name: 'Acme Plumbing', isAdmin: false },
+    };
+
+    let currentClient = null;
+    let allLeads = [];
+    let currentFilter = 'all';
+
+    // ============================================
+    // Auth
+    // ============================================
+
+    function authenticate() {
+      const code = document.getElementById('accessCode').value.trim();
+
+      // Check URL param first
+      const client = CLIENTS[code];
+      if (!client) {
+        document.getElementById('authError').style.display = 'block';
+        return;
+      }
+
+      currentClient = { ...client, token: code };
+      document.getElementById('authScreen').style.display = 'none';
+      document.getElementById('dashboard').style.display = 'block';
+      document.getElementById('dashClientName').textContent = client.name;
+
+      loadLeads();
+    }
+
+    // Auto-auth from URL param
+    (function() {
+      const params = new URLSearchParams(window.location.search);
+      const token = params.get('token') || params.get('t');
+      if (token && CLIENTS[token]) {
+        document.getElementById('accessCode').value = token;
+        authenticate();
+      }
+    })();
+
+    // ============================================
+    // Load Leads from Notion
+    // ============================================
+
+    async function loadLeads() {
+      const container = document.getElementById('leadsTableContainer');
+      container.innerHTML = '<div class="loading">Loading leads...</div>';
+
+      try {
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'query',
+            clientId: currentClient.id,
+            isAdmin: currentClient.isAdmin
+          })
+        });
+
+        if (!response.ok) throw new Error(`API error: ${response.status}`);
+
+        const data = await response.json();
+        if (!data.success) throw new Error(data.error || 'Unknown error');
+
+        allLeads = data.results.map(parseLead);
+
+        updateStats();
+        renderLeads();
+        updateDateRange();
+
+      } catch (err) {
+        console.error('Failed to load leads:', err);
+        container.innerHTML = `<div class="error">Failed to load leads. Check console for details.<br><small>${err.message}</small></div>`;
+      }
+    }
+
+    function parseLead(page) {
+      const p = page.properties;
+      return {
+        id: page.id,
+        name: p['Name']?.title?.[0]?.plain_text || 'Unknown',
+        phone: p['Phone']?.phone_number || '',
+        email: p['Email']?.email || '',
+        service: p['Service']?.select?.name || '',
+        urgency: p['Urgency']?.select?.name || 'Routine',
+        zip: p['Zip Code']?.rich_text?.[0]?.plain_text || '',
+        time: p['Preferred Time']?.select?.name || '',
+        status: p['Status']?.select?.name || 'New',
+        client: p['Client']?.rich_text?.[0]?.plain_text || '',
+        source: p['Source']?.select?.name || 'direct',
+        campaign: p['Campaign']?.rich_text?.[0]?.plain_text || '',
+        details: p['Details']?.rich_text?.[0]?.plain_text || '',
+        hardness: p['Water Hardness']?.number || 0,
+        lang: p['Language']?.select?.name || 'en',
+        date: p['Date']?.date?.start || page.created_time
+      };
+    }
+
+    // ============================================
+    // Stats
+    // ============================================
+
+    function updateStats() {
+      const total = allLeads.length;
+      const newLeads = allLeads.filter(l => l.status === 'New').length;
+      const won = allLeads.filter(l => l.status === 'Won').length;
+      const decided = allLeads.filter(l => l.status === 'Won' || l.status === 'Lost').length;
+      const closeRate = decided > 0 ? Math.round((won / decided) * 100) : 0;
+
+      document.getElementById('statTotal').textContent = total;
+      document.getElementById('statNew').textContent = newLeads;
+      document.getElementById('statWon').textContent = won;
+      document.getElementById('statCloseRate').textContent = decided > 0 ? `${closeRate}%` : '—';
+
+      // Source breakdown
+      const bySource = {};
+      allLeads.forEach(l => { bySource[l.source] = (bySource[l.source] || 0) + 1; });
+      document.getElementById('statWebsite').textContent = bySource['website'] || 0;
+      document.getElementById('statGoogle').textContent = bySource['google'] || 0;
+      document.getElementById('statGbp').textContent = bySource['gbp'] || 0;
+      const other = total - (bySource['website'] || 0) - (bySource['google'] || 0) - (bySource['gbp'] || 0);
+      document.getElementById('statOther').textContent = other;
+    }
+
+    function updateDateRange() {
+      if (allLeads.length === 0) {
+        document.getElementById('dashDateRange').textContent = 'No leads yet';
+        return;
+      }
+      const dates = allLeads.map(l => new Date(l.date)).sort((a, b) => a - b);
+      const fmt = d => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      document.getElementById('dashDateRange').textContent = `${fmt(dates[0])} – ${fmt(dates[dates.length - 1])}`;
+    }
+
+    // ============================================
+    // Render Leads Table
+    // ============================================
+
+    function renderLeads() {
+      const filtered = currentFilter === 'all'
+        ? allLeads
+        : allLeads.filter(l => l.status === currentFilter);
+
+      if (filtered.length === 0) {
+        document.getElementById('leadsTableContainer').innerHTML =
+          '<div class="loading">No leads found</div>';
+        return;
+      }
+
+      const rows = filtered.map(l => `
+        <tr>
+          <td>
+            <strong>${esc(l.name)}</strong><br>
+            <span style="font-size: 12px; color: #64748b;">${esc(l.phone)}</span>
+          </td>
+          <td>${esc(l.service)}</td>
+          <td><span class="badge badge-${l.urgency.toLowerCase()}">${esc(l.urgency)}</span></td>
+          <td class="hide-mobile">${esc(l.zip)}</td>
+          <td>
+            <select class="status-select" onchange="updateStatus('${l.id}', this.value)">
+              ${['New','Contacted','Quoted','Won','Lost'].map(s =>
+                `<option value="${s}" ${s === l.status ? 'selected' : ''}>${s}</option>`
+              ).join('')}
+            </select>
+          </td>
+          <td class="hide-mobile"><span class="source-tag">${esc(l.source)}${l.campaign ? ' / ' + esc(l.campaign) : ''}</span></td>
+          <td class="hide-mobile">${formatDate(l.date)}</td>
+        </tr>
+      `).join('');
+
+      document.getElementById('leadsTableContainer').innerHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th>Contact</th>
+              <th>Service</th>
+              <th>Urgency</th>
+              <th class="hide-mobile">Zip</th>
+              <th>Status</th>
+              <th class="hide-mobile">Source</th>
+              <th class="hide-mobile">Date</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      `;
+    }
+
+    function filterLeads(status, btn) {
+      currentFilter = status;
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      renderLeads();
+    }
+
+    // ============================================
+    // Update Lead Status (writes back to Notion)
+    // ============================================
+
+    async function updateStatus(pageId, newStatus) {
+      try {
+        const resp = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'update-status',
+            pageId: pageId,
+            status: newStatus
+          })
+        });
+        const data = await resp.json();
+        if (!data.success) throw new Error(data.error);
+
+        // Update local state
+        const lead = allLeads.find(l => l.id === pageId);
+        if (lead) lead.status = newStatus;
+        updateStats();
+
+      } catch (err) {
+        console.error('Failed to update status:', err);
+        alert('Failed to update status. Please try again.');
+      }
+    }
+
+    // ============================================
+    // Helpers
+    // ============================================
+
+    function esc(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    function formatDate(dateStr) {
+      const d = new Date(dateStr);
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+    }
+  </script>
+</body>
+</html>

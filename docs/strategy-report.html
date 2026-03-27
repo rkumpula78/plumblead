@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PlumbLead.ai — Strategic Analysis & Go-to-Market</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --blue: #0ea5e9; --blue-dark: #0369a1; --blue-light: #f0f9ff;
+      --green: #10b981; --green-light: #ecfdf5;
+      --red: #ef4444; --red-light: #fef2f2;
+      --orange: #f97316; --orange-light: #fff7ed;
+      --navy: #0f172a; --gray-900: #1e293b; --gray-700: #334155;
+      --gray-500: #64748b; --gray-300: #cbd5e1; --gray-100: #f1f5f9;
+    }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: var(--gray-900); line-height: 1.7; background: #fff; }
+    .page { max-width: 900px; margin: 0 auto; padding: 40px 24px 80px; }
+
+    /* Header */
+    .report-header { text-align: center; padding: 60px 0 40px; border-bottom: 3px solid var(--blue); margin-bottom: 40px; }
+    .report-header .logo { font-size: 28px; font-weight: 800; color: var(--navy); }
+    .report-header .logo span { color: var(--blue); }
+    .report-header h1 { font-size: 36px; font-weight: 800; color: var(--navy); margin: 16px 0 8px; line-height: 1.2; }
+    .report-header .date { font-size: 14px; color: var(--gray-500); }
+
+    /* Executive Summary */
+    .exec-summary { background: var(--blue-light); border-left: 4px solid var(--blue); border-radius: 0 12px 12px 0; padding: 24px 28px; margin-bottom: 40px; }
+    .exec-summary h2 { font-size: 18px; font-weight: 700; color: var(--blue-dark); margin-bottom: 8px; }
+    .exec-summary p { font-size: 16px; color: var(--gray-700); }
+    .exec-summary strong { color: var(--navy); }
+
+    /* Sections */
+    h2.section { font-size: 24px; font-weight: 800; color: var(--navy); margin: 48px 0 20px; padding-bottom: 8px; border-bottom: 2px solid var(--gray-100); }
+    h3.sub { font-size: 18px; font-weight: 700; color: var(--gray-700); margin: 28px 0 12px; }
+    h4 { font-size: 16px; font-weight: 700; color: var(--navy); margin: 20px 0 8px; }
+
+    p { margin-bottom: 12px; color: var(--gray-700); }
+
+    /* Stats row */
+    .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 20px 0; }
+    .stat-card { background: var(--gray-100); border-radius: 12px; padding: 20px; text-align: center; }
+    .stat-card .number { font-size: 32px; font-weight: 800; color: var(--blue); }
+    .stat-card .label { font-size: 13px; color: var(--gray-500); margin-top: 4px; }
+
+    /* Tables */
+    table { width: 100%; border-collapse: collapse; margin: 16px 0 24px; font-size: 14px; }
+    th { background: var(--navy); color: white; padding: 10px 14px; text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+    th:first-child { border-radius: 8px 0 0 0; }
+    th:last-child { border-radius: 0 8px 0 0; }
+    td { padding: 10px 14px; border-bottom: 1px solid var(--gray-100); color: var(--gray-700); }
+    tr:hover td { background: var(--gray-100); }
+
+    /* Feature cards */
+    .feature-card { border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px 24px; margin-bottom: 16px; }
+    .feature-card.ready { border-left: 4px solid var(--green); }
+    .feature-card.hot { border-left: 4px solid var(--orange); }
+    .feature-card.expansion { border-left: 4px solid var(--gray-300); }
+    .feature-card .fc-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .feature-card .fc-title { font-size: 16px; font-weight: 700; color: var(--navy); }
+    .feature-card .fc-badge { padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+    .badge-ready { background: var(--green-light); color: var(--green); }
+    .badge-hot { background: var(--orange-light); color: var(--orange); }
+    .badge-later { background: var(--gray-100); color: var(--gray-500); }
+    .feature-card .fc-meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 12px 0; font-size: 13px; }
+    .feature-card .fc-meta div { background: var(--gray-100); padding: 8px; border-radius: 6px; }
+    .feature-card .fc-meta .meta-label { font-size: 10px; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.5px; }
+    .feature-card .fc-meta .meta-value { font-weight: 700; color: var(--navy); }
+    .feature-card .fc-verdict { font-size: 14px; font-weight: 600; color: var(--gray-700); margin-top: 8px; padding: 8px 12px; background: var(--blue-light); border-radius: 6px; }
+
+    /* Tier structure */
+    .tiers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin: 24px 0; }
+    .tier-card { border: 2px solid #e2e8f0; border-radius: 16px; padding: 24px; position: relative; }
+    .tier-card.recommended { border-color: var(--blue); }
+    .tier-card.recommended::before { content: '★ RECOMMENDED'; position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: var(--blue); color: white; padding: 2px 14px; border-radius: 10px; font-size: 11px; font-weight: 700; }
+    .tier-name { font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--gray-500); }
+    .tier-price { font-size: 28px; font-weight: 800; color: var(--navy); margin: 8px 0 4px; }
+    .tier-price span { font-size: 14px; font-weight: 400; color: var(--gray-500); }
+    .tier-setup { font-size: 13px; color: var(--gray-500); margin-bottom: 16px; }
+    .tier-features { list-style: none; }
+    .tier-features li { font-size: 13px; color: var(--gray-700); padding: 4px 0; }
+    .tier-features li::before { content: '✓ '; color: var(--green); font-weight: bold; }
+
+    /* Revenue table */
+    .revenue-table { background: var(--green-light); border-radius: 12px; padding: 24px; margin: 20px 0; }
+    .revenue-table h4 { color: var(--green); margin-top: 0; }
+
+    /* Timeline */
+    .timeline { margin: 20px 0; }
+    .tl-item { display: flex; gap: 16px; margin-bottom: 20px; }
+    .tl-dot { width: 40px; height: 40px; border-radius: 50%; background: var(--blue); color: white; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; flex-shrink: 0; }
+    .tl-content h4 { margin: 0 0 4px; font-size: 15px; }
+    .tl-content p { font-size: 13px; margin: 0; }
+    .tl-content .goal { font-size: 12px; font-weight: 600; color: var(--blue); margin-top: 4px; }
+
+    /* Don't do list */
+    .dont-list { list-style: none; margin: 16px 0; }
+    .dont-list li { padding: 10px 14px; margin-bottom: 8px; background: var(--red-light); border-radius: 8px; font-size: 14px; color: var(--gray-700); }
+    .dont-list li strong { color: var(--red); }
+
+    /* Moat */
+    .moat-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin: 20px 0; }
+    .moat-item { text-align: center; padding: 16px 8px; background: var(--blue-light); border-radius: 10px; }
+    .moat-item .moat-icon { font-size: 28px; margin-bottom: 6px; }
+    .moat-item .moat-label { font-size: 12px; font-weight: 600; color: var(--navy); }
+
+    /* Verdict */
+    .verdict { background: var(--navy); color: white; border-radius: 16px; padding: 40px; text-align: center; margin: 40px 0; }
+    .verdict h2 { font-size: 24px; font-weight: 800; margin-bottom: 12px; border: none; }
+    .verdict p { color: var(--gray-300); font-size: 16px; max-width: 600px; margin: 0 auto; }
+    .verdict .action { font-size: 20px; font-weight: 800; color: var(--blue); margin-top: 16px; }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .stats-row { grid-template-columns: 1fr; }
+      .tiers { grid-template-columns: 1fr; }
+      .moat-grid { grid-template-columns: repeat(2, 1fr); }
+      .feature-card .fc-meta { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+
+    <!-- Header -->
+    <div class="report-header">
+      <div class="logo">Plumb<span>Lead</span>.ai</div>
+      <h1>Strategic Analysis &<br>Go-to-Market Plan</h1>
+      <div class="date">Research completed March 26, 2026 · Competitive data verified via web research</div>
+    </div>
+
+    <!-- Executive Summary -->
+    <div class="exec-summary">
+      <h2>Executive Summary</h2>
+      <p><strong>ONE platform. Modular tiers. Water intelligence as the moat.</strong></p>
+      <p>Build one platform called PlumbLead with a core that hooks plumbers (speed-to-lead + instant quotes), then expand with add-on modules (water treatment enablement, smart home automation, sewer advisory) that increase stickiness and revenue per customer. The water intelligence layer is what makes PlumbLead uncopyable — nobody else has this.</p>
+    </div>
+
+    <!-- Market Reality -->
+    <h2 class="section">📊 Market Reality</h2>
+
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="number">128,787</div>
+        <div class="label">Plumbing businesses in the US</div>
+      </div>
+      <div class="stat-card">
+        <div class="number">60,940</div>
+        <div class="label">SMBs with &lt;5 employees (your target)</div>
+      </div>
+      <div class="stat-card">
+        <div class="number">$657B</div>
+        <div class="label">Total home services market</div>
+      </div>
+    </div>
+
+    <p>Plumbing is the <strong>#3 most searched home service</strong>. Median US home age is 40 years — driving repair demand. Millennial homeowners (43% of buyers) expect instant, digital-first experiences.</p>
+
+    <h3 class="sub">Competitive Landscape</h3>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Competitor</th>
+          <th>What They Do</th>
+          <th>Price</th>
+          <th>Threat</th>
+          <th>Gap PlumbLead Fills</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>BuildFolio</strong></td><td>AI photo-to-quote, lead capture</td><td>$29-39/mo</td><td>⚠️ Medium</td><td>General contractor tool. No water intelligence. No SMS.</td></tr>
+        <tr><td><strong>hvacquote.ai</strong></td><td>Instant online pricing for HVAC</td><td>Unknown</td><td>🟡 Low</td><td>HVAC only. Validates model. Not a plumbing competitor.</td></tr>
+        <tr><td><strong>ServiceTitan</strong></td><td>Full business management CRM</td><td>$200-400+/mo</td><td>🟡 Low</td><td>Different layer. PlumbLead sits IN FRONT of ServiceTitan.</td></tr>
+        <tr><td><strong>Housecall Pro</strong></td><td>Scheduling, invoicing, payments</td><td>$65-229/mo</td><td>🟡 Low</td><td>Operations tool, not lead capture or intelligence.</td></tr>
+        <tr><td><strong>Angi / Thumbtack</strong></td><td>Lead marketplace (shared leads)</td><td>$15-100+/lead</td><td>🟢 Low</td><td>Shared leads, low quality. PlumbLead = exclusive leads.</td></tr>
+        <tr><td><strong>CGC/Kinetico</strong></td><td>Water quality quiz → Kinetico sales</td><td>Free (captive)</td><td>⚠️ Concept</td><td>Tied to one brand, 4 states. PlumbLead is open + national.</td></tr>
+      </tbody>
+    </table>
+
+    <div class="exec-summary" style="background: #ecfdf5; border-color: var(--green);">
+      <h2 style="color: #065f46;">Key Finding: The Gap Is Real</h2>
+      <p><strong>Nobody has:</strong> plumbing-specific instant quoting + speed-to-lead AI + water intelligence + smart home upsell engine. That's PlumbLead's lane.</p>
+    </div>
+
+    <!-- Feature Viability -->
+    <h2 class="section">✅ Feature Viability Assessment</h2>
+
+    <h3 class="sub">Tier 1: CORE — Launch With This</h3>
+
+    <div class="feature-card ready">
+      <div class="fc-header">
+        <div class="fc-title">⚡ Speed-to-Lead + Instant Quotes</div>
+        <div class="fc-badge badge-ready">✅ Ready</div>
+      </div>
+      <p>AI responds to every inbound lead in &lt;60 seconds with a personalized quote via SMS. 12 plumbing service categories with price ranges.</p>
+      <div class="fc-meta">
+        <div><div class="meta-label">Viability</div><div class="meta-value">High</div></div>
+        <div><div class="meta-label">Competition</div><div class="meta-value">None (plumbing)</div></div>
+        <div><div class="meta-label">Effort to Ship</div><div class="meta-value">1-2 weeks</div></div>
+      </div>
+      <div class="fc-verdict">Verdict: This is your v1. Ship it.</div>
+    </div>
+
+    <div class="feature-card ready">
+      <div class="fc-header">
+        <div class="fc-title">🧪 Water Quality Intelligence</div>
+        <div class="fc-badge badge-ready">✅ Ready</div>
+      </div>
+      <p>Zip-code-based water quality reports with hardness data, cost-of-hard-water calculations, filtration/softener recommendations. Built for AZ + WA, expandable nationally.</p>
+      <div class="fc-meta">
+        <div><div class="meta-label">Viability</div><div class="meta-value">High</div></div>
+        <div><div class="meta-label">Competition</div><div class="meta-value">CGC (captive, 4 states)</div></div>
+        <div><div class="meta-label">Impact</div><div class="meta-value">MASSIVE differentiator</div></div>
+      </div>
+      <div class="fc-verdict">Verdict: This is what makes PlumbLead worth $500-750/mo vs $29/mo BuildFolio.</div>
+    </div>
+
+    <div class="feature-card ready">
+      <div class="fc-header">
+        <div class="fc-title">🚨 Emergency Triage + 🇲🇽 Spanish Language</div>
+        <div class="fc-badge badge-ready">✅ Ready</div>
+      </div>
+      <p>Emergency mode shows step-by-step instructions (shut off water, drain pressure) while booking. Full Spanish translation for 31% Hispanic Arizona market.</p>
+      <div class="fc-verdict">Verdict: Ship with v1. Instant differentiators nobody else has.</div>
+    </div>
+
+    <h3 class="sub">Tier 2: ADD-ON MODULES — Month 1-3</h3>
+
+    <div class="feature-card hot">
+      <div class="fc-header">
+        <div class="fc-title">🏠 Smart Water & Home Automation</div>
+        <div class="fc-badge badge-hot">🔥 Highest Potential</div>
+      </div>
+      <p>Insurance companies (Farmers, Nationwide) are <strong>mandating</strong> smart leak detection. DOE water heater efficiency standards hit Oct 6, 2026. This creates forced demand — plumbers who install Moen Flo/Phyn systems own a new revenue category.</p>
+      <div class="fc-meta">
+        <div><div class="meta-label">Viability</div><div class="meta-value">Very High</div></div>
+        <div><div class="meta-label">Timing</div><div class="meta-value">Perfect — NOW</div></div>
+        <div><div class="meta-label">Revenue</div><div class="meta-value">$250/mo add-on</div></div>
+      </div>
+      <div class="fc-verdict">Verdict: BUILD MONTH 1. Regulatory tailwind is real. First mover advantage.</div>
+    </div>
+
+    <div class="feature-card hot">
+      <div class="fc-header">
+        <div class="fc-title">💎 Softener/Filtration Sales Enablement</div>
+        <div class="fc-badge badge-ready">✅ Partially Ready</div>
+      </div>
+      <p>Equipment sizing calculator, on-site water test interpreter, homeowner proposal generator, margin calculator. Turns plumbers into water treatment companies. Nobody arms independent plumbers with this knowledge.</p>
+      <div class="fc-verdict">Verdict: Core data already built. Polish proposals + supplier relationships in Month 1-2.</div>
+    </div>
+
+    <h3 class="sub">Tier 3: EXPANSION — Month 3-6</h3>
+
+    <div class="feature-card expansion">
+      <div class="fc-header">
+        <div class="fc-title">🪣 Septic Services Marketplace</div>
+        <div class="fc-badge badge-later">Month 3+</div>
+      </div>
+      <p>Multi-provider lead distribution for septic pumping. Homeowner submits request → goes to 3-5 companies → first to respond wins. No dedicated septic marketplace exists today.</p>
+      <div class="fc-verdict">Verdict: Good play but don't launch first. Use plumber network to recruit septic providers naturally.</div>
+    </div>
+
+    <div class="feature-card expansion">
+      <div class="fc-header">
+        <div class="fc-title">🔧 Sewer Repair Advisor</div>
+        <div class="fc-badge badge-later">Month 3+</div>
+      </div>
+      <p>Interactive decision engine: pipe lining vs bursting vs dig &amp; replace. Housing age data identifies cast iron risk by neighborhood. High-ticket leads ($5K-$25K jobs).</p>
+      <div class="fc-verdict">Verdict: Build advisory tool as SEO content. Marketplace matching later.</div>
+    </div>
+
+    <div class="feature-card expansion">
+      <div class="fc-header">
+        <div class="fc-title">🌿 Smart Sprinkler / Irrigation</div>
+        <div class="fc-badge badge-later">Awareness Only</div>
+      </div>
+      <p>Rachio/Rain Bird integration. Good upsell in-home but crosses trade boundaries. Include as awareness item, refer to irrigation partners.</p>
+      <div class="fc-verdict">Verdict: Don't make it a core service. Referral layer only.</div>
+    </div>
+
+    <!-- Pricing Tiers -->
+    <h2 class="section">💰 Recommended Pricing Tiers</h2>
+
+    <div class="tiers">
+      <div class="tier-card">
+        <div class="tier-name">Starter</div>
+        <div class="tier-price">$500<span>/mo</span></div>
+        <div class="tier-setup">$2,500 setup</div>
+        <ul class="tier-features">
+          <li>Instant Quote Tool (12 services)</li>
+          <li>Speed-to-Lead AI (&lt;60 sec SMS)</li>
+          <li>Water Quality Reports</li>
+          <li>Emergency Triage Mode</li>
+          <li>Spanish Language</li>
+          <li>Basic Dashboard</li>
+          <li>CRM Integration</li>
+        </ul>
+      </div>
+      <div class="tier-card recommended">
+        <div class="tier-name">Professional</div>
+        <div class="tier-price">$750<span>/mo</span></div>
+        <div class="tier-setup">$3,500 setup</div>
+        <ul class="tier-features">
+          <li>Everything in Starter</li>
+          <li>Water Treatment Sales Tools</li>
+          <li>Softener/Filtration Sizing</li>
+          <li>Smart Water Product Guide</li>
+          <li>"Home Water Score" Lead Magnet</li>
+          <li>Post-Job Review Automation</li>
+          <li>Follow-Up Sequences</li>
+          <li>Advanced Dashboard (ROI)</li>
+        </ul>
+      </div>
+      <div class="tier-card">
+        <div class="tier-name">Enterprise</div>
+        <div class="tier-price">$1,000<span>/mo</span></div>
+        <div class="tier-setup">$5,000 setup</div>
+        <ul class="tier-features">
+          <li>Everything in Professional</li>
+          <li>AI Chatbot (24/7 widget)</li>
+          <li>Sewer Repair Advisor</li>
+          <li>Septic Service Referrals</li>
+          <li>Multi-Location Support</li>
+          <li>White-Label Branding</li>
+          <li>Dedicated Account Manager</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Revenue Math -->
+    <div class="revenue-table">
+      <h4>📈 Revenue Projections</h4>
+      <table style="margin: 12px 0 0;">
+        <thead><tr><th>Scenario</th><th>Clients</th><th>Avg MRR</th><th>Monthly</th><th>Annual</th></tr></thead>
+        <tbody>
+          <tr><td>Conservative (Month 3)</td><td>5 Starter</td><td>$500</td><td>$2,500</td><td>$30,000</td></tr>
+          <tr><td>Growth (Month 6)</td><td>8 Starter + 4 Pro</td><td>$600</td><td>$7,000</td><td>$84,000</td></tr>
+          <tr><td><strong>Scale (Month 12)</strong></td><td><strong>15 Starter + 8 Pro + 2 Enterprise</strong></td><td><strong>$650</strong></td><td><strong>$18,500</strong></td><td><strong>$222,000</strong></td></tr>
+        </tbody>
+      </table>
+      <p style="font-size: 13px; margin-top: 8px;">Plus setup fees: 25 clients × $3,000 avg = $75,000. <strong>Conservative Year 1: $100K-$175K. Aggressive: $250K+.</strong></p>
+    </div>
+
+    <!-- Launch Timeline -->
+    <h2 class="section">🚀 Launch Sequence</h2>
+
+    <div class="timeline">
+      <div class="tl-item">
+        <div class="tl-dot">1</div>
+        <div class="tl-content">
+          <h4>Week 1-2: Ship the MVP</h4>
+          <p>Twilio verified + n8n workflow live. Quote tool + landing page hosted on plumblead.ai. Text 5 plumber contacts with free 30-day trial offer.</p>
+          <div class="goal">🎯 Goal: 3 beta plumbers signed up</div>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-dot">2</div>
+        <div class="tl-content">
+          <h4>Week 3-4: Prove the Model</h4>
+          <p>Optimize based on beta feedback. Collect data: response times, booking rates, revenue generated. Build first case study. Start CRM integration.</p>
+          <div class="goal">🎯 Goal: 1 plumber converts to paid</div>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-dot">3</div>
+        <div class="tl-content">
+          <h4>Month 2: Add the Moat</h4>
+          <p>Water treatment sales enablement polished. Smart water product guide + insurance mandate messaging. "Home Water Score" lead magnet. Professional tier available.</p>
+          <div class="goal">🎯 Goal: 5 paying clients</div>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-dot">4</div>
+        <div class="tl-content">
+          <h4>Month 3: Expand</h4>
+          <p>Sewer repair advisor. Septic referral network. Second market (Seattle). Google Ads targeting "plumbing lead generation software."</p>
+          <div class="goal">🎯 Goal: 10 paying clients, $5K+ MRR</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- What NOT to Do -->
+    <h2 class="section">🚫 What NOT to Do</h2>
+    <ul class="dont-list">
+      <li><strong>Don't build a septic marketplace first.</strong> Two-sided marketplace cold start is brutal. Expand there naturally from your plumber network.</li>
+      <li><strong>Don't try to be a CRM.</strong> ServiceTitan and Housecall Pro own that layer. PlumbLead sits IN FRONT of them.</li>
+      <li><strong>Don't go national before proving local.</strong> Phoenix first. Seattle second. Template and scale after.</li>
+      <li><strong>Don't build Voice AI yet.</strong> High effort, high complexity. SMS gets 80% of the value.</li>
+      <li><strong>Don't spread across trades.</strong> Stay plumbing. Water intelligence moat only works in plumbing.</li>
+      <li><strong>Don't sell irrigation.</strong> License issues, trade boundaries, low margin. Referral only.</li>
+    </ul>
+
+    <!-- The Moat -->
+    <h2 class="section">🏰 The Moat</h2>
+    <div class="moat-grid">
+      <div class="moat-item"><div class="moat-icon">🧪</div><div class="moat-label">Water Intelligence Data</div></div>
+      <div class="moat-item"><div class="moat-icon">📋</div><div class="moat-label">Regulatory Timing</div></div>
+      <div class="moat-item"><div class="moat-icon">🔗</div><div class="moat-label">Network Effects</div></div>
+      <div class="moat-item"><div class="moat-icon">🔬</div><div class="moat-label">Vertical Depth</div></div>
+      <div class="moat-item"><div class="moat-icon">⚗️</div><div class="moat-label">AquaOps Engine</div></div>
+    </div>
+
+    <!-- Verdict -->
+    <div class="verdict">
+      <h2>Ship Starter this week. Add Professional in Month 1-2. That's the business.</h2>
+      <p>The single biggest risk is not shipping. You have the domain, the code, the strategy, and the competitive analysis. The only remaining variable is execution.</p>
+      <div class="action">Go. 🚀</div>
+    </div>
+
+  </div>
+</body>
+</html>
