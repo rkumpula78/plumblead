@@ -1,0 +1,1682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plumber Pro — Water Treatment Lead Generator | ProMax Water Heaters</title>
+<style>
+:root {
+    --primary: #1e3a5f;
+    --accent: #e63946;
+    --light-bg: #f0f4f8;
+    --plumber-blue: #1e3a5f;
+    --plumber-light: #dbeafe;
+    --plumber-green: #059669;
+    --plumber-orange: #d97706;
+    --text: #1a1a2e;
+    --text-muted: #666;
+    --border: #ddd;
+    --bg: #fafafa;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    margin: 0;
+    padding: 20px;
+    background: var(--light-bg);
+    color: var(--text);
+    line-height: 1.6;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* Hero */
+.pp-hero {
+    background: linear-gradient(135deg, #1e3a5f 0%, #0077b6 100%);
+    color: #fff;
+    border-radius: 12px;
+    padding: 28px;
+    margin-bottom: 20px;
+}
+
+.pp-hero h2 {
+    margin: 0;
+    font-size: 1.4em;
+}
+
+.pp-hero p {
+    margin: 6px 0 0;
+    opacity: 0.85;
+    font-size: 0.92em;
+}
+
+/* Step Bar */
+.step-bar {
+    display: flex;
+    gap: 0;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+}
+
+.step {
+    flex: 1;
+    padding: 10px 14px;
+    text-align: center;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.88em;
+    transition: all 0.2s;
+    background: #fff;
+    color: var(--text-muted);
+}
+
+.step:not(:last-child) {
+    border-right: 1px solid var(--border);
+}
+
+.step.active {
+    background: var(--plumber-blue);
+    color: #fff;
+}
+
+.step.done {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.step-num {
+    font-size: 0.75em;
+    display: block;
+    margin-bottom: 2px;
+}
+
+/* Panels */
+.pp-panel {
+    display: none;
+}
+
+.pp-panel.active {
+    display: block;
+}
+
+/* Card */
+.card {
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    margin-bottom: 16px;
+}
+
+.card-header {
+    background: var(--plumber-blue);
+    color: #fff;
+    padding: 12px 16px;
+    font-weight: 700;
+    border-radius: 10px 10px 0 0;
+}
+
+.card-body {
+    padding: 16px;
+}
+
+/* Grid */
+.grid {
+    display: grid;
+    gap: 16px;
+}
+
+.grid-2 {
+    grid-template-columns: 1fr 1fr;
+}
+
+@media (max-width: 768px) {
+    .grid-2 {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Complaint Grid */
+.complaint-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 8px;
+}
+
+.complaint-btn {
+    padding: 12px;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s;
+    font-size: 0.88em;
+    background: #fff;
+}
+
+.complaint-btn:hover {
+    border-color: var(--plumber-blue);
+    background: var(--plumber-light);
+}
+
+.complaint-btn.selected {
+    border-color: var(--plumber-blue);
+    background: var(--plumber-light);
+    font-weight: 700;
+}
+
+.complaint-icon {
+    font-size: 1.6em;
+    display: block;
+    margin-bottom: 4px;
+}
+
+/* Field Row */
+.field-row {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 8px;
+    align-items: center;
+}
+
+.field-row label {
+    width: 140px;
+    font-weight: 600;
+    font-size: 0.88em;
+    flex-shrink: 0;
+}
+
+.field-row input,
+.field-row select {
+    flex: 1;
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+}
+
+.form-group {
+    margin-bottom: 12px;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 600;
+    font-size: 0.88em;
+    margin-bottom: 4px;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+}
+
+.form-group small {
+    display: block;
+    font-size: 0.8em;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+
+/* Solutions */
+.solution-card {
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 12px;
+    transition: all 0.2s;
+    background: #fff;
+}
+
+.solution-card.recommended {
+    border-color: var(--plumber-green);
+    background: #f0fdf4;
+}
+
+.solution-card.optional {
+    border-color: var(--plumber-orange);
+    background: #fffbeb;
+}
+
+.sol-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.sol-title {
+    font-weight: 700;
+    font-size: 1.05em;
+}
+
+.sol-badge {
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.75em;
+    font-weight: 700;
+}
+
+.sol-badge.rec {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.sol-badge.opt {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.sol-why {
+    font-size: 0.88em;
+    color: var(--text);
+    margin: 8px 0;
+    line-height: 1.5;
+}
+
+/* Quote */
+.quote-line {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid #f0f0f0;
+    font-size: 0.92em;
+}
+
+.quote-line:last-child {
+    border-bottom: none;
+}
+
+.quote-total {
+    font-size: 1.3em;
+    font-weight: 700;
+    color: var(--plumber-blue);
+    padding: 12px 0;
+}
+
+/* Report */
+.report-preview {
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    padding: 24px;
+    background: #fff;
+}
+
+.report-logo {
+    text-align: center;
+    margin-bottom: 16px;
+}
+
+.report-section {
+    margin-bottom: 16px;
+}
+
+.report-section h4 {
+    color: var(--plumber-blue);
+    margin: 0 0 6px;
+    border-bottom: 2px solid var(--plumber-light);
+    padding-bottom: 4px;
+}
+
+/* Buttons */
+.btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.95em;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.btn-primary {
+    background: var(--plumber-blue);
+    color: #fff;
+}
+
+.btn-primary:hover {
+    background: #152942;
+}
+
+.btn-accent {
+    background: var(--accent);
+    color: #fff;
+}
+
+.btn-accent:hover {
+    background: #d62828;
+}
+
+.btn-outline {
+    background: #fff;
+    color: var(--plumber-blue);
+    border: 2px solid var(--plumber-blue);
+}
+
+.btn-outline:hover {
+    background: var(--plumber-light);
+}
+
+/* Reference Tables */
+.ref-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88em;
+    margin: 8px 0;
+}
+
+.ref-table thead {
+    background: var(--plumber-light);
+}
+
+.ref-table th,
+.ref-table td {
+    padding: 8px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+}
+
+.ref-table th {
+    font-weight: 700;
+}
+
+/* Equipment Reference */
+.eq-section {
+    margin-bottom: 32px;
+}
+
+.eq-section h3 {
+    color: var(--plumber-blue);
+    border-bottom: 2px solid var(--plumber-blue);
+    padding-bottom: 6px;
+    margin-top: 24px;
+}
+
+.eq-section h4 {
+    margin-top: 16px;
+    color: var(--plumber-blue);
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+<!-- ═══ HERO ═══ -->
+<div class="pp-hero">
+    <h2>🔧 Plumber Pro — Water Treatment Lead Generator</h2>
+    <p>Turn every service call into a water treatment opportunity. Test → Identify → Recommend → Quote → Close.</p>
+</div>
+
+<!-- ═══ STEP BAR ═══ -->
+<div class="step-bar">
+    <div class="step active" onclick="goStep(0)"><span class="step-num">1</span>Customer Info</div>
+    <div class="step" onclick="goStep(1)"><span class="step-num">2</span>Complaints</div>
+    <div class="step" onclick="goStep(2)"><span class="step-num">3</span>Water Test</div>
+    <div class="step" onclick="goStep(3)"><span class="step-num">4</span>Solutions</div>
+    <div class="step" onclick="goStep(4)"><span class="step-num">5</span>Quote</div>
+    <div class="step" onclick="goStep(5)"><span class="step-num">6</span>Report</div>
+</div>
+
+<!-- ════════════════════════════════════════ -->
+<!-- STEP 1: CUSTOMER INFO                    -->
+<!-- ════════════════════════════════════════ -->
+<div class="pp-panel active" id="step-0">
+<div class="grid grid-2">
+<div class="card">
+    <div class="card-header">👤 Customer Information</div>
+    <div class="card-body">
+        <div class="field-row"><label>Customer Name</label><input type="text" id="cust-name" placeholder="John & Jane Smith"></div>
+        <div class="field-row"><label>Address</label><input type="text" id="cust-address" placeholder="123 Main St, Bellevue, WA"></div>
+        <div class="field-row"><label>Phone</label><input type="tel" id="cust-phone" placeholder="(425) 555-1234"></div>
+        <div class="field-row"><label>Email</label><input type="email" id="cust-email" placeholder="john@email.com"></div>
+        <div class="field-row"><label>Property Type</label>
+            <select id="cust-type" onchange="updatePropertyDefaults()">
+                <option value="home-small">Home (1-2 bath)</option>
+                <option value="home-medium" selected>Home (3-4 bath)</option>
+                <option value="home-large">Home (5+ bath)</option>
+                <option value="condo">Condo / Townhome</option>
+                <option value="restaurant">Restaurant</option>
+                <option value="salon">Salon / Spa</option>
+                <option value="laundry">Laundromat</option>
+                <option value="office">Office Building</option>
+                <option value="hotel">Hotel / Motel</option>
+                <option value="church">Church / Community Center</option>
+            </select>
+        </div>
+        <div class="field-row"><label>Occupants / Users</label><input type="number" id="cust-occupants" value="4" step="1"></div>
+        <div class="field-row"><label>Water Source</label>
+            <select id="cust-source">
+                <option value="municipal" selected>City / Municipal</option>
+                <option value="well">Private Well</option>
+                <option value="community-well">Community Well</option>
+            </select>
+        </div>
+        <div class="field-row"><label>Existing Treatment?</label>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;" id="existing-treatment-grid">
+                <div class="complaint-btn selected" data-eid="none" onclick="toggleExisting(this)" style="padding:8px 12px;font-size:0.82em;">✅ None</div>
+                <div class="complaint-btn" data-eid="softener-old" onclick="toggleExisting(this)" style="padding:8px 12px;font-size:0.82em;">💧 Old softener (not working)</div>
+                <div class="complaint-btn" data-eid="softener-working" onclick="toggleExisting(this)" style="padding:8px 12px;font-size:0.82em;">💧 Working softener</div>
+                <div class="complaint-btn" data-eid="tac" onclick="toggleExisting(this)" style="padding:8px 12px;font-size:0.82em;">🔮 TAC / salt-free system</div>
+                <div class="complaint-btn" data-eid="ro-only" onclick="toggleExisting(this)" style="padding:8px 12px;font-size:0.82em;">💎 RO at kitchen sink</div>
+                <div class="complaint-btn" data-eid="filter-carbon" onclick="toggleExisting(this)" style="padding:8px 12px;font-size:0.82em;">🧊 Whole-house carbon filter</div>
+                <div class="complaint-btn" data-eid="filter-sediment" onclick="toggleExisting(this)" style="padding:8px 12px;font-size:0.82em;">🏜️ Sediment filter</div>
+                <div class="complaint-btn" data-eid="filter-iron" onclick="toggleExisting(this)" style="padding:8px 12px;font-size:0.82em;">🟤 Iron filter</div>
+                <div class="complaint-btn" data-eid="uv" onclick="toggleExisting(this)" style="padding:8px 12px;font-size:0.82em;">☀️ UV disinfection</div>
+                <div class="complaint-btn" data-eid="tank" onclick="toggleExisting(this)" style="padding:8px 12px;font-size:0.82em;">🪣 Storage tank</div>
+                <div class="complaint-btn" data-eid="unknown" onclick="toggleExisting(this)" style="padding:8px 12px;font-size:0.82em;">❓ Don't know</div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="card">
+    <div class="card-header">🔧 Your Company Info</div>
+    <div class="card-body">
+        <div class="field-row"><label>Company Name</label><input type="text" id="co-name" value="ProMax Water Heaters & Plumbing"></div>
+        <div class="field-row"><label>Tech Name</label><input type="text" id="co-tech" placeholder="Your Name"></div>
+        <div class="field-row"><label>Phone</label><input type="tel" id="co-phone" value="(425) 495-1961"></div>
+        <div class="field-row"><label>License #</label><input type="text" id="co-license" placeholder="WA Contractor License"></div>
+        <div class="field-row"><label>Default Markup %</label><input type="number" id="co-markup" value="50" step="5" min="0" max="200"></div>
+        <div style="margin-top:12px;padding:10px;background:var(--plumber-light);border-radius:6px;font-size:0.85em;">
+            💡 <strong>Tip:</strong> Your info is saved in this browser. Fill it once and it auto-populates on every new lead.
+        </div>
+        <button class="btn btn-outline" style="margin-top:8px;" onclick="saveCompanyInfo()">💾 Save My Info</button>
+    </div>
+</div>
+</div>
+<div style="text-align:right;margin-top:12px;">
+    <button class="btn btn-primary" onclick="goStep(1)">Next → Customer Complaints</button>
+</div>
+</div>
+
+<!-- ════════════════════════════════════════ -->
+<!-- STEP 2: COMPLAINTS / SYMPTOMS            -->
+<!-- ════════════════════════════════════════ -->
+<div class="pp-panel" id="step-1">
+<div class="card">
+    <div class="card-header">🗣️ What is the customer experiencing? <span style="font-weight:400;font-size:0.85em;">(select all that apply)</span></div>
+    <div class="card-body">
+        <div class="complaint-grid" id="complaints">
+            <div class="complaint-btn" data-id="spots" onclick="toggleComplaint(this)"><span class="complaint-icon">💧</span>White spots on dishes/glass</div>
+            <div class="complaint-btn" data-id="buildup" onclick="toggleComplaint(this)"><span class="complaint-icon">🪨</span>Scale buildup on faucets/showerheads</div>
+            <div class="complaint-btn" data-id="skin" onclick="toggleComplaint(this)"><span class="complaint-icon">🧴</span>Dry skin / dull hair after showering</div>
+            <div class="complaint-btn" data-id="soap" onclick="toggleComplaint(this)"><span class="complaint-icon">🧼</span>Soap doesn't lather / film on surfaces</div>
+            <div class="complaint-btn" data-id="staining-rust" onclick="toggleComplaint(this)"><span class="complaint-icon">🟤</span>Rust / brown staining on fixtures</div>
+            <div class="complaint-btn" data-id="staining-blue" onclick="toggleComplaint(this)"><span class="complaint-icon">🔵</span>Blue-green staining (copper)</div>
+            <div class="complaint-btn" data-id="taste-chlorine" onclick="toggleComplaint(this)"><span class="complaint-icon">👃</span>Chlorine taste / smell</div>
+            <div class="complaint-btn" data-id="taste-metal" onclick="toggleComplaint(this)"><span class="complaint-icon">🥄</span>Metallic taste</div>
+            <div class="complaint-btn" data-id="taste-sulfur" onclick="toggleComplaint(this)"><span class="complaint-icon">🥚</span>Rotten egg smell (sulfur)</div>
+            <div class="complaint-btn" data-id="cloudy" onclick="toggleComplaint(this)"><span class="complaint-icon">🌫️</span>Cloudy / milky water</div>
+            <div class="complaint-btn" data-id="sediment" onclick="toggleComplaint(this)"><span class="complaint-icon">🏜️</span>Sand / sediment in water</div>
+            <div class="complaint-btn" data-id="appliance" onclick="toggleComplaint(this)"><span class="complaint-icon">🔥</span>Water heater problems (short life, noise)</div>
+            <div class="complaint-btn" data-id="laundry" onclick="toggleComplaint(this)"><span class="complaint-icon">👕</span>Dingy / stiff laundry</div>
+            <div class="complaint-btn" data-id="pipes" onclick="toggleComplaint(this)"><span class="complaint-icon">🔩</span>Corroded / leaking pipes</div>
+            <div class="complaint-btn" data-id="heater-cost" onclick="toggleComplaint(this)"><span class="complaint-icon">💰</span>High energy bills (water heater)</div>
+            <div class="complaint-btn" data-id="health" onclick="toggleComplaint(this)"><span class="complaint-icon">⚕️</span>Health concerns (lead, bacteria, contaminants)</div>
+            <div class="complaint-btn" data-id="pfas" onclick="toggleComplaint(this)"><span class="complaint-icon">☢️</span>PFAS / forever chemicals concern</div>
+            <div class="complaint-btn" data-id="arsenic" onclick="toggleComplaint(this)"><span class="complaint-icon">⚛️</span>Arsenic concern (well water)</div>
+            <div class="complaint-btn" data-id="nitrate" onclick="toggleComplaint(this)"><span class="complaint-icon">🍼</span>Nitrate concern (well / infant in home)</div>
+            <div class="complaint-btn" data-id="lead" onclick="toggleComplaint(this)"><span class="complaint-icon">🏚️</span>Lead pipe concern (pre-1960 home)</div>
+            <div class="complaint-btn" data-id="ro-drinking" onclick="toggleComplaint(this)"><span class="complaint-icon">🚰</span>Wants better drinking water</div>
+            <div class="complaint-btn" data-id="none" onclick="toggleComplaint(this)"><span class="complaint-icon">✅</span>No complaints — proactive test</div>
+        </div>
+    </div>
+</div>
+<div style="display:flex;justify-content:space-between;margin-top:12px;">
+    <button class="btn btn-outline" onclick="goStep(0)">← Back</button>
+    <button class="btn btn-primary" onclick="goStep(2)">Next → Water Test</button>
+</div>
+</div>
+
+<!-- ════════════════════════════════════════ -->
+<!-- STEP 3: WATER TEST                       -->
+<!-- ════════════════════════════════════════ -->
+<div class="pp-panel" id="step-2">
+<div class="grid grid-2">
+<div class="card">
+    <div class="card-header">🧪 Field Water Test Results</div>
+    <div class="card-body">
+        <p style="font-size:0.85em;color:var(--text-muted);margin-bottom:12px;">Enter results from your field test kit. Minimum: hardness + pH + TDS. More data = better recommendations.</p>
+        <div class="grid grid-2">
+            <div class="form-group">
+                <label>Total Hardness (gpg) *</label>
+                <input type="number" id="test-hardness" value="" step="0.1" placeholder="1.3">
+                <small style="color:var(--text-muted);">Seattle typical: 1-2 gpg (soft)</small>
+            </div>
+            <div class="form-group">
+                <label>pH *</label>
+                <input type="number" id="test-ph" value="" step="0.1" placeholder="8.0">
+                <small style="color:var(--text-muted);">Seattle typical: 7.8-8.2</small>
+            </div>
+            <div class="form-group">
+                <label>TDS (ppm)</label>
+                <input type="number" id="test-tds" value="" step="10" placeholder="40">
+                <small style="color:var(--text-muted);">Seattle typical: 30-60 ppm</small>
+            </div>
+            <div class="form-group">
+                <label>Iron (mg/L)</label>
+                <input type="number" id="test-iron" value="" step="0.1" placeholder="0.0">
+                <small style="color:var(--text-muted);">Seattle typical: trace</small>
+            </div>
+            <div class="form-group">
+                <label>Free Chlorine (mg/L)</label>
+                <input type="number" id="test-chlorine" value="" step="0.1" placeholder="0.8">
+                <small style="color:var(--text-muted);">Seattle typical: 0.6-1.0</small>
+            </div>
+            <div class="form-group">
+                <label>Nitrate (mg/L)</label>
+                <input type="number" id="test-nitrate" value="" step="1" placeholder="">
+                <small style="color:var(--text-muted);">Well water concern</small>
+            </div>
+        </div>
+        <div style="margin-top:8px;">
+            <button class="btn btn-outline" onclick="loadSeattleTest()" style="padding:6px 12px;font-size:0.82em;">🌲 Load Seattle Typical</button>
+        </div>
+    </div>
+</div>
+<div class="card">
+    <div class="card-header">📊 Quick Analysis</div>
+    <div class="card-body" id="quick-analysis" style="min-height:200px;">
+        <p style="color:var(--text-muted);text-align:center;padding:40px;">Enter test results to see instant analysis.</p>
+    </div>
+</div>
+</div>
+<div style="display:flex;justify-content:space-between;margin-top:12px;">
+    <button class="btn btn-outline" onclick="goStep(1)">← Back</button>
+    <button class="btn btn-primary" onclick="analyzeLead()">Analyze & Recommend →</button>
+</div>
+</div>
+
+<!-- ════════════════════════════════════════ -->
+<!-- STEP 4: SOLUTIONS                        -->
+<!-- ════════════════════════════════════════ -->
+<div class="pp-panel" id="step-3">
+<div class="card">
+    <div class="card-header">💡 Recommended Solutions</div>
+    <div class="card-body" id="solutions-list">
+        <p style="color:var(--text-muted);text-align:center;padding:40px;">Complete the water test to see recommendations.</p>
+    </div>
+</div>
+<div style="display:flex;justify-content:space-between;margin-top:12px;">
+    <button class="btn btn-outline" onclick="goStep(2)">← Back</button>
+    <button class="btn btn-primary" onclick="buildQuote()">Build Quote →</button>
+</div>
+</div>
+
+<!-- ════════════════════════════════════════ -->
+<!-- STEP 5: QUOTE BUILDER                    -->
+<!-- ════════════════════════════════════════ -->
+<div class="pp-panel" id="step-4">
+<div class="grid grid-2">
+<div class="card">
+    <div class="card-header">💰 Quote Builder</div>
+    <div class="card-body" id="quote-lines"></div>
+</div>
+<div>
+    <div class="card">
+        <div class="card-header">📋 Quote Summary</div>
+        <div class="card-body" id="quote-summary">
+            <p style="color:var(--text-muted);text-align:center;">Build your quote to see totals.</p>
+        </div>
+    </div>
+    <div class="card" style="margin-top:12px;">
+        <div class="card-header">💬 Sales Talking Points</div>
+        <div class="card-body" id="talking-points" style="font-size:0.9em;line-height:1.7;"></div>
+    </div>
+</div>
+</div>
+<div style="display:flex;justify-content:space-between;margin-top:12px;">
+    <button class="btn btn-outline" onclick="goStep(3)">← Back</button>
+    <button class="btn btn-primary" onclick="generateReport()">Generate Customer Report →</button>
+</div>
+</div>
+
+<!-- ════════════════════════════════════════ -->
+<!-- STEP 6: CUSTOMER REPORT                  -->
+<!-- ════════════════════════════════════════ -->
+<div class="pp-panel" id="step-5">
+<div style="text-align:center;margin-bottom:16px;">
+    <button class="btn btn-primary" onclick="printReport()">🖨️ Print Report</button>
+    <button class="btn btn-accent" onclick="exportReportHTML()">📄 Export as PDF-ready HTML</button>
+</div>
+<div class="report-preview" id="report-preview">
+    <p style="color:var(--text-muted);text-align:center;">Generate report from the Quote step.</p>
+</div>
+<div style="display:flex;justify-content:space-between;margin-top:12px;">
+    <button class="btn btn-outline" onclick="goStep(4)">← Back</button>
+    <button class="btn btn-primary" onclick="newLead()">🔄 New Lead</button>
+</div>
+</div>
+
+<!-- ════════════════════════════════════════ -->
+<!-- RESIDENTIAL EQUIPMENT REFERENCE          -->
+<!-- ════════════════════════════════════════ -->
+<div style="margin-top:40px;border-top:4px solid var(--plumber-blue);padding-top:24px;">
+<h2 style="text-align:center;color:var(--plumber-blue);">🔧 Residential Equipment Reference Guide</h2>
+<p style="text-align:center;color:var(--text-muted);margin-bottom:24px;">Complete product knowledge for water treatment professionals and plumbers — Seattle/WA Market</p>
+
+<div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:20px;">
+    <button class="btn btn-outline" onclick="showEqRef('all')" id="eqref-all" style="font-size:0.85em;">All</button>
+    <button class="btn btn-outline" onclick="showEqRef('heaters')" id="eqref-heaters" style="font-size:0.85em;">🔥 Water Heaters</button>
+    <button class="btn btn-outline" onclick="showEqRef('softeners')" id="eqref-softeners" style="font-size:0.85em;">💧 Softeners</button>
+    <button class="btn btn-outline" onclick="showEqRef('tac')" id="eqref-tac" style="font-size:0.85em;">🔮 TAC / Salt-Free</button>
+    <button class="btn btn-outline" onclick="showEqRef('filters')" id="eqref-filters" style="font-size:0.85em;">🧊 Filters</button>
+    <button class="btn btn-outline" onclick="showEqRef('ro')" id="eqref-ro" style="font-size:0.85em;">💎 RO Systems</button>
+    <button class="btn btn-outline" onclick="showEqRef('plumbing')" id="eqref-plumbing" style="font-size:0.85em;">🔩 Plumbing</button>
+</div>
+
+<!-- ── WATER HEATERS ── -->
+<div class="eq-section" data-eqref="heaters">
+<h3>🔥 Water Heaters</h3>
+
+<div class="grid grid-2">
+<div>
+<div class="card">
+    <div class="card-header">Tank Water Heaters (Standard)</div>
+    <div class="card-body" style="font-size:0.88em;line-height:1.7;">
+        <table class="ref-table">
+            <thead><tr><th>Size</th><th>Best For</th><th>Recovery (gas)</th><th>Equipment</th><th>Installed</th></tr></thead>
+            <tbody>
+                <tr><td><strong>30 gal</strong></td><td>1-2 people, condo</td><td>30 GPH</td><td>$400-500</td><td>$1,200-1,500</td></tr>
+                <tr><td><strong>40 gal</strong></td><td>2-3 people</td><td>40 GPH</td><td>$500-650</td><td>$1,400-1,800</td></tr>
+                <tr><td><strong>50 gal</strong></td><td>3-4 people</td><td>43 GPH</td><td>$600-800</td><td>$1,500-2,000</td></tr>
+                <tr><td><strong>75 gal</strong></td><td>5+ people, high demand</td><td>70 GPH</td><td>$1,000-1,400</td><td>$2,200-3,000</td></tr>
+            </tbody>
+        </table>
+        <p><strong>Top brands:</strong> A.O. Smith, Rheem/Ruud, Bradford White (wholesale only), State (A.O. Smith).</p>
+        <p><strong>Warranty tiers:</strong> 6-year (builder), 9-year (standard), 12-year (premium). Longer warranty = bigger anode rod + better glass lining.</p>
+        <div style="background:#d1fae5;padding:8px 12px;border-radius:6px;margin-top:8px;">
+            🌲 <strong>Seattle advantage:</strong> Soft water (1-2 gpg) means minimal scale buildup. Tank water heaters last longer here than in hard water areas. Annual flush still recommended for sediment.
+        </div>
+    </div>
+</div>
+
+<div class="card" style="margin-top:12px;">
+    <div class="card-header">Hybrid Heat Pump Water Heaters</div>
+    <div class="card-body" style="font-size:0.88em;line-height:1.7;">
+        <p><strong>3-4× more efficient</strong> than standard electric. Extracts heat from ambient air. Perfect for Seattle's mild climate.</p>
+        <table class="ref-table">
+            <thead><tr><th>Model</th><th>Size</th><th>UEF</th><th>Annual Cost</th><th>Equipment</th></tr></thead>
+            <tbody>
+                <tr><td><strong>Rheem ProTerra</strong></td><td>50/65/80 gal</td><td>3.55-4.07</td><td>~$120/yr</td><td>$1,400-1,800</td></tr>
+                <tr><td><strong>A.O. Smith Voltex</strong></td><td>50/66/80 gal</td><td>3.42-3.75</td><td>~$140/yr</td><td>$1,300-1,700</td></tr>
+                <tr><td><strong>GE GeoSpring</strong></td><td>50 gal</td><td>3.25</td><td>~$160/yr</td><td>$1,200-1,400</td></tr>
+            </tbody>
+        </table>
+        <div style="background:#d1fae5;padding:8px 12px;border-radius:6px;margin-top:8px;">
+            💰 <strong>Selling point:</strong> $370/yr savings vs standard electric. <strong>Federal tax credit up to $2,000</strong> (Energy Star). WA may have PSE/utility rebates available.
+        </div>
+    </div>
+</div>
+</div>
+<div>
+<div class="card">
+    <div class="card-header">Tankless Water Heaters</div>
+    <div class="card-body" style="font-size:0.88em;line-height:1.7;">
+        <table class="ref-table">
+            <thead><tr><th>Brand</th><th>Type</th><th>BTU / kW</th><th>GPM</th><th>Equipment</th><th>Installed</th></tr></thead>
+            <tbody>
+                <tr><td><strong>Rinnai RU199</strong></td><td>Gas condensing</td><td>199K BTU</td><td>11 GPM</td><td>$1,200-1,500</td><td>$3,000-4,200</td></tr>
+                <tr><td><strong>Navien NPE-2</strong></td><td>Gas condensing</td><td>199K BTU</td><td>11.2 GPM</td><td>$1,100-1,400</td><td>$2,800-4,000</td></tr>
+                <tr><td><strong>Noritz EZ111</strong></td><td>Gas condensing</td><td>199K BTU</td><td>11.1 GPM</td><td>$1,000-1,300</td><td>$2,700-3,800</td></tr>
+                <tr><td><strong>EcoSmart ECO 27</strong></td><td>Electric</td><td>27 kW</td><td>3 GPM*</td><td>$400-550</td><td>$1,200-1,800</td></tr>
+            </tbody>
+        </table>
+        <p style="font-size:0.85em;color:var(--text-muted);">*Electric GPM based on 50°F rise (Seattle groundwater ~50°F → 120°F output).</p>
+
+        <div style="background:#d1fae5;padding:8px 12px;border-radius:6px;margin-top:8px;">
+            ✅ <strong>Seattle advantage:</strong> SOFT water = minimal scale risk. Tankless systems excel here. No softener needed for scale protection (unlike hard water markets).
+        </div>
+
+        <p style="margin-top:8px;"><strong>Navien advantage:</strong> Built-in recirculation pump + buffer tank. Best overall value for Seattle installs.</p>
+    </div>
+</div>
+
+<div class="card" style="margin-top:12px;">
+    <div class="card-header">Recirculation Systems</div>
+    <div class="card-body" style="font-size:0.88em;line-height:1.7;">
+        <p><strong>Problem:</strong> Customer waits 30-90 seconds for hot water at far fixtures. Wastes 2-5 gallons per event.</p>
+        <table class="ref-table">
+            <thead><tr><th>System</th><th>Type</th><th>Cost Installed</th><th>Notes</th></tr></thead>
+            <tbody>
+                <tr><td><strong>Grundfos Comfort</strong></td><td>Dedicated return line</td><td>$600-1,000</td><td>Best performance. Requires return pipe.</td></tr>
+                <tr><td><strong>Watts 500800</strong></td><td>Under-sink pump</td><td>$300-500</td><td>No return line needed. Timer or on-demand.</td></tr>
+                <tr><td><strong>Navien built-in</strong></td><td>Integrated</td><td>Included</td><td>Built into NPE-2 series.</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- ── SOFTENERS ── -->
+<div class="eq-section" data-eqref="softeners">
+<h3>💧 Water Softeners (Ion Exchange)</h3>
+
+<div class="grid grid-2">
+<div>
+<div class="card">
+    <div class="card-header">Residential Softeners</div>
+    <div class="card-body" style="font-size:0.88em;line-height:1.7;">
+        <div style="background:#fef3c7;padding:12px;border-radius:6px;margin-bottom:12px;">
+            🌲 <strong>Seattle Reality Check:</strong> Seattle water is SOFT (1-2 gpg). Most homes <strong>DO NOT need a water softener</strong> for scale prevention. Softeners are optional upgrades for those who want the luxurious "slippery" soft-water feel.
+        </div>
+        <table class="ref-table">
+            <thead><tr><th>Capacity</th><th>Best For</th><th>Valve</th><th>Equipment</th><th>Installed</th></tr></thead>
+            <tbody>
+                <tr><td><strong>32K grain</strong></td><td>1-2 bath, 1-2 people</td><td>Fleck 5600SXT</td><td>$400-550</td><td>$1,000-1,200</td></tr>
+                <tr><td><strong>48K grain</strong></td><td>3-4 bath, 2-4 people</td><td>Fleck 5600SXT</td><td>$500-650</td><td>$1,200-1,500</td></tr>
+                <tr><td><strong>64K grain</strong></td><td>5+ bath, 4+ people</td><td>Clack WS1</td><td>$600-800</td><td>$1,400-1,800</td></tr>
+            </tbody>
+        </table>
+        <p style="margin-top:12px;"><strong>When to recommend in Seattle:</strong></p>
+        <ul style="padding-left:20px;">
+            <li>Customer SPECIFICALLY wants soft-water feel (slippery skin, less soap)</li>
+            <li>Customer has eczema or sensitive skin</li>
+            <li>Customer wants spot-free dishes without manual drying</li>
+            <li>Well water with elevated hardness (rare in Seattle area)</li>
+        </ul>
+    </div>
+</div>
+</div>
+<div>
+<div class="card">
+    <div class="card-header">Seattle Softener Sizing</div>
+    <div class="card-body" style="font-size:0.88em;line-height:1.7;">
+        <p><strong>Seattle city water:</strong> 1-2 gpg hardness. Even smallest softener is oversized.</p>
+        <div style="background:#eff6ff;padding:12px;border-radius:6px;">
+            <strong>Example:</strong> 1.5 gpg × 300 gal/day × 7 days = <strong>3,150 grains</strong><br>
+            → A 32K softener would go <strong>70+ days</strong> between regenerations (too long)<br>
+            → Set to time-clock mode: regen every 7-10 days regardless of capacity
+        </div>
+        <div style="background:#fef3c7;padding:8px 12px;border-radius:6px;margin-top:8px;">
+            ⚠️ <strong>Critical:</strong> In soft water, resin stagnation causes bacterial growth → rotten egg smell. Set frequent regens (7-10 days max) or use sanitizing resin cleaner quarterly.
+        </div>
+    </div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- ── TAC / SALT-FREE ── -->
+<div class="eq-section" data-eqref="tac">
+<h3>🔮 TAC — Template Assisted Crystallization (Salt-Free)</h3>
+
+<div class="grid grid-2">
+<div>
+<div class="card">
+    <div class="card-header">TAC in Seattle Context</div>
+    <div class="card-body" style="font-size:0.88em;line-height:1.7;">
+        <div style="background:#fee2e2;padding:12px;border-radius:6px;margin-bottom:12px;">
+            ⚠️ <strong>Seattle Reality:</strong> TAC systems prevent scale formation. But Seattle water is <strong>already soft</strong> (1-2 gpg) — scale is NOT a problem here. TAC systems have <strong>limited utility</strong> in the Seattle market for municipal water customers.
+        </div>
+        <p><strong>When TAC makes sense in Seattle:</strong></p>
+        <ul style="padding-left:20px;">
+            <li><strong>Well water with elevated hardness</strong> (rare, but exists in rural areas)</li>
+            <li><strong>Commercial/industrial applications</strong> with specific scale concerns</li>
+            <li>Customer philosophically opposed to salt-based softeners but has well water</li>
+        </ul>
+        <p><strong>Default recommendation:</strong> For Seattle municipal water, skip both softener AND TAC unless customer has specific preferences.</p>
+    </div>
+</div>
+</div>
+<div>
+<div class="card">
+    <div class="card-header">TAC Product Lines (if needed)</div>
+    <div class="card-body" style="font-size:0.88em;line-height:1.7;">
+        <table class="ref-table">
+            <thead><tr><th>Model</th><th>Flow</th><th>Equipment</th><th>Installed</th></tr></thead>
+            <tbody>
+                <tr><td><strong>Watts OneFlow OF110-1</strong></td><td>10 GPM</td><td>$300-400</td><td>$700-900</td></tr>
+                <tr><td><strong>Watts OneFlow OF110-2</strong></td><td>15 GPM</td><td>$450-600</td><td>$1,000-1,200</td></tr>
+                <tr><td><strong>Watts OneFlow OF110-3</strong></td><td>20 GPM</td><td>$600-800</td><td>$1,200-1,500</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- ── FILTERS ── -->
+<div class="eq-section" data-eqref="filters">
+<h3>🧊 Whole-House Filtration — SEATTLE PRIMARY FOCUS</h3>
+
+<div class="grid grid-2">
+<div>
+<div class="card">
+    <div class="card-header">Carbon Filters (Chlorine/Taste/Odor) — RECOMMENDED</div>
+    <div class="card-body" style="font-size:0.88em;line-height:1.7;">
+        <div style="background:#d1fae5;padding:12px;border-radius:6px;margin-bottom:12px;">
+            ✅ <strong>THIS IS THE MONEY MAKER IN SEATTLE.</strong> Seattle water is soft but chlorinated. Whole-house carbon filtration removes chlorine taste/odor and protects against chloramine exposure. High customer satisfaction.
+        </div>
+        <table class="ref-table">
+            <thead><tr><th>Type</th><th>Media</th><th>Equipment</th><th>Installed</th></tr></thead>
+            <tbody>
+                <tr><td><strong>Catalytic carbon backwash</strong></td><td>Centaur or Jacobi CX</td><td>$400-600</td><td>$900-1,300</td></tr>
+                <tr><td><strong>Carbon cartridge (Big Blue)</strong></td><td>20" carbon block</td><td>$100-150</td><td>$300-500</td></tr>
+            </tbody>
+        </table>
+        <p><strong>Seattle uses chloramines</strong> (more persistent than free chlorine). Catalytic carbon is essential for effective removal.</p>
+    </div>
+</div>
+
+<div class="card" style="margin-top:12px;">
+    <div class="card-header">Lead Filtration — CRITICAL FOR PRE-1960 HOMES</div>
+    <div class="card-body" style="font-size:0.88em;line-height:1.7;">
+        <div style="background:#fee2e2;padding:12px;border-radius:6px;margin-bottom:12px;">
+            🚨 <strong>Seattle has significant lead pipe risk</strong> in homes built before 1960. Lead service lines and lead solder were common. <strong>Always ask home age.</strong>
+        </div>
+        <p><strong>Solutions for lead:</strong></p>
+        <ul style="padding-left:20px;">
+            <li><strong>Point-of-use:</strong> NSF 53 certified faucet filter or under-sink filter ($50-200)</li>
+            <li><strong>Whole-house:</strong> KDF + catalytic carbon tank system ($800-1,200 installed)</li>
+            <li><strong>Ultimate:</strong> RO system removes 95%+ lead ($350-600 installed)</li>
+        </ul>
+        <p><strong>Recommendation script:</strong> "Your home was built in [year]. Seattle homes from that era often have lead pipes or solder. Let's test your water and discuss lead filtration options to protect your family."</p>
+    </div>
+</div>
+</div>
+<div>
+<div class="card">
+    <div class="card-header">PFAS Removal — GROWING CONCERN</div>
+    <div class="card-body" style="font-size:0.88em;line-height:1.7;">
+        <div style="background:#fef3c7;padding:12px;border-radius:6px;margin-bottom:12px;">
+            ⚠️ <strong>PFAS in Seattle water:</strong> Recent testing has detected PFAS (forever chemicals) in some Seattle-area water supplies, especially near industrial areas and military bases (Boeing, JBLM). Growing consumer awareness.
+        </div>
+        <p><strong>PFAS removal options:</strong></p>
+        <table class="ref-table">
+            <thead><tr><th>Solution</th><th>Effectiveness</th><th>Cost Installed</th></tr></thead>
+            <tbody>
+                <tr><td><strong>RO system (under-sink)</strong></td><td>95%+ removal (NSF 58)</td><td>$350-600</td></tr>
+                <tr><td><strong>Activated carbon (catalytic)</strong></td><td>70-90% (long-chain PFAS)</td><td>$900-1,500</td></tr>
+                <tr><td><strong>Pitcher/faucet filter (NSF 53)</strong></td><td>Varies by brand</td><td>$100-200</td></tr>
+            </tbody>
+        </table>
+        <p><strong>Best approach:</strong> RO for drinking water + whole-house carbon for comprehensive protection.</p>
+    </div>
+</div>
+
+<div class="card" style="margin-top:12px;">
+    <div class="card-header">Seattle Combo System (Best Seller)</div>
+    <div class="card-body" style="font-size:0.88em;line-height:1.7;">
+        <div style="background:#f3f4f6;padding:12px;border-radius:6px;font-family:monospace;font-size:0.85em;">
+            City Water In<br>
+            → [Stage 1] Sediment pre-filter (5µm) — $80<br>
+            → [Stage 2] Whole-house catalytic carbon (chlorine/chloramine) — $450<br>
+            → [Stage 3] Under-sink RO (PFAS/lead/TDS) — $250<br>
+            ─────────────────<br>
+            Total: $780 equipment / $1,500-2,000 installed<br>
+            <strong>NO SOFTENER NEEDED</strong> (Seattle water already soft)
+        </div>
+        <div style="background:#d1fae5;padding:8px 12px;border-radius:6px;margin-top:8px;">
+            💰 <strong>Seattle market pricing:</strong> ~20% higher labor rates than national average. This system installs for $1,800-2,400. At 40% margin, that's $700-1,000 profit per install.
+        </div>
+    </div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- ── RO SYSTEMS ── -->
+<div class="eq-section" data-eqref="ro">
+<h3>💎 Reverse Osmosis (Drinking Water) — HIGH DEMAND IN SEATTLE</h3>
+
+<div class="grid grid-2">
+<div>
+<div class="card">
+    <div class="card-header">Under-Sink RO Systems</div>
+    <div class="card-body" style="font-size:0.88em;line-height:1.7;">
+        <div style="background:#d1fae5;padding:12px;border-radius:6px;margin-bottom:12px;">
+            💎 <strong>RO is the PRIMARY upsell in Seattle.</strong> Removes PFAS, lead, chlorine taste, and trace contaminants. Seattle customers are health-conscious and willing to invest in clean drinking water.
+        </div>
+        <table class="ref-table">
+            <thead><tr><th>System</th><th>Stages</th><th>GPD</th><th>Features</th><th>Equipment</th><th>Installed</th></tr></thead>
+            <tbody>
+                <tr><td><strong>iSpring RCC7</strong></td><td>5</td><td>75</td><td>Budget workhorse</td><td>$150-200</td><td>$420-600</td></tr>
+                <tr><td><strong>APEC ROES-50</strong></td><td>5</td><td>50</td><td>US-made, premium</td><td>$180-230</td><td>$480-660</td></tr>
+                <tr><td><strong>Waterdrop G3P800</strong></td><td>3</td><td>800</td><td>Tankless, instant, TDS display</td><td>$400-500</td><td>$720-900</td></tr>
+                <tr><td><strong>iSpring RCC7AK</strong></td><td>6</td><td>75</td><td>Alkaline remineralization</td><td>$200-260</td><td>$480-700</td></tr>
+            </tbody>
+        </table>
+        <p style="margin-top:8px;"><strong>Filter replacement:</strong> $50-80/year (cartridges + membrane).</p>
+    </div>
+</div>
+</div>
+<div>
+<div class="card">
+    <div class="card-header">RO Sales Script for Seattle</div>
+    <div class="card-body" style="font-size:0.88em;line-height:1.7;">
+        <p><strong>"Here's what Seattle water has that you might not want:"</strong></p>
+        <ul style="padding-left:20px;line-height:1.8;">
+            <li>✅ <strong>Chlorine/chloramines</strong> — tastes bad, smells like pool water</li>
+            <li>✅ <strong>PFAS</strong> — forever chemicals detected in Seattle-area water</li>
+            <li>✅ <strong>Lead risk</strong> — if your home was built before 1960, lead pipes/solder likely</li>
+            <li>✅ <strong>Trace pharmaceuticals</strong> — municipal water contains trace amounts</li>
+            <li>✅ <strong>Microplastics</strong> — present in all municipal supplies</li>
+        </ul>
+        <p style="margin-top:12px;"><strong>"An RO system removes 95%+ of all that."</strong> Crystal-clear drinking water, better than any bottled water. And it pays for itself — the average Seattle family spends $600/year on bottled water.</p>
+    </div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- ── PLUMBING ── -->
+<div class="eq-section" data-eqref="plumbing">
+<h3>🔩 Plumbing Components & Services</h3>
+
+<div class="grid grid-2">
+<div>
+<div class="card">
+    <div class="card-header">Pipe Materials & Repiping — SEATTLE CONTEXT</div>
+    <div class="card-body" style="font-size:0.88em;line-height:1.7;">
+        <table class="ref-table">
+            <thead><tr><th>Material</th><th>Status</th><th>Action</th></tr></thead>
+            <tbody>
+                <tr><td><strong>Copper</strong></td><td>Standard. Good for 50+ years.</td><td>Monitor for pinhole leaks in older homes.</td></tr>
+                <tr><td><strong>PEX-A (Uponor)</strong></td><td>Modern standard. Freeze-resistant.</td><td>Best repipe option for Seattle.</td></tr>
+                <tr><td><strong>Galvanized steel</strong></td><td>⚠️ Pre-1960. Corroding.</td><td>Repipe immediately. Low pressure, rust, contamination.</td></tr>
+                <tr><td><strong>Lead (service line)</strong></td><td>🚨 Pre-1960 Seattle homes.</td><td><strong>CRITICAL:</strong> Test water. Notify customer. Replace or filter.</td></tr>
+            </tbody>
+        </table>
+        <div style="background:#fee2e2;padding:8px 12px;border-radius:6px;margin-top:8px;">
+            🚨 <strong>Seattle lead pipe alert:</strong> Many pre-1960 Seattle homes (Ballard, Capitol Hill, Queen Anne, Fremont) have lead service lines or lead solder. ALWAYS ask home age. If pre-1960, recommend water test + lead filtration.
+        </div>
+    </div>
+</div>
+
+<div class="card" style="margin-top:12px;">
+    <div class="card-header">Pressure Management</div>
+    <div class="card-body" style="font-size:0.88em;line-height:1.7;">
+        <table class="ref-table">
+            <thead><tr><th>Component</th><th>When</th><th>Equipment</th><th>Installed</th></tr></thead>
+            <tbody>
+                <tr><td><strong>PRV (Pressure Reducing Valve)</strong></td><td>Incoming &gt;80 PSI. Code requirement.</td><td>$50-100</td><td>$300-500</td></tr>
+                <tr><td><strong>Thermal Expansion Tank</strong></td><td>Required with PRV (closed system).</td><td>$40-80</td><td>$250-400</td></tr>
+            </tbody>
+        </table>
+        <p><strong>Seattle water pressure:</strong> Varies by neighborhood. Typically 50-80 PSI. Hill areas (Capitol Hill, Queen Anne) often need PRVs.</p>
+    </div>
+</div>
+</div>
+<div>
+<div class="card">
+    <div class="card-header">Leak Detection & Protection</div>
+    <div class="card-body" style="font-size:0.88em;line-height:1.7;">
+        <table class="ref-table">
+            <thead><tr><th>System</th><th>What It Does</th><th>Cost Installed</th></tr></thead>
+            <tbody>
+                <tr><td><strong>Flo by Moen</strong></td><td>Smart shutoff, leak detection, app alerts</td><td>$720-1,100</td></tr>
+                <tr><td><strong>Phyn Plus</strong></td><td>Ultrasonic monitoring, insurance discounts</td><td>$600-1,000</td></tr>
+            </tbody>
+        </table>
+        <div style="background:#d1fae5;padding:8px 12px;border-radius:6px;margin-top:8px;">
+            💧 <strong>Seattle rain = water damage risk.</strong> Many insurers offer 10-15% discounts for whole-house leak detection. Pays for itself in 4-6 years in premium savings alone.
+        </div>
+    </div>
+</div>
+
+<div class="card" style="margin-top:12px;">
+    <div class="card-header">Maintenance Services Menu</div>
+    <div class="card-body" style="font-size:0.88em;line-height:1.7;">
+        <table class="ref-table">
+            <thead><tr><th>Service</th><th>Frequency</th><th>Seattle Price</th><th>Time</th></tr></thead>
+            <tbody>
+                <tr><td><strong>Water heater flush + anode check</strong></td><td>Annual</td><td>$180-240</td><td>45 min</td></tr>
+                <tr><td><strong>RO filter change + sanitize</strong></td><td>Annual</td><td>$150-210</td><td>30 min</td></tr>
+                <tr><td><strong>Whole-house filter change</strong></td><td>6-12 mo</td><td>$90-150</td><td>15 min</td></tr>
+                <tr><td><strong>Full water test (lead/PFAS/minerals)</strong></td><td>Annual</td><td>$75-125</td><td>20 min</td></tr>
+            </tbody>
+        </table>
+        <p style="font-size:0.85em;color:var(--text-muted);margin-top:8px;">Prices reflect Seattle metro labor rates (~20% above national average).</p>
+    </div>
+</div>
+</div>
+</div>
+</div>
+
+</div>
+
+</div>
+
+<script>
+// ═══ EQUIPMENT REFERENCE FILTER ═══
+function showEqRef(cat) {
+    document.querySelectorAll('.eq-section').forEach(s => {
+        s.style.display = (cat === 'all' || s.dataset.eqref === cat) ? '' : 'none';
+    });
+    document.querySelectorAll('[id^="eqref-"]').forEach(b => {
+        b.style.background = '';
+        b.style.color = '';
+    });
+    const activeBtn = document.getElementById('eqref-' + cat);
+    if (activeBtn) {
+        activeBtn.style.background = 'var(--plumber-blue)';
+        activeBtn.style.color = '#fff';
+    }
+}
+
+// ═══ STATE ═══
+let currentStep = 0;
+let selectedComplaints = new Set();
+let selectedExisting = new Set(['none']);
+let solutions = [];
+let quoteItems = [];
+
+// ═══ EXISTING TREATMENT MULTI-SELECT ═══
+function toggleExisting(btn) {
+    const id = btn.dataset.eid;
+    if (id === 'none' || id === 'unknown') {
+        selectedExisting.clear();
+        document.querySelectorAll('[data-eid]').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        selectedExisting.add(id);
+        return;
+    }
+    document.querySelector('[data-eid="none"]')?.classList.remove('selected');
+    document.querySelector('[data-eid="unknown"]')?.classList.remove('selected');
+    selectedExisting.delete('none');
+    selectedExisting.delete('unknown');
+
+    if (selectedExisting.has(id)) {
+        selectedExisting.delete(id);
+        btn.classList.remove('selected');
+    } else {
+        selectedExisting.add(id);
+        btn.classList.add('selected');
+    }
+    if (selectedExisting.size === 0) {
+        document.querySelector('[data-eid="none"]').classList.add('selected');
+        selectedExisting.add('none');
+    }
+}
+
+function getExistingLabels() {
+    const labels = {
+        'none':'None', 'softener-old':'Old softener (not working)', 'softener-working':'Working softener',
+        'tac':'TAC / salt-free system', 'ro-only':'RO at kitchen sink', 'filter-carbon':'Whole-house carbon filter',
+        'filter-sediment':'Sediment filter', 'filter-iron':'Iron filter', 'uv':'UV disinfection',
+        'tank':'Storage tank', 'unknown':"Don't know"
+    };
+    return [...selectedExisting].filter(e => e !== 'none' && e !== 'unknown').map(e => labels[e] || e);
+}
+
+// ═══ NAVIGATION ═══
+function goStep(n) {
+    currentStep = n;
+    document.querySelectorAll('.pp-panel').forEach((p,i) => p.classList.toggle('active', i===n));
+    document.querySelectorAll('.step').forEach((s,i) => {
+        s.classList.remove('active','done');
+        if (i === n) s.classList.add('active');
+        else if (i < n) s.classList.add('done');
+    });
+    window.scrollTo({top:0,behavior:'smooth'});
+    if (n === 2) updateQuickAnalysis();
+}
+
+// ═══ COMPLAINTS ═══
+function toggleComplaint(btn) {
+    const id = btn.dataset.id;
+    if (id === 'none') {
+        selectedComplaints.clear();
+        document.querySelectorAll('.complaint-btn').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        selectedComplaints.add('none');
+        return;
+    }
+    document.querySelector('[data-id="none"]')?.classList.remove('selected');
+    selectedComplaints.delete('none');
+
+    if (selectedComplaints.has(id)) {
+        selectedComplaints.delete(id);
+        btn.classList.remove('selected');
+    } else {
+        selectedComplaints.add(id);
+        btn.classList.add('selected');
+    }
+}
+
+// ═══ WATER TEST ═══
+function v(id) { return parseFloat(document.getElementById(id).value) || 0; }
+
+function loadSeattleTest() {
+    document.getElementById('test-hardness').value = 1.3;
+    document.getElementById('test-ph').value = 8.0;
+    document.getElementById('test-tds').value = 40;
+    document.getElementById('test-iron').value = 0.0;
+    document.getElementById('test-chlorine').value = 0.8;
+    updateQuickAnalysis();
+}
+
+function updateQuickAnalysis() {
+    const h = v('test-hardness');
+    const ph = v('test-ph');
+    const tds = v('test-tds');
+    const iron = v('test-iron');
+    const cl = v('test-chlorine');
+
+    if (!h && !ph) {
+        document.getElementById('quick-analysis').innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:40px;">Enter test results to see instant analysis.</p>';
+        return;
+    }
+
+    let items = [];
+
+    if (h > 0) {
+        const mgL = (h * 17.1).toFixed(0);
+        let level, color, icon;
+        if (h <= 3.5) { level = 'Soft'; color = '#059669'; icon = '✅'; }
+        else if (h <= 7) { level = 'Slightly Hard'; color = '#059669'; icon = '🟢'; }
+        else if (h <= 10.5) { level = 'Moderately Hard'; color = '#d97706'; icon = '🟡'; }
+        else if (h <= 15) { level = 'Hard'; color = '#dc2626'; icon = '🟠'; }
+        else { level = 'Very Hard'; color = '#dc2626'; icon = '🔴'; }
+        items.push(`<div style="padding:10px;margin:6px 0;border-left:4px solid ${color};background:${color}10;border-radius:0 6px 6px 0;">
+            ${icon} <strong>Hardness: ${h} gpg (${mgL} mg/L) — ${level}</strong>
+            ${h > 3.5 ? '<br><span style="font-size:0.85em;">Soft water for Seattle standards. Softener is optional (luxury upgrade only).</span>' : '<br><span style="font-size:0.85em;">Perfect soft water — typical for Seattle. No softener needed.</span>'}
+        </div>`);
+    }
+
+    if (iron > 0) {
+        const color = iron > 0.3 ? '#dc2626' : '#059669';
+        items.push(`<div style="padding:10px;margin:6px 0;border-left:4px solid ${color};background:${color}10;border-radius:0 6px 6px 0;">
+            ${iron > 0.3 ? '🔴' : '✅'} <strong>Iron: ${iron} mg/L</strong>
+            ${iron > 0.3 ? '<br><span style="font-size:0.85em;">Above 0.3 mg/L — will cause staining. Iron filter needed.</span>' : '<br><span style="font-size:0.85em;">Iron is within acceptable range.</span>'}
+        </div>`);
+    }
+
+    if (ph > 0) {
+        const color = (ph < 6.5 || ph > 8.5) ? '#dc2626' : '#059669';
+        items.push(`<div style="padding:10px;margin:6px 0;border-left:4px solid ${color};background:${color}10;border-radius:0 6px 6px 0;">
+            ${(ph < 6.5 || ph > 8.5) ? '🟡' : '✅'} <strong>pH: ${ph}</strong>
+            ${ph < 6.5 ? '<br><span style="font-size:0.85em;">Acidic — corrosive to pipes. Acid neutralizer recommended.</span>' : ph > 8.5 ? '<br><span style="font-size:0.85em;">Slightly alkaline — normal for Seattle area.</span>' : '<br><span style="font-size:0.85em;">pH is within normal range.</span>'}
+        </div>`);
+    }
+
+    if (tds > 0) {
+        items.push(`<div style="padding:10px;margin:6px 0;border-left:4px solid ${tds > 200 ? '#d97706' : '#059669'};background:${tds > 200 ? '#d9770610' : '#05966910'};border-radius:0 6px 6px 0;">
+            ✅ <strong>TDS: ${tds} ppm</strong>
+            <br><span style="font-size:0.85em;">Very low TDS — typical Seattle water. RO system will improve taste and remove PFAS/lead/chlorine.</span>
+        </div>`);
+    }
+
+    if (cl > 0) {
+        items.push(`<div style="padding:10px;margin:6px 0;border-left:4px solid ${cl > 0.5 ? '#d97706' : '#059669'};background:${cl > 0.5 ? '#d9770610' : '#05966910'};border-radius:0 6px 6px 0;">
+            ${cl > 0.5 ? '🟡' : '✅'} <strong>Chlorine: ${cl} mg/L</strong>
+            ${cl > 0.5 ? '<br><span style="font-size:0.85em;">Noticeable chlorine (Seattle uses chloramines). Whole-house carbon filter will remove taste/odor.</span>' : '<br><span style="font-size:0.85em;">Low chlorine level.</span>'}
+        </div>`);
+    }
+
+    document.getElementById('quick-analysis').innerHTML = items.length ? items.join('') : '<p style="color:var(--text-muted);text-align:center;">Enter test results above.</p>';
+}
+
+['test-hardness','test-ph','test-tds','test-iron','test-chlorine'].forEach(id => {
+    document.getElementById(id)?.addEventListener('input', updateQuickAnalysis);
+});
+
+// ═══ SOLUTION ENGINE ═══
+const EQUIPMENT = {
+    // ── SOFTENERS ── (rarely needed in Seattle)
+    softener_small: {name:"Water Softener (32,000 grain)", desc:"Fleck 5600SXT — OPTIONAL luxury upgrade for soft-water feel", cost:450, install:550, forComplaints:['spots','buildup','skin','soap','laundry'], forTest:{hardness:3.5}, category:'softener', size:'1-2 bath'},
+    softener_medium: {name:"Water Softener (48,000 grain)", desc:"Fleck 5600SXT — OPTIONAL luxury upgrade for soft-water feel", cost:550, install:650, forComplaints:['spots','buildup','skin','soap','laundry'], forTest:{hardness:3.5}, category:'softener', size:'3-4 bath'},
+    softener_large: {name:"Water Softener (64,000 grain)", desc:"Clack WS1 — OPTIONAL luxury upgrade for soft-water feel", cost:650, install:750, forComplaints:['spots','buildup','skin','soap','laundry'], forTest:{hardness:3.5}, category:'softener', size:'5+ bath'},
+
+    // ── FILTERS ── (PRIMARY FOCUS IN SEATTLE)
+    carbon_filter: {name:"Whole-House Carbon Filter (Catalytic)", desc:"Removes chlorine, chloramines, taste, odor — RECOMMENDED for Seattle", cost:450, install:650, forComplaints:['taste-chlorine','taste-metal'], forTest:{chlorine:0.5}, category:'filter'},
+    sediment_filter: {name:"Sediment Pre-Filter (5 µm)", desc:"Protects downstream equipment — recommended with any whole-house system", cost:80, install:150, forComplaints:['cloudy','sediment'], forTest:{}, category:'filter'},
+    iron_filter: {name:"Iron/Manganese Filter", desc:"Air injection + catalytic media (for well water)", cost:800, install:700, forComplaints:['staining-rust','taste-metal','taste-sulfur'], forTest:{iron:0.3}, category:'filter'},
+    lead_filter_pou: {name:"Under-Sink Lead Filter (NSF 53)", desc:"Point-of-use lead removal — CRITICAL for pre-1960 Seattle homes", cost:120, install:150, forComplaints:['health','lead'], forTest:{}, category:'filter'},
+    lead_filter_wh: {name:"Whole-House Lead Filter (KDF + Carbon)", desc:"KDF media removes lead, copper, heavy metals — for pre-1960 homes", cost:700, install:600, forComplaints:['health','lead','staining-blue'], forTest:{}, category:'filter'},
+
+    // ── RO SYSTEMS ── (HIGH DEMAND)
+    ro_drinking: {name:"Under-Sink RO System (5-stage)", desc:"Removes PFAS, lead, chlorine, TDS — BEST SELLER in Seattle", cost:220, install:350, forComplaints:['ro-drinking','health','taste-chlorine','taste-metal','pfas','lead'], forTest:{}, category:'ro'},
+    ro_premium: {name:"Premium RO System (6-stage + UV)", desc:"Alkaline remineralization + UV sterilization", cost:380, install:420, forComplaints:['ro-drinking','health','pfas','lead'], forTest:{}, category:'ro'},
+
+    // ── UV ──
+    uv_system: {name:"UV Disinfection System", desc:"Viqua/Sterilight — kills 99.99% bacteria/viruses (well water)", cost:450, install:450, forComplaints:['health'], forTest:{}, category:'uv', wellOnly:true},
+
+    // ── PFAS / CONTAMINANT REMOVAL ──
+    pfas_wh_carbon: {name:"Whole-House PFAS Carbon Filter", desc:"Catalytic GAC — NSF 53 certified for long-chain PFAS", cost:900, install:700, forComplaints:['pfas','health'], forTest:{}, category:'pfas'},
+    pfas_pou_ro: {name:"Under-Sink RO for PFAS (NSF 58)", desc:"95%+ PFAS removal — dedicated drinking faucet", cost:300, install:350, forComplaints:['pfas','health','ro-drinking'], forTest:{}, category:'ro'},
+
+    // ── ARSENIC / NITRATE ──
+    arsenic_pou: {name:"Under-Sink RO for Arsenic", desc:"RO removes 95%+ arsenic (well water)", cost:250, install:350, forComplaints:['arsenic','health','ro-drinking'], forTest:{}, category:'ro', wellOnly:true},
+    nitrate_pou: {name:"Under-Sink RO for Nitrate", desc:"Critical for homes with infants (well water)", cost:250, install:350, forComplaints:['nitrate','health','ro-drinking'], forTest:{}, category:'ro'},
+
+    // ── WATER HEATERS ──
+    wh_tank_40: {name:"40-gal Tank Water Heater", desc:"A.O. Smith, Rheem, or Bradford White — 6-yr warranty", cost:500, install:1000, forComplaints:['appliance','heater-cost'], forTest:{}, category:'water_heater', size:'1-2 bath'},
+    wh_tank_50: {name:"50-gal Tank Water Heater", desc:"A.O. Smith ProLine or Rheem Professional", cost:650, install:1050, forComplaints:['appliance','heater-cost'], forTest:{}, category:'water_heater', size:'3-4 bath'},
+    wh_tank_75: {name:"75-gal Tank Water Heater", desc:"High-capacity for large homes", cost:1100, install:1300, forComplaints:['appliance','heater-cost'], forTest:{}, category:'water_heater', size:'5+ bath'},
+    wh_tankless_gas: {name:"Tankless Gas Water Heater", desc:"Rinnai, Navien, or Noritz — endless hot water, perfect for Seattle soft water", cost:1200, install:2000, forComplaints:['appliance','heater-cost'], forTest:{}, category:'water_heater', size:'whole-house'},
+    wh_hybrid: {name:"Hybrid Heat Pump Water Heater", desc:"Rheem ProTerra — 3-4x more efficient, $370/yr savings + $2K tax credit", cost:1500, install:1500, forComplaints:['heater-cost'], forTest:{}, category:'water_heater', size:'50-80 gal'},
+    wh_recirculation: {name:"Hot Water Recirculation System", desc:"Grundfos or Watts — instant hot water, saves 12,000 gal/year", cost:300, install:500, forComplaints:['appliance'], forTest:{}, category:'water_heater', size:'add-on'},
+
+    // ── SERVICES ──
+    water_heater_flush: {name:"Water Heater Flush & Inspection", desc:"Annual maintenance — drain, flush, check anode, test T&P valve", cost:0, install:200, forComplaints:['appliance','heater-cost'], forTest:{}, category:'service'},
+    expansion_tank: {name:"Thermal Expansion Tank", desc:"Required with PRV — prevents T&P weeping", cost:50, install:250, forComplaints:['appliance','pipes'], forTest:{}, category:'service'},
+    prv_replacement: {name:"Pressure Reducing Valve (PRV)", desc:"Watts LFN45B — set to 50-60 PSI", cost:80, install:320, forComplaints:['pipes','appliance'], forTest:{}, category:'service'},
+    whole_house_repipe: {name:"Whole-House Repipe (PEX-A)", desc:"Replace galvanized/lead pipes with PEX-A — 25-yr warranty", cost:4200, install:5800, forComplaints:['pipes','staining-rust','staining-blue','lead'], forTest:{}, category:'service', size:'whole-house'},
+};
+
+function analyzeLead() {
+    solutions = [];
+    const h = v('test-hardness');
+    const ph = v('test-ph');
+    const tds = v('test-tds');
+    const iron = v('test-iron');
+    const cl = v('test-chlorine');
+    const propType = document.getElementById('cust-type').value;
+    const source = document.getElementById('cust-source').value;
+    const isCommercial = ['restaurant','salon','laundry','office','hotel','church'].includes(propType);
+
+    for (const [key, eq] of Object.entries(EQUIPMENT)) {
+        if (eq.wellOnly && source === 'municipal') continue;
+
+        if (eq.category === 'softener' && selectedExisting.has('softener-working')) continue;
+        if (eq.category === 'ro' && selectedExisting.has('ro-only')) continue;
+        if (key === 'carbon_filter' && selectedExisting.has('filter-carbon')) continue;
+        if (key === 'sediment_filter' && selectedExisting.has('filter-sediment')) continue;
+        if (key === 'iron_filter' && selectedExisting.has('filter-iron')) continue;
+        if (eq.category === 'uv' && selectedExisting.has('uv')) continue;
+
+        let existingBonus = 0;
+        if (eq.category === 'softener' && selectedExisting.has('softener-old')) existingBonus = 2;
+
+        let score = existingBonus;
+        let reasons = [];
+        if (existingBonus > 0) reasons.push('Replaces non-working softener');
+
+        for (const c of eq.forComplaints) {
+            if (selectedComplaints.has(c)) {
+                score += 2;
+                reasons.push(complaintLabel(c));
+            }
+        }
+
+        if (eq.forTest.hardness && h >= eq.forTest.hardness) { score += 3; reasons.push(`Hardness ${h} gpg`); }
+        if (eq.forTest.iron && iron >= eq.forTest.iron) { score += 3; reasons.push(`Iron ${iron} mg/L`); }
+        if (eq.forTest.chlorine && cl >= eq.forTest.chlorine) { score += 2; reasons.push(`Chlorine ${cl} mg/L`); }
+
+        // Seattle-specific: boost carbon filter and RO scores
+        if (key === 'carbon_filter' && source === 'municipal') { score += 2; if(!reasons.length) reasons.push('Chlorine/chloramine removal recommended'); }
+        if (eq.category === 'ro') { score += 1; if(!reasons.length) reasons.push('PFAS/lead protection'); }
+
+        if (eq.category === 'softener') {
+            if (isCommercial && eq.size !== 'commercial') continue;
+            if (!isCommercial && eq.size === 'commercial') continue;
+            if (!isCommercial) {
+                const sizeMatch = {'home-small':'1-2 bath','condo':'1-2 bath','home-medium':'3-4 bath','home-large':'5+ bath'};
+                if (eq.size !== (sizeMatch[propType] || '3-4 bath')) continue;
+            }
+            // Reduce softener recommendation in Seattle (soft water)
+            if (h < 3.5 && source === 'municipal') {
+                score = Math.max(score - 3, 0);
+                if (score > 0) reasons.push('Optional luxury upgrade (water already soft)');
+            }
+        }
+
+        if (eq.category === 'water_heater') {
+            if (!selectedComplaints.has('appliance') && !selectedComplaints.has('heater-cost')) continue;
+            if (['1-2 bath','3-4 bath','5+ bath'].includes(eq.size)) {
+                const whSizeMatch = {'home-small':'1-2 bath','condo':'1-2 bath','home-medium':'3-4 bath','home-large':'5+ bath'};
+                if (eq.size !== (whSizeMatch[propType] || '3-4 bath')) continue;
+            }
+            if (eq.size === 'add-on') { score -= 1; }
+        }
+
+        if (score > 0) {
+            solutions.push({key, ...eq, score, reasons, recommended: score >= 3});
+        }
+    }
+
+    // RO deduplication
+    const roSolutions = solutions.filter(s => s.category === 'ro');
+    if (roSolutions.length > 1) {
+        const roPriority = ['pfas_pou_ro','arsenic_pou','nitrate_pou','ro_premium','ro_drinking'];
+        let bestRO = null;
+        for (const key of roPriority) {
+            const found = roSolutions.find(s => s.key === key);
+            if (found) { bestRO = found; break; }
+        }
+        if (bestRO) {
+            const allROReasons = new Set();
+            roSolutions.forEach(s => s.reasons.forEach(r => allROReasons.add(r)));
+            bestRO.reasons = [...allROReasons];
+            const capabilities = [];
+            if (roSolutions.find(s => s.key === 'pfas_pou_ro')) capabilities.push('PFAS');
+            if (roSolutions.find(s => s.key === 'arsenic_pou')) capabilities.push('arsenic');
+            if (roSolutions.find(s => s.key === 'nitrate_pou')) capabilities.push('nitrate');
+            capabilities.push('lead', 'chlorine', 'TDS');
+            if (capabilities.length > 1) {
+                bestRO.desc = `Under-sink RO system — removes 95%+ of ${capabilities.join(', ')}`;
+                bestRO.name = 'Under-Sink RO System (multi-contaminant)';
+            }
+            bestRO.cost = Math.max(...roSolutions.map(s => s.cost));
+            bestRO.install = Math.max(...roSolutions.map(s => s.install));
+            bestRO.score = Math.max(...roSolutions.map(s => s.score));
+            bestRO.recommended = roSolutions.some(s => s.recommended);
+            solutions = solutions.filter(s => s.category !== 'ro' || s.key === bestRO.key);
+        }
+    }
+
+    solutions.sort((a,b) => (b.recommended - a.recommended) || (b.score - a.score));
+
+    // Always suggest RO for Seattle (PFAS/lead concern)
+    if (!solutions.find(s => s.category === 'ro')) {
+        const ro = EQUIPMENT.ro_drinking;
+        solutions.push({key:'ro_drinking', ...ro, score:2, reasons:['PFAS/lead protection recommended for Seattle'], recommended:false});
+    }
+
+    renderSolutions();
+    goStep(3);
+}
+
+function complaintLabel(id) {
+    const labels = {
+        spots:'Water spots', buildup:'Scale buildup', skin:'Dry skin/hair', soap:'Poor lathering',
+        'staining-rust':'Rust staining', 'staining-blue':'Blue-green staining',
+        'taste-chlorine':'Chlorine taste', 'taste-metal':'Metallic taste', 'taste-sulfur':'Sulfur smell',
+        cloudy:'Cloudy water', sediment:'Sediment', appliance:'Appliance issues',
+        laundry:'Laundry issues', pipes:'Pipe corrosion', 'heater-cost':'High energy bills',
+        health:'Health concerns', pfas:'PFAS/forever chemicals', arsenic:'Arsenic', lead:'Lead concern',
+        nitrate:'Nitrate concern', 'ro-drinking':'Drinking water quality', none:'Proactive test'
+    };
+    return labels[id] || id;
+}
+
+function renderSolutions() {
+    const markup = v('co-markup') / 100;
+    document.getElementById('solutions-list').innerHTML = solutions.map((sol, i) => {
+        const retail = Math.round((sol.cost * (1 + markup)) + sol.install);
+        return `<div class="solution-card ${sol.recommended ? 'recommended' : 'optional'}">
+            <div class="sol-header">
+                <div>
+                    <span class="sol-badge ${sol.recommended ? 'rec' : 'opt'}">${sol.recommended ? '✅ RECOMMENDED' : '💡 OPTIONAL'}</span>
+                    <div class="sol-title" style="margin-top:4px;">${sol.name}</div>
+                    <div style="font-size:0.82em;color:var(--text-muted);">${sol.desc}</div>
+                </div>
+                <div style="text-align:right;">
+                    <div style="font-size:1.3em;font-weight:700;color:var(--plumber-blue);">$${retail.toLocaleString()}</div>
+                    <div style="font-size:0.75em;color:var(--text-muted);">installed</div>
+                </div>
+            </div>
+            <div class="sol-why"><strong>Why:</strong> ${sol.reasons.join(' · ')}</div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;">
+                <div style="font-size:0.8em;color:var(--text-muted);">Your cost: $${sol.cost} equip + $${sol.install} labor | Profit: $${Math.round(sol.cost * markup + sol.install)}</div>
+                <label style="display:flex;align-items:center;gap:4px;cursor:pointer;">
+                    <input type="checkbox" ${sol.recommended ? 'checked' : ''} onchange="toggleSolution(${i}, this.checked)">
+                    <span style="font-size:0.85em;font-weight:600;">Include in quote</span>
+                </label>
+            </div>
+        </div>`;
+    }).join('') || '<p style="text-align:center;color:var(--text-muted);">No issues detected. Water quality looks good!</p>';
+
+    solutions.forEach((s,i) => { s.included = s.recommended; });
+}
+
+function toggleSolution(i, checked) {
+    solutions[i].included = checked;
+}
+
+// ═══ QUOTE BUILDER ═══
+function buildQuote() {
+    const markup = v('co-markup') / 100;
+    quoteItems = solutions.filter(s => s.included).map(s => ({
+        name: s.name,
+        desc: s.desc,
+        equipCost: s.cost,
+        installCost: s.install,
+        equipRetail: Math.round(s.cost * (1 + markup)),
+        total: Math.round(s.cost * (1 + markup) + s.install),
+        profit: Math.round(s.cost * markup + s.install),
+    }));
+
+    const totalRetail = quoteItems.reduce((sum, q) => sum + q.total, 0);
+    const totalProfit = quoteItems.reduce((sum, q) => sum + q.profit, 0);
+    const totalCost = quoteItems.reduce((sum, q) => sum + q.equipCost, 0);
+
+    document.getElementById('quote-lines').innerHTML = quoteItems.map((q, i) => `
+        <div class="quote-line">
+            <div>
+                <div style="font-weight:600;">${q.name}</div>
+                <div style="font-size:0.8em;color:var(--text-muted);">${q.desc}</div>
+            </div>
+            <div style="text-align:right;">
+                <div style="font-weight:700;">$${q.total.toLocaleString()}</div>
+                <div style="font-size:0.75em;color:var(--text-muted);">equip $${q.equipRetail} + install $${q.installCost}</div>
+            </div>
+        </div>
+    `).join('') + (quoteItems.length ? `
+        <div style="border-top:2px solid var(--plumber-blue);margin-top:8px;padding-top:12px;display:flex;justify-content:space-between;">
+            <div class="quote-total">Total: $${totalRetail.toLocaleString()}</div>
+            <div style="text-align:right;font-size:0.85em;color:var(--text-muted);">
+                Your cost: $${totalCost.toLocaleString()}<br>
+                <strong style="color:var(--plumber-green);">Your profit: $${totalProfit.toLocaleString()}</strong>
+            </div>
+        </div>
+    ` : '<p style="text-align:center;color:var(--text-muted);">No items selected. Go back and check solutions to include.</p>');
+
+    document.getElementById('quote-summary').innerHTML = quoteItems.length ? `
+        <div style="text-align:center;">
+            <div style="font-size:2em;font-weight:700;color:var(--plumber-blue);">$${totalRetail.toLocaleString()}</div>
+            <div style="font-size:0.9em;color:var(--text-muted);">Customer price (${quoteItems.length} item${quoteItems.length>1?'s':''})</div>
+            <div style="margin-top:12px;padding:12px;background:#f0fdf4;border-radius:8px;">
+                <div style="font-size:1.4em;font-weight:700;color:var(--plumber-green);">$${totalProfit.toLocaleString()}</div>
+                <div style="font-size:0.85em;color:#065f46;">Your profit (equipment margin + labor)</div>
+            </div>
+            ${totalRetail > 1500 ? `<div style="margin-top:8px;padding:8px;background:var(--plumber-light);border-radius:6px;font-size:0.82em;">
+                💡 Monthly payment: ~$${Math.round(totalRetail/12)}/mo (12-month) or ~$${Math.round(totalRetail/24)}/mo (24-month)
+            </div>` : ''}
+        </div>
+    ` : '';
+
+    // Talking points
+    const h = v('test-hardness');
+    const tds = v('test-tds');
+    const cl = v('test-chlorine');
+    const points = [];
+
+    if (cl > 0.5) {
+        points.push(`<strong>"Seattle water uses chloramines — they're more persistent than regular chlorine."</strong> A whole-house carbon filter removes the taste and smell, plus protects your family from long-term exposure.`);
+    }
+    if (selectedComplaints.has('pfas') || selectedComplaints.has('health')) {
+        points.push(`<strong>"PFAS — forever chemicals — have been detected in Seattle-area water."</strong> An RO system removes 95%+ of PFAS, lead, and other contaminants. Better than any bottled water.`);
+    }
+    if (selectedComplaints.has('lead')) {
+        points.push(`<strong>"Your home was built before 1960 — that's the lead pipe era in Seattle."</strong> Lead filtration or RO is critical for protecting your family, especially children.`);
+    }
+    if (h < 2 && selectedComplaints.has('skin')) {
+        points.push(`<strong>"Seattle water is already soft, but a softener takes it to the next level."</strong> It's a luxury upgrade — that ultra-slippery, spa-like shower feel. Your skin and hair will thank you.`);
+    }
+    if (tds < 100) {
+        points.push(`<strong>"Your water already has low TDS — that's great!"</strong> An RO system polishes it to bottled-water quality and removes things municipal treatment can't — like PFAS and pharmaceuticals.`);
+    }
+    points.push(`<strong>"Seattle's soft water is a hidden advantage."</strong> Your appliances and pipes last longer here than in hard water areas. With the right filtration, you'll have the best water quality in the country.`);
+    points.push(`<strong>"I can have this installed within the week."</strong> Everything included — equipment, installation, and I'll show you how to maintain it.`);
+
+    document.getElementById('talking-points').innerHTML = points.map(p => `<div style="padding:8px 0;border-bottom:1px solid #f0f0f0;">${p}</div>`).join('');
+
+    goStep(4);
+}
+
+// ═══ CUSTOMER REPORT ═══
+function generateReport() {
+    const custName = document.getElementById('cust-name').value || 'Valued Customer';
+    const custAddr = document.getElementById('cust-address').value || '';
+    const coName = document.getElementById('co-name').value || 'ProMax Water Heaters & Plumbing';
+    const coTech = document.getElementById('co-tech').value || '';
+    const coPhone = document.getElementById('co-phone').value || '(425) 495-1961';
+    const coLicense = document.getElementById('co-license').value || '';
+    const date = new Date().toLocaleDateString();
+
+    const h = v('test-hardness');
+    const ph = v('test-ph');
+    const tds = v('test-tds');
+    const iron = v('test-iron');
+    const cl = v('test-chlorine');
+
+    const totalRetail = quoteItems.reduce((sum, q) => sum + q.total, 0);
+
+    const complaintsText = [...selectedComplaints].filter(c => c !== 'none').map(c => complaintLabel(c)).join(', ') || 'None reported';
+    const existingText = getExistingLabels().join(', ') || 'None';
+
+    const reportHTML = `
+    <div class="report-logo">
+        <h2 style="color:var(--plumber-blue);margin:0;">${coName}</h2>
+        <div style="font-size:0.9em;color:var(--text-muted);">${coPhone}${coLicense ? ' · Lic. ' + coLicense : ''}</div>
+        <div style="font-size:0.85em;color:var(--text-muted);">Bellevue, WA · Serving the Greater Seattle Area</div>
+    </div>
+
+    <h3 style="text-align:center;color:var(--plumber-blue);border-bottom:3px solid var(--plumber-blue);padding-bottom:8px;">Water Quality Assessment & Recommendation</h3>
+
+    <div class="report-section">
+        <div style="display:flex;justify-content:space-between;font-size:0.9em;">
+            <div><strong>Prepared for:</strong> ${custName}</div>
+            <div><strong>Date:</strong> ${date}</div>
+        </div>
+        ${custAddr ? `<div style="font-size:0.9em;"><strong>Address:</strong> ${custAddr}</div>` : ''}
+        ${coTech ? `<div style="font-size:0.9em;"><strong>Technician:</strong> ${coTech}</div>` : ''}
+    </div>
+
+    <div class="report-section">
+        <h4>Water Test Results</h4>
+        <table style="width:100%;border-collapse:collapse;font-size:0.9em;">
+            <tr style="background:var(--plumber-light);"><th style="text-align:left;padding:6px;">Parameter</th><th style="text-align:center;padding:6px;">Your Water</th><th style="text-align:center;padding:6px;">Seattle Typical</th><th style="text-align:center;padding:6px;">Status</th></tr>
+            ${h ? `<tr><td style="padding:6px;border-bottom:1px solid #eee;">Hardness</td><td style="text-align:center;border-bottom:1px solid #eee;font-weight:700;">${h} gpg</td><td style="text-align:center;border-bottom:1px solid #eee;">1-2 gpg (soft)</td><td style="text-align:center;border-bottom:1px solid #eee;">${h > 3.5 ? '⚠️ Elevated' : '✅ Soft'}</td></tr>` : ''}
+            ${ph ? `<tr><td style="padding:6px;border-bottom:1px solid #eee;">pH</td><td style="text-align:center;border-bottom:1px solid #eee;font-weight:700;">${ph}</td><td style="text-align:center;border-bottom:1px solid #eee;">7.8-8.2</td><td style="text-align:center;border-bottom:1px solid #eee;">${ph >= 6.5 && ph <= 8.5 ? '✅ Normal' : '⚠️'}</td></tr>` : ''}
+            ${tds ? `<tr><td style="padding:6px;border-bottom:1px solid #eee;">Total Dissolved Solids</td><td style="text-align:center;border-bottom:1px solid #eee;font-weight:700;">${tds} ppm</td><td style="text-align:center;border-bottom:1px solid #eee;">30-60 ppm</td><td style="text-align:center;border-bottom:1px solid #eee;">✅ Low TDS</td></tr>` : ''}
+            ${iron ? `<tr><td style="padding:6px;border-bottom:1px solid #eee;">Iron</td><td style="text-align:center;border-bottom:1px solid #eee;font-weight:700;">${iron} mg/L</td><td style="text-align:center;border-bottom:1px solid #eee;">< 0.1 mg/L</td><td style="text-align:center;border-bottom:1px solid #eee;">${iron > 0.3 ? '⚠️ High' : '✅ OK'}</td></tr>` : ''}
+            ${cl ? `<tr><td style="padding:6px;border-bottom:1px solid #eee;">Chlorine</td><td style="text-align:center;border-bottom:1px solid #eee;font-weight:700;">${cl} mg/L</td><td style="text-align:center;border-bottom:1px solid #eee;">0.6-1.0 mg/L</td><td style="text-align:center;border-bottom:1px solid #eee;">${cl > 1.0 ? '🟡 Elevated' : '✅ Normal'}</td></tr>` : ''}
+        </table>
+    </div>
+
+    <div class="report-section">
+        <h4>Concerns Identified</h4>
+        <p style="font-size:0.9em;">${complaintsText}</p>
+        ${existingText !== 'None' ? `<p style="font-size:0.9em;"><strong>Existing equipment:</strong> ${existingText}</p>` : ''}
+    </div>
+
+    <div class="report-section">
+        <h4>Our Recommendation</h4>
+        ${quoteItems.map(q => `<div style="padding:10px;margin:6px 0;background:var(--plumber-light);border-radius:6px;">
+            <div style="display:flex;justify-content:space-between;">
+                <div><strong>${q.name}</strong><br><span style="font-size:0.85em;color:var(--text-muted);">${q.desc}</span></div>
+                <div style="font-weight:700;font-size:1.1em;color:var(--plumber-blue);">$${q.total.toLocaleString()}</div>
+            </div>
+        </div>`).join('')}
+        <div style="text-align:right;margin-top:12px;padding-top:8px;border-top:2px solid var(--plumber-blue);">
+            <span style="font-size:1.3em;font-weight:700;color:var(--plumber-blue);">Total Investment: $${totalRetail.toLocaleString()}</span>
+            <div style="font-size:0.82em;color:var(--text-muted);">Includes all equipment, installation, and setup</div>
+        </div>
+    </div>
+
+    <div class="report-section">
+        <h4>Benefits You'll Notice</h4>
+        <ul style="font-size:0.9em;line-height:1.8;">
+            ${solutions.find(s => s.key === 'carbon_filter' && s.included) ? '<li>✅ No chlorine taste or smell in your water</li><li>✅ Healthier skin and hair (no chlorine/chloramine exposure)</li>' : ''}
+            ${solutions.find(s => s.category === 'ro' && s.included) ? '<li>✅ Crystal-clear, great-tasting drinking water</li><li>✅ PFAS, lead, and contaminant removal</li><li>✅ Better than bottled water — saves $600+/year</li>' : ''}
+            ${solutions.find(s => s.key.includes('lead') && s.included) ? '<li>✅ Peace of mind — lead-free water for your family</li>' : ''}
+            ${solutions.find(s => s.category === 'softener' && s.included) ? '<li>✅ Luxurious soft-water feel — spa-like showers</li><li>✅ Spot-free dishes and fixtures</li>' : ''}
+            <li>✅ Longer appliance life and better performance</li>
+            <li>✅ Professional installation with warranty</li>
+        </ul>
+    </div>
+
+    <div style="text-align:center;margin-top:20px;padding:16px;background:var(--plumber-light);border-radius:8px;">
+        <div style="font-weight:700;font-size:1.05em;color:var(--plumber-blue);">Ready to get started?</div>
+        <div style="font-size:0.9em;margin-top:4px;">Call ${coPhone} or ask your technician about scheduling installation.</div>
+        ${totalRetail > 1500 ? `<div style="font-size:0.85em;margin-top:8px;">Financing available — as low as <strong>$${Math.round(totalRetail/24)}/month</strong></div>` : ''}
+    </div>
+
+    <div style="text-align:center;margin-top:16px;font-size:0.75em;color:var(--text-muted);border-top:1px solid #eee;padding-top:8px;">
+        ${coName}${coLicense ? ' · License ' + coLicense : ''} · This assessment is based on field testing and is provided as a recommendation.
+    </div>`;
+
+    document.getElementById('report-preview').innerHTML = reportHTML;
+    goStep(5);
+}
+
+function exportReportHTML() {
+    const content = document.getElementById('report-preview').innerHTML;
+    const win = window.open('', '_blank');
+    win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Water Quality Assessment - ProMax</title>
+    <style>
+        body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:750px;margin:0 auto;padding:24px;color:#1a1a2e;font-size:10.5pt;}
+        h2{color:#1e3a5f;margin:0;}h3{color:#1e3a5f;text-align:center;}h4{color:#1e3a5f;border-bottom:2px solid #dbeafe;padding-bottom:4px;}
+        table{width:100%;border-collapse:collapse;}th,td{padding:6px;border-bottom:1px solid #eee;}
+        .no-print{text-align:center;margin-bottom:16px;}
+        @media print{.no-print{display:none;}}
+    </style></head><body>
+    <div class="no-print"><button onclick="window.print()" style="padding:10px 30px;background:#1e3a5f;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:1em;">🖨️ Print / Save as PDF</button></div>
+    ${content}
+    </body></html>`);
+    win.document.close();
+}
+
+function printReport() {
+    exportReportHTML();
+}
+
+// ═══ COMPANY INFO PERSISTENCE ═══
+function saveCompanyInfo() {
+    const info = {
+        name: document.getElementById('co-name').value,
+        tech: document.getElementById('co-tech').value,
+        phone: document.getElementById('co-phone').value,
+        license: document.getElementById('co-license').value,
+        markup: document.getElementById('co-markup').value,
+    };
+    localStorage.setItem('plumber_pro_company', JSON.stringify(info));
+    alert('Company info saved! It will auto-fill on your next visit.');
+}
+
+function loadCompanyInfo() {
+    try {
+        const info = JSON.parse(localStorage.getItem('plumber_pro_company'));
+        if (info) {
+            if (info.name) document.getElementById('co-name').value = info.name;
+            if (info.tech) document.getElementById('co-tech').value = info.tech;
+            if (info.phone) document.getElementById('co-phone').value = info.phone;
+            if (info.license) document.getElementById('co-license').value = info.license;
+            if (info.markup) document.getElementById('co-markup').value = info.markup;
+        }
+    } catch(e) {}
+}
+
+function updatePropertyDefaults() {
+    const type = document.getElementById('cust-type').value;
+    const occupantDefaults = {
+        'home-small':2, 'home-medium':4, 'home-large':6, 'condo':2,
+        'restaurant':20, 'salon':8, 'laundry':0, 'office':25, 'hotel':50, 'church':30
+    };
+    document.getElementById('cust-occupants').value = occupantDefaults[type] || 4;
+}
+
+function newLead() {
+    ['cust-name','cust-address','cust-phone','cust-email'].forEach(id => document.getElementById(id).value = '');
+    ['test-hardness','test-ph','test-tds','test-iron','test-chlorine','test-nitrate'].forEach(id => document.getElementById(id).value = '');
+    selectedComplaints.clear();
+    selectedExisting.clear();
+    selectedExisting.add('none');
+    document.querySelectorAll('.complaint-btn').forEach(b => b.classList.remove('selected'));
+    document.querySelectorAll('[data-eid]').forEach(b => b.classList.remove('selected'));
+    document.querySelector('[data-eid="none"]').classList.add('selected');
+    solutions = [];
+    quoteItems = [];
+    goStep(0);
+}
+
+// ═══ INIT ═══
+loadCompanyInfo();
+showEqRef('all');
+</script>
+
+</body>
+</html>
