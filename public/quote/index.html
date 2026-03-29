@@ -580,7 +580,7 @@
 
       <div class="form-group">
         <label>Your zip code</label>
-        <input type="text" id="zipCode" placeholder="85383" maxlength="5" pattern="[0-9]*" inputmode="numeric">
+        <input type="text" id="zipCode" maxlength="5" pattern="[0-9]*" inputmode="numeric">
       </div>
 
       <button class="btn-primary" onclick="goToStep(3)">See My Estimate →</button>
@@ -1280,8 +1280,6 @@
     // Init — set company name from config
     // ============================================
 
-    document.getElementById('companyName').textContent = CONFIG.clientName;
-
     // Allow config override via URL params (for embed/ads/tracking)
     const params = new URLSearchParams(window.location.search);
     if (params.get('client')) CONFIG.clientId = params.get('client');
@@ -1305,6 +1303,10 @@
     if (params.get('promoLabel')) CONFIG.promoLabel = params.get('promoLabel');
     if (params.get('promoBadge')) CONFIG.promoBadge = params.get('promoBadge');
     if (params.get('promoSubtitle')) CONFIG.promoSubtitle = params.get('promoSubtitle');
+
+    // Set final company name after all overrides
+    document.getElementById('companyName').textContent = CONFIG.clientName;
+
     // Initialize promo banner if configured
     initPromo();
   </script>
