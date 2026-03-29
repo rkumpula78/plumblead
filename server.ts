@@ -1,6 +1,5 @@
 
 import express from 'express';
-import express from 'express';
 import { GoogleGenAI } from "@google/genai"; // Keep for /api/quote if still using Gemini
 import dotenv from 'dotenv';
 import cors from 'cors';
@@ -62,15 +61,77 @@ app.post('/api/chat', async (req, res) => {
   }
 });
 
-// 2. Instant Quote Tool
+// 2. Instant Quote Tool (Now pre-qualified by OpenClaw)
 app.post('/api/quote', async (req, res) => {
+  const { serviceType, details, location, language = 'en', sessionId = 'plumblead-quote-user' } = req.body;
+  const quoteRequest: QuoteRequest = { serviceType, details, location, language };
+
+  if (!openClawApiEndpoint || !openClawApiKey) {
+    console.error("OpenClaw API endpoint or key not configured for quote pre-qualification.");
+    // Fallback to direct Gemini call if OpenClaw is not configured
+    try {
+      const quoteResponse: QuoteResponse = await generateAIQuote(quoteRequest);
+      return res.json(quoteResponse);
+    } catch (error) {
+      console.error("Error in /api/quote (Gemini Fallback):", error);
+      return res.status(500).json({ error: "Failed to generate instant quote (Gemini fallback)." });
+    }
+  }
+
   try {
-    const quoteRequest: QuoteRequest = req.body;
-    const quoteResponse: QuoteResponse = await generateAIQuote(quoteRequest);
+    // Phase 1: OpenClaw Pre-qualification
+    const qualificationPrompt = `You are a PlumbLead.ai Lead Qualifier. Analyze the following plumbing quote request. Your goal is to score the lead (e.g., 'High Urgency', 'Routine'), identify any specific keywords or potential cross-sell opportunities (e.g., 'water treatment' if hard water is implied by location), and suggest any refinements to the prompt for the main AI (Gemini) to generate a better quote.
+
+    Quote Request Details:
+    Service Type: ${serviceType}
+    Details: ${details}
+    Location: ${location}
+    Language: ${language}
+
+    Return a JSON object with 'leadScore' (string), 'crossSellOpportunities' (array of strings), and 'geminiPromptRefinement' (string, optional) for Gemini to use.`;
+
+    const openClawResponse = await fetch(openClawApiEndpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${openClawApiKey}`
+      },
+      body: JSON.stringify({
+        model: 'openclaw:plumblead',
+        messages: [{ role: 'user', content: qualificationPrompt }],
+        user: sessionId
+      })
+    });
+
+    const openClawResult = await openClawResponse.json();
+    const openClawData = JSON.parse(openClawResult.choices?.[0]?.message?.content || openClawResult.output || '{}');
+
+    // Phase 2: Refine Gemini's prompt based on OpenClaw's insights
+    let refinedDetails = details;
+    if (openClawData.geminiPromptRefinement) {
+      refinedDetails += `\n\nOpenClaw Insights for Gemini: ${openClawData.geminiPromptRefinement}`;
+    }
+
+    const finalQuoteRequest: QuoteRequest = {
+      ...quoteRequest,
+      details: refinedDetails,
+    };
+
+    // Phase 3: Call Gemini's generateAIQuote function
+    const quoteResponse: QuoteResponse = await generateAIQuote(finalQuoteRequest);
+
+    // Optionally, add OpenClaw's lead score to the response
+    if (openClawData.leadScore) {
+      (quoteResponse as any).leadScore = openClawData.leadScore;
+    }
+    if (openClawData.crossSellOpportunities) {
+      (quoteResponse as any).crossSellOpportunities = openClawData.crossSellOpportunities;
+    }
+
     res.json(quoteResponse);
   } catch (error) {
-    console.error("Error in /api/quote:", error);
-    res.status(500).json({ error: "Failed to generate instant quote." });
+    console.error("Error in /api/quote (OpenClaw pre-qualification or Gemini call):", error);
+    res.status(500).json({ error: "Failed to generate instant quote with OpenClaw pre-qualification." });
   }
 });
 
