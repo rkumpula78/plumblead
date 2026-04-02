@@ -1,7 +1,6 @@
 {
   "name": "plumblead-ai",
   "version": "1.1.0",
-  "type": "module",
   "description": "AI-powered instant quotes and speed-to-lead for plumbing contractors",
   "scripts": {
     "dev": "concurrently \"npm run dev:client\" \"npm run dev:server\"",
