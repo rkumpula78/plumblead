@@ -1,13 +1,12 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-// Production backend: https://plumblead-production.up.railway.app
-// Set VITE_API_URL in Cloudflare Pages environment variables
-// Local dev: Vite proxies /api/* to localhost:3000
+const RAILWAY_URL = 'https://plumblead-production.up.railway.app';
 
 export default defineConfig({
   plugins: [react()],
   server: {
+    // Local dev: proxy /api/* to Express on localhost:3000
     proxy: {
       '/api': {
         target: 'http://localhost:3000',
@@ -19,10 +18,10 @@ export default defineConfig({
     outDir: 'dist',
   },
   define: {
-    // Bakes the API URL into the frontend bundle at build time
-    // Falls back to empty string (relative URLs) if not set
+    // Hardcoded Railway URL baked into the bundle at build time
+    // Local dev uses empty string (falls back to Vite proxy above)
     'import.meta.env.VITE_API_URL': JSON.stringify(
-      process.env.VITE_API_URL || ''
+      process.env.NODE_ENV === 'production' ? RAILWAY_URL : ''
     ),
   },
 });
