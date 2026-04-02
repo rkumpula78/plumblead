@@ -10,24 +10,8 @@ dotenv.config();
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Allow requests from plumblead.ai and local dev
-const allowedOrigins = [
-  'https://plumblead.ai',
-  'https://www.plumblead.ai',
-  'https://plumblead-site.rkumpula.workers.dev',
-  'http://localhost:5173',
-  'http://localhost:3000',
-];
-
 app.use(cors({
-  origin: (origin, callback) => {
-    // Allow requests with no origin (mobile, curl, etc)
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(null, true); // Permissive for now — tighten after confirmed working
-    }
-  },
+  origin: (origin, callback) => { callback(null, true); },
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
@@ -47,11 +31,22 @@ app.get('/api/health', (_req, res) => {
 // --- Chat ---
 app.post('/api/chat', async (req, res) => {
   const { message, lang = 'en', sessionId = 'plumblead-user' } = req.body;
-  const systemInstruction = `You are a Senior Plumbing Technical Consultant for PlumbLead.ai.
-  Use precise plumbing terminology. Explain the how and why behind issues.
-  Offer safe DIY tips but always note when a professional is required.
-  Be direct and authoritative. Encourage the Instant Quote tool for pricing.
-  IMPORTANT: Respond in ${lang === 'es' ? 'Spanish' : 'English'}.`;
+  const isSpanish = lang === 'es';
+
+  const systemInstruction = `You are a friendly plumbing assistant for PlumbLead.ai. Your job is to quickly qualify the homeowner's issue and guide them to get a free quote.
+
+STRICT RULES:
+- Keep responses SHORT — 2-4 sentences maximum. Never use headers, bullet points, or long lists.
+- Ask ONE clarifying question per response to narrow down the problem.
+- After 1-2 exchanges, encourage them to use the Instant Quote tool for a free estimate.
+- Be warm and helpful, not clinical or encyclopedic.
+- Never dump a wall of text. If you feel like writing more than 4 sentences, stop and ask a question instead.
+- IMPORTANT: Respond entirely in ${isSpanish ? 'Spanish' : 'English'}.
+
+Example good response to "my water heater is leaking":
+"That sounds urgent — a leaking water heater needs attention soon. Is the leak coming from the top, bottom, or the side of the tank? That'll help us figure out if it's a quick fix or a replacement."
+
+Example bad response: Long headers, bullet points, multiple sections. Never do this.`;
 
   // Try OpenClaw first
   if (openClawApiEndpoint && openClawApiKey) {
@@ -77,7 +72,7 @@ app.post('/api/chat', async (req, res) => {
   try {
     const geminiResponse = await ai.models.generateContent({
       model: process.env.PLUMBLEAD_QUOTE_AI_MODEL || 'gemini-2.0-flash',
-      contents: `${systemInstruction}\n\nHomeowner question: ${message}`,
+      contents: `${systemInstruction}\n\nHomeowner: ${message}`,
     });
     const text = geminiResponse.text ?? "I'm sorry, I couldn't process that right now.";
     return res.json({ response: text });
@@ -151,7 +146,6 @@ Request: Service=${serviceType}, Details=${details}, Location=${location}`;
 app.post('/api/leads', async (req, res) => {
   const n8nWebhookUrl = process.env.N8N_WEBHOOK_URL;
   if (!n8nWebhookUrl) {
-    console.warn('N8N_WEBHOOK_URL not set');
     return res.status(200).json({ message: 'Lead received.' });
   }
   try {
@@ -160,9 +154,7 @@ app.post('/api/leads', async (req, res) => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(req.body)
     });
-    if (response.ok) {
-      return res.json({ message: 'Lead forwarded to n8n.' });
-    }
+    if (response.ok) return res.json({ message: 'Lead forwarded to n8n.' });
     return res.status(200).json({ message: 'Lead received (forwarding failed).' });
   } catch (error) {
     console.error('Lead forwarding error:', error);
