@@ -1,13 +1,13 @@
 // src/components/SubmitTrial.tsx
 // PlumbLead.ai — Free trial signup for plumbing contractors
-// Design: Bebas Neue + DM Sans, black/yellow/white — matches LandingPage aesthetic
+// Aesthetic: matches LandingPage — Bebas Neue + DM Sans, #0D0D0D / #F5A623 / #F5F4F0
 
 import React, { useState, useEffect } from 'react';
 
 // ─── API Base ─────────────────────────────────────────────────────────────────
 const API_BASE = 'https://plumblead-production.up.railway.app';
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
 interface TrialFormData {
   firstName: string;
   lastName: string;
@@ -29,226 +29,68 @@ const INITIAL: TrialFormData = {
   crm: '', crmOther: '', city: '', hearAbout: '',
 };
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-const formatPhone = (val: string) => {
-  const d = val.replace(/\D/g, '').slice(0, 10);
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+const formatPhone = (v: string) => {
+  const d = v.replace(/\D/g, '').slice(0, 10);
   if (d.length <= 3) return d;
   if (d.length <= 6) return `(${d.slice(0, 3)}) ${d.slice(3)}`;
   return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`;
 };
 
-const isEmailValid = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+const isEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
-const GLOBAL_CSS = `
-  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&display=swap');
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'DM Sans', sans-serif; background: #F5F4F0; color: #0D0D0D; }
+// ─── Shared styles ────────────────────────────────────────────────────────────
+const LABEL: React.CSSProperties = {
+  display: 'block',
+  fontSize: 11,
+  fontWeight: 700,
+  textTransform: 'uppercase',
+  letterSpacing: '1.2px',
+  color: '#9E9B91',
+  marginBottom: 6,
+};
 
-  .trial-input {
-    width: 100%;
-    padding: 14px 16px;
-    font-size: 15px;
-    font-family: 'DM Sans', sans-serif;
-    border: 2px solid #E8E6DF;
-    background: #FFF;
-    color: #0D0D0D;
-    outline: none;
-    transition: border-color 0.15s;
-    appearance: none;
-    -webkit-appearance: none;
-  }
-  .trial-input:focus { border-color: #F5A623; }
-  .trial-input::placeholder { color: #9E9B91; }
-
-  .trial-select {
-    width: 100%;
-    padding: 14px 40px 14px 16px;
-    font-size: 15px;
-    font-family: 'DM Sans', sans-serif;
-    border: 2px solid #E8E6DF;
-    background: #FFF url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%239E9B91' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat right 16px center;
-    color: #0D0D0D;
-    outline: none;
-    transition: border-color 0.15s;
-    cursor: pointer;
-    appearance: none;
-    -webkit-appearance: none;
-  }
-  .trial-select:focus { border-color: #F5A623; }
-  .trial-select.placeholder-active { color: #9E9B91; }
-
-  .field-grid-2 {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-  }
-
-  @media (max-width: 600px) {
-    .field-grid-2 { grid-template-columns: 1fr; }
-    .trial-hero-grid { grid-template-columns: 1fr !important; }
-    .trial-form-card { padding: 32px 24px !important; }
-    .trial-nav { padding: 0 24px !important; }
-    .trial-footer { padding: 24px !important; flex-direction: column !important; gap: 12px !important; text-align: center !important; }
-  }
-
-  @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-  .fade-up { animation: fadeUp 0.5s ease forwards; opacity: 0; }
-`;
-
-// ─── Sub-components ───────────────────────────────────────────────────────────
-
-const FieldLabel: React.FC<{ htmlFor: string; children: React.ReactNode }> = ({ htmlFor, children }) => (
-  <label
-    htmlFor={htmlFor}
-    style={{
-      display: 'block',
-      fontSize: 12,
-      fontWeight: 700,
-      textTransform: 'uppercase',
-      letterSpacing: '0.9px',
-      color: '#5C5A53',
-      marginBottom: 8,
-    }}
-  >
-    {children}
-  </label>
-);
-
-const FieldGroup: React.FC<{ children: React.ReactNode; style?: React.CSSProperties }> = ({ children, style }) => (
-  <div style={{ display: 'flex', flexDirection: 'column', ...style }}>{children}</div>
-);
-
-// ─── Success Screen ───────────────────────────────────────────────────────────
-
-const SuccessScreen: React.FC<{ form: TrialFormData }> = ({ form }) => (
-  <>
-    <style>{GLOBAL_CSS}</style>
-    <div style={{ minHeight: '100vh', background: '#0D0D0D', display: 'flex', flexDirection: 'column' }}>
-
-      {/* Nav */}
-      <nav className="trial-nav" style={{ background: '#0D0D0D', borderBottom: '3px solid #F5A623', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 60px', height: 64 }}>
-        <a href="/" style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 28, color: '#F5A623', letterSpacing: 1, textDecoration: 'none' }}>
-          Plumb<span style={{ color: '#FFF' }}>Lead</span>.ai
-        </a>
-      </nav>
-
-      {/* Content */}
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '60px 24px' }}>
-        <div
-          className="fade-up"
-          style={{
-            background: '#1A1A1A',
-            border: '2px solid #333',
-            borderTop: '4px solid #F5A623',
-            padding: '56px 52px',
-            maxWidth: 520,
-            width: '100%',
-            textAlign: 'center',
-          }}
-        >
-          {/* Check icon */}
-          <div style={{
-            width: 72, height: 72,
-            background: '#F5A623',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            margin: '0 auto 28px',
-            fontSize: 32,
-          }}>
-            ✓
-          </div>
-
-          <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: 2, color: '#F5A623', fontWeight: 700, marginBottom: 12 }}>
-            Trial Activated
-          </div>
-          <h2 style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 56, color: '#FFF', lineHeight: 1, marginBottom: 16 }}>
-            You're In.
-</h2>
-          <p style={{ fontSize: 16, color: '#9E9B91', lineHeight: 1.6, marginBottom: 32 }}>
-            We'll have <strong style={{ color: '#FFF' }}>{form.company}</strong> configured within{' '}
-            <strong style={{ color: '#F5A623' }}>2 business hours</strong>.<br />
-            Check <strong style={{ color: '#FFF' }}>{form.email}</strong> for your setup guide.
-          </p>
-
-          {/* Detail pills */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 2, marginBottom: 36 }}>
-            {[
-              { label: 'Trucks', val: form.trucks },
-              { label: 'CRM', val: form.crm === 'other' ? form.crmOther || 'Other' : form.crm || '—' },
-              { label: 'Trial', val: '14 Days' },
-            ].map((d, i) => (
-              <div key={i} style={{ background: '#222', padding: '14px 12px', textAlign: 'center' }}>
-                <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: 1, color: '#5C5A53', fontWeight: 700, marginBottom: 4 }}>{d.label}</div>
-                <div style={{ fontSize: 15, fontWeight: 700, color: '#FFF' }}>{d.val}</div>
-              </div>
-            ))}
-          </div>
-
-          <div style={{ display: 'flex', gap: 12 }}>
-            <a
-              href="/"
-              style={{
-                flex: 1, padding: '14px', background: 'transparent',
-                border: '2px solid #333', color: '#9E9B91',
-                fontWeight: 700, fontSize: 14, textDecoration: 'none',
-                textAlign: 'center', fontFamily: 'DM Sans, sans-serif',
-              }}
-            >
-              ← Back to Home
-            </a>
-            <a
-              href="/dashboard"
-              style={{
-                flex: 1, padding: '14px', background: '#F5A623',
-                border: 'none', color: '#000',
-                fontWeight: 700, fontSize: 14, textDecoration: 'none',
-                textAlign: 'center', fontFamily: 'DM Sans, sans-serif',
-              }}
-            >
-              View Dashboard →
-            </a>
-          </div>
-
-          <p style={{ marginTop: 24, fontSize: 13, color: '#5C5A53' }}>
-            Questions? Call or text{' '}
-            <a href="tel:+18335580877" style={{ color: '#F5A623', textDecoration: 'none', fontWeight: 600 }}>(833) 558-0877</a>
-          </p>
-        </div>
-      </div>
-    </div>
-  </>
-);
+const INPUT_BASE: React.CSSProperties = {
+  width: '100%',
+  padding: '13px 16px',
+  fontSize: 15,
+  fontFamily: 'DM Sans, sans-serif',
+  color: '#0D0D0D',
+  background: '#FFF',
+  border: '2px solid #E8E6DF',
+  outline: 'none',
+  transition: 'border-color 0.15s',
+  appearance: 'none' as React.CSSProperties['appearance'],
+};
 
 // ─── Main Component ───────────────────────────────────────────────────────────
-
 const SubmitTrial: React.FC = () => {
   const [form, setForm] = useState<TrialFormData>(INITIAL);
   const [submitState, setSubmitState] = useState<SubmitState>('idle');
   const [errorMsg, setErrorMsg] = useState('');
+  const [focused, setFocused] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
 
-  // Scroll to top on mount
-  useEffect(() => { window.scrollTo(0, 0); }, []);
+  useEffect(() => { setMounted(true); }, []);
 
-  const update = (field: keyof TrialFormData, value: string) =>
+  const set = (field: keyof TrialFormData, value: string) =>
     setForm(prev => ({ ...prev, [field]: value }));
 
-  const isValid = (): boolean =>
-    !!form.firstName.trim() &&
-    !!form.lastName.trim() &&
-    !!form.company.trim() &&
+  const isValid = (
+    form.firstName.trim() &&
+    form.lastName.trim() &&
+    form.company.trim() &&
     form.phone.replace(/\D/g, '').length === 10 &&
-    isEmailValid(form.email) &&
-    !!form.trucks &&
-    !!form.crm &&
-    (form.crm !== 'other' || !!form.crmOther.trim()) &&
-    !!form.city.trim();
+    isEmail(form.email) &&
+    form.trucks &&
+    form.crm &&
+    (form.crm !== 'other' || form.crmOther.trim()) &&
+    form.city.trim()
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isValid()) return;
+    if (!isValid) return;
     setSubmitState('submitting');
     setErrorMsg('');
 
@@ -266,7 +108,7 @@ const SubmitTrial: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (!res.ok) throw new Error(`${res.status}`);
       setSubmitState('success');
     } catch (err) {
       console.error('Trial submit error:', err);
@@ -275,348 +117,288 @@ const SubmitTrial: React.FC = () => {
     }
   };
 
-  if (submitState === 'success') return <SuccessScreen form={form} />;
+  const inputStyle = (name: string): React.CSSProperties => ({
+    ...INPUT_BASE,
+    borderColor: focused === name ? '#F5A623' : '#E8E6DF',
+  });
 
-  const isLoading = submitState === 'submitting';
-  const btnActive = isValid() && !isLoading;
+  // ─── Success Screen ─────────────────────────────────────────────────────────
+  if (submitState === 'success') {
+    return (
+      <>
+        <style>{globalStyles}</style>
+        <div style={{ minHeight: '100vh', background: '#0D0D0D', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 24px' }}>
+          <div style={{
+            maxWidth: 520, width: '100%',
+            border: '3px solid #F5A623',
+            background: '#111',
+            padding: '56px 48px',
+            textAlign: 'center',
+            opacity: mounted ? 1 : 0,
+            transform: mounted ? 'translateY(0)' : 'translateY(20px)',
+            transition: 'opacity 0.5s ease, transform 0.5s ease',
+          }}>
+            <div style={{ width: 64, height: 64, background: '#F5A623', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', fontSize: 28 }}>✓</div>
+            <div style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 64, color: '#F5A623', lineHeight: 1, marginBottom: 12 }}>YOU'RE IN.</div>
+            <p style={{ fontSize: 16, color: '#9E9B91', lineHeight: 1.6, marginBottom: 32 }}>
+              Your trial will be configured within <strong style={{ color: '#FFF' }}>2 business hours</strong>.<br />
+              Check <strong style={{ color: '#FFF' }}>{form.email}</strong> for setup instructions.
+            </p>
+            <div style={{ background: '#1A1A1A', border: '1px solid #333', padding: '20px 24px', marginBottom: 32, textAlign: 'left' }}>
+              {[
+                ['Company', form.company],
+                ['Trucks', form.trucks],
+                ['Trial Length', '14 days free'],
+                ['CRM', form.crm === 'other' ? form.crmOther : form.crm],
+              ].map(([label, val]) => (
+                <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #222', fontSize: 14 }}>
+                  <span style={{ color: '#5C5A53', fontWeight: 600 }}>{label}</span>
+                  <span style={{ color: '#FFF', fontWeight: 700 }}>{val}</span>
+                </div>
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: 12 }}>
+              <a href="/" style={{ flex: 1, padding: '14px', background: '#F5A623', color: '#000', fontWeight: 700, fontSize: 15, textDecoration: 'none', textAlign: 'center', fontFamily: 'DM Sans, sans-serif' }}>Back to Home</a>
+              <a href="/dashboard" style={{ flex: 1, padding: '14px', background: 'transparent', color: '#F5A623', fontWeight: 700, fontSize: 15, textDecoration: 'none', textAlign: 'center', border: '2px solid #F5A623', fontFamily: 'DM Sans, sans-serif' }}>View Dashboard</a>
+            </div>
+            <p style={{ marginTop: 20, fontSize: 12, color: '#5C5A53' }}>
+              Questions? <a href="tel:+18335580877" style={{ color: '#F5A623', textDecoration: 'none' }}>(833) 558-0877</a>
+            </p>
+          </div>
+        </div>
+      </>
+    );
+  }
 
+  // ─── Main Form ───────────────────────────────────────────────────────────────
   return (
     <>
-      <style>{GLOBAL_CSS}</style>
+      <style>{globalStyles}</style>
 
-      {/* ── Top bar ── */}
-      <div style={{
-        background: '#F5A623', padding: '9px 40px',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: 13, fontWeight: 700, color: '#0D0D0D', gap: 10,
-      }}>
-        <span style={{ width: 7, height: 7, background: '#0D0D0D', borderRadius: '50%', display: 'inline-block' }} />
-        14-Day Free Trial · No Credit Card Required · Cancel Anytime
-        <span style={{ width: 7, height: 7, background: '#0D0D0D', borderRadius: '50%', display: 'inline-block' }} />
+      {/* Top bar */}
+      <div style={{ background: '#F5A623', padding: '10px 40px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 13, fontWeight: 700, color: '#0D0D0D' }}>
+        <span>🔒 14-Day Free Trial · No Credit Card Required</span>
+        <span style={{ fontSize: 12, color: '#7A5810' }}>Questions? Call (833) 558-0877</span>
       </div>
 
-      {/* ── Nav ── */}
-      <nav
-        className="trial-nav"
-        style={{
-          position: 'sticky', top: 0, zIndex: 100,
-          background: '#0D0D0D', borderBottom: '3px solid #F5A623',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '0 60px', height: 64,
-        }}
-      >
-        <a href="/" style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 28, color: '#F5A623', letterSpacing: 1, textDecoration: 'none' }}>
-          Plumb<span style={{ color: '#FFF' }}>Lead</span>.ai
-        </a>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#5C5A53' }}>
-          Already have an account?
-          <a href="/dashboard" style={{ color: '#F5A623', fontWeight: 700, textDecoration: 'none' }}>Sign In →</a>
-        </div>
+      {/* Nav */}
+      <nav style={{ background: '#0D0D0D', borderBottom: '3px solid #F5A623', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 60px', height: 64 }}>
+        <a href="/" style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 28, color: '#F5A623', letterSpacing: 1, textDecoration: 'none' }}>Plumb<span style={{ color: '#FFF' }}>Lead</span>.ai</a>
+        <a href="/" style={{ fontSize: 13, color: '#5C5A53', textDecoration: 'none', fontWeight: 500 }}>← Back to Home</a>
       </nav>
 
-      {/* ── Hero + Form grid ── */}
-      <div
-        className="trial-hero-grid"
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          minHeight: 'calc(100vh - 100px)',
-        }}
-      >
-        {/* ── Left: Hero copy ── */}
+      {/* Page layout */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', minHeight: 'calc(100vh - 104px)', background: '#F5F4F0' }}>
+
+        {/* Left — value prop */}
         <div style={{
           background: '#0D0D0D',
-          padding: '72px 60px 72px 80px',
-          display: 'flex', flexDirection: 'column', justifyContent: 'center',
-          borderRight: '2px solid #222',
+          padding: '72px 64px',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          borderRight: '4px solid #F5A623',
+          opacity: mounted ? 1 : 0,
+          transform: mounted ? 'translateX(0)' : 'translateX(-20px)',
+          transition: 'opacity 0.5s ease, transform 0.5s ease',
         }}>
-          {/* Eyebrow */}
-          <div style={{
-            display: 'inline-flex', alignItems: 'center', gap: 8,
-            background: '#1A1A1A', border: '1px solid #333',
-            borderLeft: '3px solid #F5A623',
-            padding: '6px 14px',
-            fontSize: 11, color: '#9E9B91',
-            letterSpacing: 1.5, textTransform: 'uppercase', fontWeight: 700,
-            marginBottom: 28, width: 'fit-content',
-          }}>
-            Free 14-Day Trial
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: 'rgba(245,166,35,0.1)', border: '1px solid rgba(245,166,35,0.3)', borderLeft: '3px solid #F5A623', padding: '6px 14px', fontSize: 11, color: '#F5A623', letterSpacing: 1.5, textTransform: 'uppercase', fontWeight: 700, marginBottom: 28, width: 'fit-content' }}>
+            Free Trial — No Card Required
           </div>
 
-          <h1 style={{
-            fontFamily: 'Bebas Neue, sans-serif',
-            fontSize: 80, lineHeight: 0.92,
-            color: '#FFF', textTransform: 'uppercase',
-            marginBottom: 24,
-          }}>
-            Start Closing<br />
-            <span style={{ color: '#F5A623' }}>More Jobs</span><br />
-            Tomorrow.
+          <h1 style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 72, lineHeight: 0.95, color: '#FFF', textTransform: 'uppercase', marginBottom: 20 }}>
+            Start Winning<br />
+            <span style={{ color: '#F5A623' }}>Every Lead</span><br />
+            You Deserve.
           </h1>
 
-          <p style={{ fontSize: 17, color: '#9E9B91', lineHeight: 1.6, marginBottom: 40, maxWidth: 400 }}>
-            Your AI quote tool, speed-to-lead automation, and contractor dashboard — live before your first shift.
+          <p style={{ fontSize: 16, color: '#9E9B91', lineHeight: 1.6, marginBottom: 40, maxWidth: 400 }}>
+            Takes 2 minutes to set up. Your AI quote tool, speed-to-lead SMS, and lead dashboard will be live before your next shift.
           </p>
 
-          {/* Perks */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 14 }}>
             {[
-              ['⚡', 'Respond to leads in under 60 seconds'],
-              ['💬', 'AI quotes sent to homeowners automatically'],
-              ['📊', 'Lead dashboard + status tracking'],
-              ['🔗', 'Works with ServiceTitan & Housecall Pro'],
-              ['🇲🇽', 'Full English + Spanish support'],
-            ].map(([icon, text], i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 14, animationDelay: `${i * 0.06}s` }} className="fade-up">
-                <div style={{
-                  width: 36, height: 36,
-                  background: '#1A1A1A', border: '1px solid #333',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 16, flexShrink: 0,
-                }}>
-                  {icon}
-                </div>
-                <span style={{ fontSize: 14, color: '#9E9B91', fontWeight: 500 }}>{text}</span>
-              </div>
+              'AI responds to homeowners in under 60 seconds',
+              'Instant quote estimates for 12 service categories',
+              'Leads routed to ServiceTitan, HCP, or your CRM',
+              'English + Spanish — automatic',
+              'Full lead dashboard with status tracking',
+            ].map((perk, i) => (
+              <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, fontSize: 14, color: '#9E9B91', lineHeight: 1.5, opacity: mounted ? 1 : 0, transform: mounted ? 'translateX(0)' : 'translateX(-12px)', transition: `opacity 0.4s ease ${0.15 + i * 0.07}s, transform 0.4s ease ${0.15 + i * 0.07}s` }}>
+                <span style={{ color: '#F5A623', fontWeight: 700, marginTop: 1, flexShrink: 0 }}>✓</span>
+                {perk}
+              </li>
             ))}
-          </div>
+          </ul>
 
-          {/* Social proof */}
-          <div style={{
-            marginTop: 48,
-            padding: '24px 28px',
-            background: '#111', border: '1px solid #222',
-            borderLeft: '3px solid #F5A623',
-          }}>
-            <p style={{ fontSize: 15, color: '#9E9B91', lineHeight: 1.5, fontStyle: 'italic', marginBottom: 12 }}>
-              &ldquo;PlumbLead paid for itself in the first 48 hours. Now my guys just show up and close.&rdquo;
-            </p>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{
-                width: 36, height: 36, borderRadius: '50%',
-                background: '#F5A623',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontWeight: 700, fontSize: 13, color: '#000',
-              }}>MR</div>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#FFF' }}>Mike R.</div>
-                <div style={{ fontSize: 12, color: '#5C5A53' }}>Owner, Reliable Plumbing — Phoenix, AZ</div>
-              </div>
-            </div>
+          <div style={{ marginTop: 48, paddingTop: 32, borderTop: '1px solid #222' }}>
+            <div style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 40, color: '#F5A623', lineHeight: 1 }}>One job pays for 6 months.</div>
+            <p style={{ fontSize: 13, color: '#5C5A53', marginTop: 6 }}>Average water heater install: $1,400. Monthly Pro plan: $197.</p>
           </div>
         </div>
 
-        {/* ── Right: Form ── */}
-        <div style={{ background: '#F5F4F0', padding: '72px 60px 72px 60px', display: 'flex', alignItems: 'flex-start', justifyContent: 'center' }}>
-          <div
-            className="trial-form-card"
-            style={{
-              background: '#FFF',
-              border: '2px solid #E8E6DF',
-              borderTop: '4px solid #F5A623',
-              padding: '44px 40px',
-              width: '100%',
-              maxWidth: 520,
-            }}
-          >
-            {/* Card header */}
-            <div style={{ marginBottom: 32 }}>
-              <div style={{
-                fontSize: 11, textTransform: 'uppercase', letterSpacing: 2,
-                fontWeight: 700, color: '#C4841A', marginBottom: 8,
-                display: 'flex', alignItems: 'center', gap: 8,
-              }}>
-                <span style={{ display: 'block', width: 20, height: 2, background: '#F5A623' }} />
-                Start Your Free Trial
+        {/* Right — form */}
+        <div style={{
+          padding: '56px 64px',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          opacity: mounted ? 1 : 0,
+          transform: mounted ? 'translateX(0)' : 'translateX(20px)',
+          transition: 'opacity 0.5s ease 0.1s, transform 0.5s ease 0.1s',
+        }}>
+          <div style={{ marginBottom: 32 }}>
+            <div style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 42, lineHeight: 1, color: '#0D0D0D', marginBottom: 8 }}>Start Your Free Trial</div>
+            <p style={{ fontSize: 14, color: '#9E9B91' }}>14 days free. We'll configure everything before you go live.</p>
+          </div>
+
+          <form onSubmit={handleSubmit} noValidate style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+            {/* Name row */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <div>
+                <label style={LABEL} htmlFor="firstName">First Name</label>
+                <input id="firstName" type="text" value={form.firstName} onChange={e => set('firstName', e.target.value)} onFocus={() => setFocused('firstName')} onBlur={() => setFocused(null)} placeholder="Ryan" style={inputStyle('firstName')} required autoComplete="given-name" />
               </div>
-              <h2 style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 40, lineHeight: 1, textTransform: 'uppercase' }}>
-                Your Info
-              </h2>
-              <p style={{ fontSize: 14, color: '#9E9B91', marginTop: 6 }}>
-                Takes 90 seconds. We'll handle the rest.
-              </p>
+              <div>
+                <label style={LABEL} htmlFor="lastName">Last Name</label>
+                <input id="lastName" type="text" value={form.lastName} onChange={e => set('lastName', e.target.value)} onFocus={() => setFocused('lastName')} onBlur={() => setFocused(null)} placeholder="Smith" style={inputStyle('lastName')} required autoComplete="family-name" />
+              </div>
             </div>
 
-            <form onSubmit={handleSubmit} noValidate>
-              {/* Name */}
-              <div className="field-grid-2" style={{ marginBottom: 16 }}>
-                <FieldGroup>
-                  <FieldLabel htmlFor="firstName">First Name</FieldLabel>
-                  <input id="firstName" className="trial-input" type="text" autoComplete="given-name"
-                    value={form.firstName} onChange={e => update('firstName', e.target.value)}
-                    placeholder="Ryan" required />
-                </FieldGroup>
-                <FieldGroup>
-                  <FieldLabel htmlFor="lastName">Last Name</FieldLabel>
-                  <input id="lastName" className="trial-input" type="text" autoComplete="family-name"
-                    value={form.lastName} onChange={e => update('lastName', e.target.value)}
-                    placeholder="Smith" required />
-                </FieldGroup>
+            {/* Company */}
+            <div>
+              <label style={LABEL} htmlFor="company">Company Name</label>
+              <input id="company" type="text" value={form.company} onChange={e => set('company', e.target.value)} onFocus={() => setFocused('company')} onBlur={() => setFocused(null)} placeholder="Smith Plumbing LLC" style={inputStyle('company')} required autoComplete="organization" />
+            </div>
+
+            {/* Phone + Email row */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <div>
+                <label style={LABEL} htmlFor="phone">Mobile Phone</label>
+                <input id="phone" type="tel" value={form.phone} onChange={e => set('phone', formatPhone(e.target.value))} onFocus={() => setFocused('phone')} onBlur={() => setFocused(null)} placeholder="(602) 555-0100" style={inputStyle('phone')} required autoComplete="tel" />
               </div>
-
-              {/* Company */}
-              <FieldGroup style={{ marginBottom: 16 }}>
-                <FieldLabel htmlFor="company">Company Name</FieldLabel>
-                <input id="company" className="trial-input" type="text" autoComplete="organization"
-                  value={form.company} onChange={e => update('company', e.target.value)}
-                  placeholder="Smith Plumbing LLC" required />
-              </FieldGroup>
-
-              {/* Phone + Email */}
-              <div className="field-grid-2" style={{ marginBottom: 16 }}>
-                <FieldGroup>
-                  <FieldLabel htmlFor="phone">Mobile Phone</FieldLabel>
-                  <input id="phone" className="trial-input" type="tel" autoComplete="tel"
-                    value={form.phone}
-                    onChange={e => update('phone', formatPhone(e.target.value))}
-                    placeholder="(602) 555-0100" required />
-                </FieldGroup>
-                <FieldGroup>
-                  <FieldLabel htmlFor="email">Work Email</FieldLabel>
-                  <input id="email" className="trial-input" type="email" autoComplete="email"
-                    value={form.email} onChange={e => update('email', e.target.value)}
-                    placeholder="ryan@smithplumbing.com" required />
-                </FieldGroup>
+              <div>
+                <label style={LABEL} htmlFor="email">Work Email</label>
+                <input id="email" type="email" value={form.email} onChange={e => set('email', e.target.value)} onFocus={() => setFocused('email')} onBlur={() => setFocused(null)} placeholder="ryan@smithplumbing.com" style={inputStyle('email')} required autoComplete="email" />
               </div>
+            </div>
 
-              {/* City + Trucks */}
-              <div className="field-grid-2" style={{ marginBottom: 16 }}>
-                <FieldGroup>
-                  <FieldLabel htmlFor="city">Service City / Metro</FieldLabel>
-                  <input id="city" className="trial-input" type="text"
-                    value={form.city} onChange={e => update('city', e.target.value)}
-                    placeholder="Phoenix, AZ" required />
-                </FieldGroup>
-                <FieldGroup>
-                  <FieldLabel htmlFor="trucks">Number of Trucks</FieldLabel>
-                  <select
-                    id="trucks"
-                    className={`trial-select${!form.trucks ? ' placeholder-active' : ''}`}
-                    value={form.trucks}
-                    onChange={e => update('trucks', e.target.value)}
-                    required
-                  >
-                    <option value="" disabled>Select...</option>
-                    <option value="1">1 truck</option>
-                    <option value="2-3">2–3 trucks</option>
-                    <option value="4-7">4–7 trucks</option>
-                    <option value="8-15">8–15 trucks</option>
-                    <option value="16+">16+ trucks</option>
+            {/* Trucks + City row */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <div>
+                <label style={LABEL} htmlFor="trucks">Number of Trucks</label>
+                <div style={{ position: 'relative' }}>
+                  <select id="trucks" value={form.trucks} onChange={e => set('trucks', e.target.value)} onFocus={() => setFocused('trucks')} onBlur={() => setFocused(null)} required style={{ ...inputStyle('trucks'), paddingRight: 36, backgroundImage: 'none' }}>
+                    <option value="">Select...</option>
+                    <option>1</option>
+                    <option>2–3</option>
+                    <option>4–6</option>
+                    <option>7–10</option>
+                    <option>11–20</option>
+                    <option>20+</option>
                   </select>
-                </FieldGroup>
+                  <span style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: '#9E9B91', fontSize: 12 }}>▼</span>
+                </div>
               </div>
+              <div>
+                <label style={LABEL} htmlFor="city">Primary Service City</label>
+                <input id="city" type="text" value={form.city} onChange={e => set('city', e.target.value)} onFocus={() => setFocused('city')} onBlur={() => setFocused(null)} placeholder="Phoenix, AZ" style={inputStyle('city')} required />
+              </div>
+            </div>
 
-              {/* CRM */}
-              <FieldGroup style={{ marginBottom: form.crm === 'other' ? 12 : 16 }}>
-                <FieldLabel htmlFor="crm">CRM / Field Software</FieldLabel>
-                <select
-                  id="crm"
-                  className={`trial-select${!form.crm ? ' placeholder-active' : ''}`}
-                  value={form.crm}
-                  onChange={e => update('crm', e.target.value)}
-                  required
-                >
-                  <option value="" disabled>Select your software...</option>
+            {/* CRM */}
+            <div>
+              <label style={LABEL} htmlFor="crm">CRM / Scheduling Software</label>
+              <div style={{ position: 'relative' }}>
+                <select id="crm" value={form.crm} onChange={e => set('crm', e.target.value)} onFocus={() => setFocused('crm')} onBlur={() => setFocused(null)} required style={{ ...inputStyle('crm'), paddingRight: 36 }}>
+                  <option value="">Select your CRM...</option>
                   <option value="ServiceTitan">ServiceTitan</option>
                   <option value="Housecall Pro">Housecall Pro</option>
                   <option value="Jobber">Jobber</option>
                   <option value="FieldEdge">FieldEdge</option>
-                  <option value="none">No CRM yet</option>
+                  <option value="none">None / Spreadsheet</option>
                   <option value="other">Other</option>
                 </select>
-              </FieldGroup>
-
+                <span style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: '#9E9B91', fontSize: 12 }}>▼</span>
+              </div>
               {form.crm === 'other' && (
-                <FieldGroup style={{ marginBottom: 16 }}>
-                  <FieldLabel htmlFor="crmOther">Which software?</FieldLabel>
-                  <input id="crmOther" className="trial-input" type="text"
-                    value={form.crmOther} onChange={e => update('crmOther', e.target.value)}
-                    placeholder="e.g. ServiceM8, Tradify..." />
-                </FieldGroup>
+                <input type="text" value={form.crmOther} onChange={e => set('crmOther', e.target.value)} onFocus={() => setFocused('crmOther')} onBlur={() => setFocused(null)} placeholder="What do you use?" style={{ ...inputStyle('crmOther'), marginTop: 8 }} />
               )}
+            </div>
 
-              {/* How did you hear */}
-              <FieldGroup style={{ marginBottom: 28 }}>
-                <FieldLabel htmlFor="hearAbout">How'd you hear about us? <span style={{ color: '#9E9B91', fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(optional)</span></FieldLabel>
-                <select
-                  id="hearAbout"
-                  className={`trial-select${!form.hearAbout ? ' placeholder-active' : ''}`}
-                  value={form.hearAbout}
-                  onChange={e => update('hearAbout', e.target.value)}
-                >
+            {/* How did you hear */}
+            <div>
+              <label style={LABEL} htmlFor="hearAbout">How'd You Hear About Us? <span style={{ color: '#5C5A53', fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>(optional)</span></label>
+              <div style={{ position: 'relative' }}>
+                <select id="hearAbout" value={form.hearAbout} onChange={e => set('hearAbout', e.target.value)} onFocus={() => setFocused('hearAbout')} onBlur={() => setFocused(null)} style={{ ...inputStyle('hearAbout'), paddingRight: 36 }}>
                   <option value="">Select...</option>
-                  <option value="Google">Google Search</option>
-                  <option value="Facebook">Facebook / Instagram</option>
-                  <option value="Referral">Referral from another contractor</option>
-                  <option value="YouTube">YouTube</option>
-                  <option value="Podcast">Podcast</option>
-                  <option value="Other">Other</option>
+                  <option>Google Search</option>
+                  <option>Facebook / Instagram</option>
+                  <option>Referred by another contractor</option>
+                  <option>Trade show / event</option>
+                  <option>Cold outreach / email</option>
+                  <option>Other</option>
                 </select>
-              </FieldGroup>
+                <span style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: '#9E9B91', fontSize: 12 }}>▼</span>
+              </div>
+            </div>
 
-              {/* Error */}
-              {submitState === 'error' && (
-                <div style={{
-                  background: '#FCEBEB', border: '1px solid #F09595',
-                  padding: '12px 16px', marginBottom: 20,
-                  fontSize: 14, color: '#A32D2D',
-                }}>
-                  {errorMsg}
-                </div>
-              )}
+            {/* Error */}
+            {submitState === 'error' && (
+              <div style={{ background: '#1A0000', border: '1px solid #D83030', padding: '12px 16px', fontSize: 14, color: '#E57373' }}>
+                {errorMsg}
+              </div>
+            )}
 
-              {/* Submit */}
-              <button
-                type="submit"
-                disabled={!btnActive}
-                style={{
-                  width: '100%', padding: '16px',
-                  background: btnActive ? '#F5A623' : '#E8E6DF',
-                  border: 'none',
-                  fontFamily: 'DM Sans, sans-serif',
-                  fontWeight: 700, fontSize: 16,
-                  color: btnActive ? '#000' : '#9E9B91',
-                  cursor: btnActive ? 'pointer' : 'not-allowed',
-                  transition: 'all 0.15s',
-                  letterSpacing: 0.3,
-                }}
-              >
-                {isLoading ? 'Activating Trial...' : 'Start My Free Trial →'}
-              </button>
+            {/* Submit */}
+            <button
+              type="submit"
+              disabled={!isValid || submitState === 'submitting'}
+              style={{
+                width: '100%',
+                padding: '18px',
+                background: isValid && submitState !== 'submitting' ? '#F5A623' : '#E8E6DF',
+                color: isValid && submitState !== 'submitting' ? '#0D0D0D' : '#9E9B91',
+                border: 'none',
+                fontFamily: 'DM Sans, sans-serif',
+                fontWeight: 700,
+                fontSize: 16,
+                cursor: isValid && submitState !== 'submitting' ? 'pointer' : 'not-allowed',
+                transition: 'background 0.2s, color 0.2s',
+                letterSpacing: 0.3,
+              }}
+            >
+              {submitState === 'submitting' ? 'Submitting...' : 'Start My Free Trial →'}
+            </button>
 
-              <p style={{ fontSize: 12, color: '#9E9B91', marginTop: 12, textAlign: 'center', lineHeight: 1.5 }}>
-                By submitting, you agree to our{' '}
-                <a href="/terms" style={{ color: '#C4841A', textDecoration: 'none' }}>Terms</a>{' '}and{' '}
-                <a href="/privacy" style={{ color: '#C4841A', textDecoration: 'none' }}>Privacy Policy</a>.
-                No spam. No contracts. Cancel anytime.
-              </p>
-            </form>
-          </div>
+            <p style={{ fontSize: 12, color: '#9E9B91', textAlign: 'center', lineHeight: 1.5 }}>
+              By submitting, you agree to our <a href="/terms" style={{ color: '#C4841A', textDecoration: 'none' }}>Terms</a> and <a href="/privacy" style={{ color: '#C4841A', textDecoration: 'none' }}>Privacy Policy</a>.
+              No spam. No contracts. Cancel anytime.
+            </p>
+          </form>
         </div>
       </div>
 
-      {/* ── Footer ── */}
-      <footer
-        className="trial-footer"
-        style={{
-          background: '#0D0D0D',
-          padding: '28px 80px',
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          borderTop: '3px solid #F5A623',
-        }}
-      >
-        <div style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 22, color: '#F5A623' }}>
-          Plumb<span style={{ color: '#FFF' }}>Lead</span>.ai
-        </div>
-        <p style={{ fontSize: 13, color: '#5C5A53' }}>© 2026 PlumbLead.ai · Built for contractors who close fast.</p>
-        <div style={{ display: 'flex', gap: 16, fontSize: 12 }}>
-          <a href="/privacy" style={{ color: '#5C5A53', textDecoration: 'none' }}>Privacy</a>
-          <a href="/terms" style={{ color: '#5C5A53', textDecoration: 'none' }}>Terms</a>
-          <a href="tel:+18335580877" style={{ color: '#F5A623', textDecoration: 'none', fontWeight: 600 }}>(833) 558-0877</a>
+      {/* Footer */}
+      <footer style={{ background: '#0D0D0D', padding: '28px 60px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '3px solid #F5A623' }}>
+        <div style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 22, color: '#F5A623' }}>Plumb<span style={{ color: '#FFF' }}>Lead</span>.ai</div>
+        <p style={{ fontSize: 12, color: '#5C5A53' }}>© 2026 PlumbLead.ai · Questions? (833) 558-0877</p>
+        <div style={{ display: 'flex', gap: 16 }}>
+          <a href="/privacy" style={{ fontSize: 12, color: '#444', textDecoration: 'none' }}>Privacy</a>
+          <a href="/terms" style={{ fontSize: 12, color: '#444', textDecoration: 'none' }}>Terms</a>
         </div>
       </footer>
     </>
   );
 };
+
+const globalStyles = `
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: #F5F4F0; color: #0D0D0D; -webkit-font-smoothing: antialiased; }
+  select:focus, input:focus { border-color: #F5A623 !important; outline: none; }
+  select { -webkit-appearance: none; -moz-appearance: none; appearance: none; }
+`;
 
 export default SubmitTrial;
