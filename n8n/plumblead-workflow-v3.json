@@ -25,7 +25,7 @@
           "conditions": [
             {
               "id": "condition-type-check",
-              "leftValue": "={{ $json.body.type }}",
+              "leftValue": "={{ $('Webhook — Receive Lead').first().json.body.type }}",
               "rightValue": "trial_signup",
               "operator": {
                 "type": "string",
@@ -56,10 +56,10 @@
     },
     {
       "parameters": {
-        "sendTo": "ryan@plumblead.ai",
-        "subject": "=🔥 New Trial Signup: {{ $json.body.company }}",
+        "sendTo": "rkumpula@gmail.com",
+        "subject": "={{ '🔥 New Trial Signup: ' + $('Webhook — Receive Lead').first().json.body.company }}",
         "emailType": "html",
-        "message": "=<h2>New PlumbLead.ai Trial Signup</h2><table style='border-collapse:collapse;width:100%;font-family:sans-serif'><tr><td style='padding:8px;border:1px solid #ddd;font-weight:bold'>Name</td><td style='padding:8px;border:1px solid #ddd'>{{ $json.body.firstName }} {{ $json.body.lastName }}</td></tr><tr><td style='padding:8px;border:1px solid #ddd;font-weight:bold'>Company</td><td style='padding:8px;border:1px solid #ddd'>{{ $json.body.company }}</td></tr><tr><td style='padding:8px;border:1px solid #ddd;font-weight:bold'>Phone</td><td style='padding:8px;border:1px solid #ddd'>{{ $json.body.phone }}</td></tr><tr><td style='padding:8px;border:1px solid #ddd;font-weight:bold'>Email</td><td style='padding:8px;border:1px solid #ddd'>{{ $json.body.email }}</td></tr><tr><td style='padding:8px;border:1px solid #ddd;font-weight:bold'>Trucks</td><td style='padding:8px;border:1px solid #ddd'>{{ $json.body.trucks }}</td></tr><tr><td style='padding:8px;border:1px solid #ddd;font-weight:bold'>CRM</td><td style='padding:8px;border:1px solid #ddd'>{{ $json.body.crm }}</td></tr><tr><td style='padding:8px;border:1px solid #ddd;font-weight:bold'>City</td><td style='padding:8px;border:1px solid #ddd'>{{ $json.body.city }}</td></tr><tr><td style='padding:8px;border:1px solid #ddd;font-weight:bold'>How They Heard</td><td style='padding:8px;border:1px solid #ddd'>{{ $json.body.hearAbout }}</td></tr><tr><td style='padding:8px;border:1px solid #ddd;font-weight:bold'>Submitted At</td><td style='padding:8px;border:1px solid #ddd'>{{ $json.body.submittedAt }}</td></tr></table><br><p><a href='https://plumblead.ai/dashboard'>View Dashboard</a></p>",
+        "message": "={{ '<h2>New PlumbLead.ai Trial Signup</h2><table style=\"border-collapse:collapse;width:100%;font-family:sans-serif\"><tr><td style=\"padding:8px;border:1px solid #ddd;font-weight:bold\">Name</td><td style=\"padding:8px;border:1px solid #ddd\">' + $('Webhook — Receive Lead').first().json.body.firstName + ' ' + $('Webhook — Receive Lead').first().json.body.lastName + '</td></tr><tr><td style=\"padding:8px;border:1px solid #ddd;font-weight:bold\">Company</td><td style=\"padding:8px;border:1px solid #ddd\">' + $('Webhook — Receive Lead').first().json.body.company + '</td></tr><tr><td style=\"padding:8px;border:1px solid #ddd;font-weight:bold\">Phone</td><td style=\"padding:8px;border:1px solid #ddd\">' + $('Webhook — Receive Lead').first().json.body.phone + '</td></tr><tr><td style=\"padding:8px;border:1px solid #ddd;font-weight:bold\">Email</td><td style=\"padding:8px;border:1px solid #ddd\">' + $('Webhook — Receive Lead').first().json.body.email + '</td></tr><tr><td style=\"padding:8px;border:1px solid #ddd;font-weight:bold\">Trucks</td><td style=\"padding:8px;border:1px solid #ddd\">' + $('Webhook — Receive Lead').first().json.body.trucks + '</td></tr><tr><td style=\"padding:8px;border:1px solid #ddd;font-weight:bold\">CRM</td><td style=\"padding:8px;border:1px solid #ddd\">' + $('Webhook — Receive Lead').first().json.body.crm + '</td></tr><tr><td style=\"padding:8px;border:1px solid #ddd;font-weight:bold\">City</td><td style=\"padding:8px;border:1px solid #ddd\">' + $('Webhook — Receive Lead').first().json.body.city + '</td></tr><tr><td style=\"padding:8px;border:1px solid #ddd;font-weight:bold\">How They Heard</td><td style=\"padding:8px;border:1px solid #ddd\">' + $('Webhook — Receive Lead').first().json.body.hearAbout + '</td></tr><tr><td style=\"padding:8px;border:1px solid #ddd;font-weight:bold\">Submitted At</td><td style=\"padding:8px;border:1px solid #ddd\">' + $('Webhook — Receive Lead').first().json.body.submittedAt + '</td></tr></table><br><p><a href=\"https://plumblead.ai/dashboard\">View Dashboard</a></p>' }}",
         "options": {}
       },
       "id": "email-ryan-trial",
@@ -72,8 +72,8 @@
       "parameters": {
         "operation": "send",
         "from": "+18335580877",
-        "to": "={{ $json.body.phone }}",
-        "message": "=Hey {{ $json.body.firstName }}, you're in! Your PlumbLead.ai 14-day free trial for {{ $json.body.company }} is being set up now. You'll receive your login and setup guide at {{ $json.body.email }} within 2 hours. Questions? Call or text (833) 558-0877. Reply STOP to opt out.",
+        "to": "={{ $('Webhook — Receive Lead').first().json.body.phone }}",
+        "message": "={{ 'Hey ' + $('Webhook — Receive Lead').first().json.body.firstName + \", you're in! Your PlumbLead.ai 14-day free trial for \" + $('Webhook — Receive Lead').first().json.body.company + ' is being set up now. You\\'ll receive your login and setup guide at ' + $('Webhook — Receive Lead').first().json.body.email + ' within 2 hours. Questions? Call or text (833) 558-0877. Reply STOP to opt out.' }}",
         "options": {}
       },
       "id": "sms-plumber-trial",
@@ -98,8 +98,8 @@
       "parameters": {
         "operation": "send",
         "from": "+18335580877",
-        "to": "={{ $json.body.phone }}",
-        "message": "=Hi {{ $json.body.name }}, thanks for reaching out! We received your {{ $json.body.serviceType }} request — your estimate is {{ $json.body.estimateRange }}. A licensed plumber will call or text you within 60 minutes to confirm details and get you scheduled. Save this number for updates. Questions? Call (833) 558-0877. Reply STOP to opt out.",
+        "to": "={{ $('Webhook — Receive Lead').first().json.body.phone }}",
+        "message": "={{ 'Hi ' + $('Webhook — Receive Lead').first().json.body.name + ', thanks for reaching out! We received your ' + $('Webhook — Receive Lead').first().json.body.serviceType + ' request — your estimate is ' + $('Webhook — Receive Lead').first().json.body.estimateRange + '. A licensed plumber will call or text you within 60 minutes to confirm details and get you scheduled. Save this number for updates. Questions? Call (833) 558-0877. Reply STOP to opt out.' }}",
         "options": {}
       },
       "id": "sms-homeowner",
@@ -110,10 +110,10 @@
     },
     {
       "parameters": {
-        "sendTo": "ryan@plumblead.ai",
-        "subject": "=⚡ New Lead: {{ $json.body.serviceType }} — {{ $json.body.location }}",
+        "sendTo": "rkumpula@gmail.com",
+        "subject": "={{ '⚡ New Lead: ' + $('Webhook — Receive Lead').first().json.body.serviceType + ' — ' + $('Webhook — Receive Lead').first().json.body.location }}",
         "emailType": "html",
-        "message": "=<h2>New Homeowner Lead</h2><table style='border-collapse:collapse;width:100%;font-family:sans-serif'><tr><td style='padding:8px;border:1px solid #ddd;font-weight:bold'>Name</td><td style='padding:8px;border:1px solid #ddd'>{{ $json.body.name }}</td></tr><tr><td style='padding:8px;border:1px solid #ddd;font-weight:bold'>Phone</td><td style='padding:8px;border:1px solid #ddd'>{{ $json.body.phone }}</td></tr><tr><td style='padding:8px;border:1px solid #ddd;font-weight:bold'>Email</td><td style='padding:8px;border:1px solid #ddd'>{{ $json.body.email }}</td></tr><tr><td style='padding:8px;border:1px solid #ddd;font-weight:bold'>Service</td><td style='padding:8px;border:1px solid #ddd'>{{ $json.body.serviceType }}</td></tr><tr><td style='padding:8px;border:1px solid #ddd;font-weight:bold'>Details</td><td style='padding:8px;border:1px solid #ddd'>{{ $json.body.details }}</td></tr><tr><td style='padding:8px;border:1px solid #ddd;font-weight:bold'>Location</td><td style='padding:8px;border:1px solid #ddd'>{{ $json.body.location }}</td></tr><tr><td style='padding:8px;border:1px solid #ddd;font-weight:bold'>Estimate Range</td><td style='padding:8px;border:1px solid #ddd'><strong>{{ $json.body.estimateRange }}</strong></td></tr><tr><td style='padding:8px;border:1px solid #ddd;font-weight:bold'>Lead Score</td><td style='padding:8px;border:1px solid #ddd'>{{ $json.body.leadScore }}</td></tr><tr><td style='padding:8px;border:1px solid #ddd;font-weight:bold'>Cross-Sell</td><td style='padding:8px;border:1px solid #ddd'>{{ $json.body.crossSellOpportunities }}</td></tr><tr><td style='padding:8px;border:1px solid #ddd;font-weight:bold'>Timestamp</td><td style='padding:8px;border:1px solid #ddd'>{{ $json.body.timestamp }}</td></tr></table>",
+        "message": "={{ '<h2>New Homeowner Lead</h2><table style=\"border-collapse:collapse;width:100%;font-family:sans-serif\"><tr><td style=\"padding:8px;border:1px solid #ddd;font-weight:bold\">Name</td><td style=\"padding:8px;border:1px solid #ddd\">' + $('Webhook — Receive Lead').first().json.body.name + '</td></tr><tr><td style=\"padding:8px;border:1px solid #ddd;font-weight:bold\">Phone</td><td style=\"padding:8px;border:1px solid #ddd\">' + $('Webhook — Receive Lead').first().json.body.phone + '</td></tr><tr><td style=\"padding:8px;border:1px solid #ddd;font-weight:bold\">Email</td><td style=\"padding:8px;border:1px solid #ddd\">' + $('Webhook — Receive Lead').first().json.body.email + '</td></tr><tr><td style=\"padding:8px;border:1px solid #ddd;font-weight:bold\">Service</td><td style=\"padding:8px;border:1px solid #ddd\">' + $('Webhook — Receive Lead').first().json.body.serviceType + '</td></tr><tr><td style=\"padding:8px;border:1px solid #ddd;font-weight:bold\">Details</td><td style=\"padding:8px;border:1px solid #ddd\">' + $('Webhook — Receive Lead').first().json.body.details + '</td></tr><tr><td style=\"padding:8px;border:1px solid #ddd;font-weight:bold\">Location</td><td style=\"padding:8px;border:1px solid #ddd\">' + $('Webhook — Receive Lead').first().json.body.location + '</td></tr><tr><td style=\"padding:8px;border:1px solid #ddd;font-weight:bold\">Estimate Range</td><td style=\"padding:8px;border:1px solid #ddd\"><strong>' + $('Webhook — Receive Lead').first().json.body.estimateRange + '</strong></td></tr><tr><td style=\"padding:8px;border:1px solid #ddd;font-weight:bold\">Lead Score</td><td style=\"padding:8px;border:1px solid #ddd\">' + $('Webhook — Receive Lead').first().json.body.leadScore + '</td></tr><tr><td style=\"padding:8px;border:1px solid #ddd;font-weight:bold\">Cross-Sell</td><td style=\"padding:8px;border:1px solid #ddd\">' + $('Webhook — Receive Lead').first().json.body.crossSellOpportunities + '</td></tr><tr><td style=\"padding:8px;border:1px solid #ddd;font-weight:bold\">Timestamp</td><td style=\"padding:8px;border:1px solid #ddd\">' + $('Webhook — Receive Lead').first().json.body.timestamp + '</td></tr></table>' }}",
         "options": {}
       },
       "id": "email-ryan-lead",
@@ -137,8 +137,8 @@
       "parameters": {
         "operation": "send",
         "from": "+18335580877",
-        "to": "={{ $json.body.phone }}",
-        "message": "=Hi {{ $json.body.name }}, just checking in on your {{ $json.body.serviceType }} request. Have you been connected with a plumber yet? Reply YES if you're all set, or call (833) 558-0877 and we'll get you taken care of right away. Reply STOP to opt out.",
+        "to": "={{ $('Webhook — Receive Lead').first().json.body.phone }}",
+        "message": "={{ 'Hi ' + $('Webhook — Receive Lead').first().json.body.name + ', just checking in on your ' + $('Webhook — Receive Lead').first().json.body.serviceType + \" request. Have you been connected with a plumber yet? Reply YES if you're all set, or call (833) 558-0877 and we'll get you taken care of right away. Reply STOP to opt out.\" }}",
         "options": {}
       },
       "id": "sms-followup-2hr",
@@ -150,63 +150,31 @@
   ],
   "connections": {
     "Webhook — Receive Lead": {
-      "main": [
-        [
-          { "node": "IF — Trial Signup or Homeowner Lead?", "type": "main", "index": 0 }
-        ]
-      ]
+      "main": [[{ "node": "IF — Trial Signup or Homeowner Lead?", "type": "main", "index": 0 }]]
     },
     "IF — Trial Signup or Homeowner Lead?": {
       "main": [
-        [
-          { "node": "Respond — Trial ACK", "type": "main", "index": 0 }
-        ],
-        [
-          { "node": "Respond — Lead ACK", "type": "main", "index": 0 }
-        ]
+        [{ "node": "Respond — Trial ACK", "type": "main", "index": 0 }],
+        [{ "node": "Respond — Lead ACK", "type": "main", "index": 0 }]
       ]
     },
     "Respond — Trial ACK": {
-      "main": [
-        [
-          { "node": "Email Ryan — New Trial", "type": "main", "index": 0 }
-        ]
-      ]
+      "main": [[{ "node": "Email Ryan — New Trial", "type": "main", "index": 0 }]]
     },
     "Email Ryan — New Trial": {
-      "main": [
-        [
-          { "node": "SMS Plumber — Trial Confirmation", "type": "main", "index": 0 }
-        ]
-      ]
+      "main": [[{ "node": "SMS Plumber — Trial Confirmation", "type": "main", "index": 0 }]]
     },
     "Respond — Lead ACK": {
-      "main": [
-        [
-          { "node": "SMS Homeowner — 60s Response", "type": "main", "index": 0 }
-        ]
-      ]
+      "main": [[{ "node": "SMS Homeowner — 60s Response", "type": "main", "index": 0 }]]
     },
     "SMS Homeowner — 60s Response": {
-      "main": [
-        [
-          { "node": "Email Ryan — New Lead Alert", "type": "main", "index": 0 }
-        ]
-      ]
+      "main": [[{ "node": "Email Ryan — New Lead Alert", "type": "main", "index": 0 }]]
     },
     "Email Ryan — New Lead Alert": {
-      "main": [
-        [
-          { "node": "Wait 2 Hours", "type": "main", "index": 0 }
-        ]
-      ]
+      "main": [[{ "node": "Wait 2 Hours", "type": "main", "index": 0 }]]
     },
     "Wait 2 Hours": {
-      "main": [
-        [
-          { "node": "SMS Homeowner — 2hr Follow-Up", "type": "main", "index": 0 }
-        ]
-      ]
+      "main": [[{ "node": "SMS Homeowner — 2hr Follow-Up", "type": "main", "index": 0 }]]
     }
   },
   "settings": {
