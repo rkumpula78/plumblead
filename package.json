@@ -1,0 +1,38 @@
+{
+  "name": "plumblead-ai",
+  "version": "1.0.0",
+  "description": "AI-powered instant quotes and speed-to-lead for plumbing contractors",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:client\" \"npm run dev:server\"",
+    "dev:client": "vite",
+    "dev:server": "ts-node-dev --respawn --transpile-only server.ts",
+    "build": "vite build",
+    "preview": "vite preview",
+    "start": "node dist-server/server.js",
+    "build:server": "tsc --project tsconfig.server.json",
+    "build:all": "npm run build && npm run build:server"
+  },
+  "dependencies": {
+    "@google/genai": "^0.7.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "node-fetch": "^2.7.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-markdown": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.14.0",
+    "@types/node-fetch": "^2.6.11",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "concurrently": "^8.2.2",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.4.5",
+    "vite": "^5.3.1"
+  }
+}
