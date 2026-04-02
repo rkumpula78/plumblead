@@ -1,10 +1,14 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { cloudflare } from '@cloudflare/vite-plugin';
 
 const RAILWAY_URL = 'https://plumblead-production.up.railway.app';
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    cloudflare(),
+  ],
   server: {
     proxy: {
       '/api': {
