@@ -1,10 +1,9 @@
-
 import express from 'express';
-import { GoogleGenAI } from "@google/genai"; // Keep for /api/quote if still using Gemini
+import { GoogleGenAI } from "@google/genai";
 import dotenv from 'dotenv';
 import cors from 'cors';
-import { generateAIQuote, QuoteRequest, QuoteResponse } from './src/services/geminiService'; // Assuming geminiService.ts
-import fetch from 'node-fetch'; // For webhook forwarding
+import { generateAIQuote, QuoteRequest, QuoteResponse } from './src/services/geminiService';
+import fetch from 'node-fetch';
 
 dotenv.config();
 
@@ -14,88 +13,93 @@ const port = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 
-// OpenClaw Integration Configuration
 const openClawApiEndpoint = process.env.OPENCLAW_API_ENDPOINT;
 const openClawApiKey = process.env.OPENCLAW_API_KEY;
-
-// Initialize Gemini API (for /api/quote and potentially other future uses)
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 
-// --- API Endpoints ---
+// ─── Health Check (required by Railway) ──────────────────────────────────────
+app.get('/api/health', (_req, res) => {
+  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+});
 
-// 1. Chatbot "Brain" (Now powered by OpenClaw)
+// ─── 1. Chat (OpenClaw with Gemini fallback) ──────────────────────────────────
 app.post('/api/chat', async (req, res) => {
-  const { message, lang = 'en', sessionId = 'plumblead-user' } = req.body; // Added sessionId
-  const systemInstruction = `You are a Senior Plumbing Technical Consultant and Educator for PlumbLead.ai. Personality Traits: - Technical Authority: Use precise plumbing terminology (e.g., "T&P valve," "sediment buildup"). Explain the "how" and "why" behind plumbing issues. - Educator: Be transparent and helpful. Offer DIY troubleshooting tips when safe, but always emphasize when a professional is required for safety or code compliance. - Professional & Precise: Avoid fluff. Get straight to the point with high-value information. Goals: 1. Answer technical plumbing questions with authority. 2. Educate the user on the complexity of their issue. 3. Encourage users to use the Instant Quote tool for a detailed price estimate. 4. IMPORTANT: You MUST respond in ${lang}.`;
+  const { message, lang = 'en', sessionId = 'plumblead-user' } = req.body;
+  const systemInstruction = `You are a Senior Plumbing Technical Consultant and Educator for PlumbLead.ai.
+  - Use precise plumbing terminology (T&P valve, sediment buildup, thermal expansion, etc.)
+  - Explain the how and why behind plumbing issues
+  - Offer safe DIY troubleshooting tips, but always note when a professional is required
+  - Be direct and authoritative — no fluff
+  - Encourage users to use the Instant Quote tool for pricing
+  - IMPORTANT: You MUST respond in ${lang === 'es' ? 'Spanish' : 'English'}.`;
 
-  if (!openClawApiEndpoint || !openClawApiKey) {
-    console.error("OpenClaw API endpoint or key not configured.");
-    return res.status(500).json({ error: "Chatbot not configured." });
+  // Try OpenClaw first if configured
+  if (openClawApiEndpoint && openClawApiKey) {
+    try {
+      const response = await fetch(openClawApiEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${openClawApiKey}`
+        },
+        body: JSON.stringify({
+          model: 'openclaw:plumblead',
+          messages: [{ role: 'user', content: systemInstruction + '\n\n' + message }],
+          user: sessionId
+        })
+      });
+      const result = await response.json() as any;
+      const chatbotResponse = result.choices?.[0]?.message?.content || result.output;
+      if (chatbotResponse) {
+        return res.json({ response: chatbotResponse });
+      }
+    } catch (err) {
+      console.error('OpenClaw error, falling back to Gemini:', err);
+    }
   }
 
+  // Gemini fallback for chat
   try {
-    const response = await fetch(openClawApiEndpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${openClawApiKey}`
-      },
-      body: JSON.stringify({
-        model: 'openclaw:plumblead', // Target the specific OpenClaw agent
-        messages: [{ role: 'user', content: systemInstruction + "\n\n" + message }], // Combine system instruction with user message
-        user: sessionId // Pass the session ID for OpenClaw to manage context
-      })
+    const geminiResponse = await ai.models.generateContent({
+      model: process.env.PLUMBLEAD_QUOTE_AI_MODEL || 'gemini-2.0-flash',
+      contents: `${systemInstruction}\n\nHomeowner question: ${message}`,
     });
-
-    const openClawResult = await response.json();
-
-    // OpenClaw API returns content in messages[0].content or similar, or directly as 'output'
-    // This assumes OpenClaw's OpenAI-compatible endpoint returns an array of messages
-    // with content in the first message's 'content' field.
-    const chatbotResponse = openClawResult.choices?.[0]?.message?.content || openClawResult.output || "I'm sorry, I couldn't process that right now.";
-    res.json({ response: chatbotResponse });
-
+    const text = geminiResponse.text ?? "I'm sorry, I couldn't process that right now.";
+    return res.json({ response: text });
   } catch (error) {
-    console.error("Error in /api/chat (OpenClaw):", error);
-    res.status(500).json({ error: "Failed to get chatbot response from OpenClaw." });
+    console.error('Gemini chat fallback error:', error);
+    return res.status(500).json({ error: 'Failed to get chatbot response.' });
   }
 });
 
-// 2. Instant Quote Tool (Now pre-qualified by OpenClaw)
+// ─── 2. Quote Tool (OpenClaw pre-qual + Gemini) ───────────────────────────────
 app.post('/api/quote', async (req, res) => {
   const { serviceType, details, location, language = 'en', sessionId = 'plumblead-quote-user' } = req.body;
   const quoteRequest: QuoteRequest = { serviceType, details, location, language };
 
+  // Direct Gemini path if OpenClaw not configured
   if (!openClawApiEndpoint || !openClawApiKey) {
-    console.error("OpenClaw API endpoint or key not configured for quote pre-qualification.");
-    // Fallback to direct Gemini call if OpenClaw is not configured
     try {
       const quoteResponse: QuoteResponse = await generateAIQuote(quoteRequest);
       return res.json(quoteResponse);
     } catch (error) {
-      console.error("Error in /api/quote (Gemini Fallback):", error);
-      return res.status(500).json({ error: "Failed to generate instant quote (Gemini fallback)." });
+      console.error('Gemini quote error:', error);
+      return res.status(500).json({ error: 'Failed to generate quote.' });
     }
   }
 
   try {
-    // Phase 1: OpenClaw Pre-qualification
-    const qualificationPrompt = `You are a PlumbLead.ai Lead Qualifier. Analyze the following plumbing quote request. Your goal is to score the lead (e.g., 'High Urgency', 'Routine'), identify any specific keywords or potential cross-sell opportunities (e.g., 'water treatment' if hard water is implied by location), and suggest any refinements to the prompt for the main AI (Gemini) to generate a better quote.
+    // OpenClaw pre-qualification
+    const qualificationPrompt = `You are a PlumbLead.ai Lead Qualifier. Analyze this plumbing quote request and return ONLY a JSON object with:
+- leadScore: string (e.g. "High Urgency", "Routine", "Emergency")
+- crossSellOpportunities: string[] (e.g. ["water softener", "annual maintenance plan"])
+- geminiPromptRefinement: string (optional — extra context for the quote AI)
 
-    Quote Request Details:
-    Service Type: ${serviceType}
-    Details: ${details}
-    Location: ${location}
-    Language: ${language}
-
-    Return a JSON object with 'leadScore' (string), 'crossSellOpportunities' (array of strings), and 'geminiPromptRefinement' (string, optional) for Gemini to use.`;
+Request: Service=${serviceType}, Details=${details}, Location=${location}`;
 
     const openClawResponse = await fetch(openClawApiEndpoint, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${openClawApiKey}`
-      },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${openClawApiKey}` },
       body: JSON.stringify({
         model: 'openclaw:plumblead',
         messages: [{ role: 'user', content: qualificationPrompt }],
@@ -103,66 +107,60 @@ app.post('/api/quote', async (req, res) => {
       })
     });
 
-    const openClawResult = await openClawResponse.json();
-    const openClawData = JSON.parse(openClawResult.choices?.[0]?.message?.content || openClawResult.output || '{}');
+    const openClawResult = await openClawResponse.json() as any;
+    let openClawData: any = {};
+    try {
+      const raw = openClawResult.choices?.[0]?.message?.content || openClawResult.output || '{}';
+      openClawData = JSON.parse(raw);
+    } catch { /* ignore parse errors */ }
 
-    // Phase 2: Refine Gemini's prompt based on OpenClaw's insights
-    let refinedDetails = details;
-    if (openClawData.geminiPromptRefinement) {
-      refinedDetails += `\n\nOpenClaw Insights for Gemini: ${openClawData.geminiPromptRefinement}`;
-    }
+    const refinedDetails = openClawData.geminiPromptRefinement
+      ? `${details}\n\nAdditional context: ${openClawData.geminiPromptRefinement}`
+      : details;
 
-    const finalQuoteRequest: QuoteRequest = {
-      ...quoteRequest,
-      details: refinedDetails,
-    };
+    const quoteResponse: QuoteResponse = await generateAIQuote({ ...quoteRequest, details: refinedDetails });
 
-    // Phase 3: Call Gemini's generateAIQuote function
-    const quoteResponse: QuoteResponse = await generateAIQuote(finalQuoteRequest);
-
-    // Optionally, add OpenClaw's lead score to the response
-    if (openClawData.leadScore) {
-      (quoteResponse as any).leadScore = openClawData.leadScore;
-    }
-    if (openClawData.crossSellOpportunities) {
-      (quoteResponse as any).crossSellOpportunities = openClawData.crossSellOpportunities;
-    }
-
-    res.json(quoteResponse);
+    return res.json({
+      ...quoteResponse,
+      ...(openClawData.leadScore && { leadScore: openClawData.leadScore }),
+      ...(openClawData.crossSellOpportunities && { crossSellOpportunities: openClawData.crossSellOpportunities }),
+    });
   } catch (error) {
-    console.error("Error in /api/quote (OpenClaw pre-qualification or Gemini call):", error);
-    res.status(500).json({ error: "Failed to generate instant quote with OpenClaw pre-qualification." });
+    console.error('Quote error, falling back to direct Gemini:', error);
+    try {
+      const quoteResponse: QuoteResponse = await generateAIQuote(quoteRequest);
+      return res.json(quoteResponse);
+    } catch (fallbackError) {
+      return res.status(500).json({ error: 'Failed to generate quote.' });
+    }
   }
 });
 
-// 3. Webhook Forwarding for Leads
+// ─── 3. Lead Forwarding to n8n ────────────────────────────────────────────────
 app.post('/api/leads', async (req, res) => {
   const n8nWebhookUrl = process.env.N8N_WEBHOOK_URL;
   if (!n8nWebhookUrl) {
-    console.error("N8N_WEBHOOK_URL is not configured.");
-    return res.status(500).json({ error: "Lead forwarding not configured." });
+    console.warn('N8N_WEBHOOK_URL not configured — lead not forwarded');
+    return res.status(200).json({ message: 'Lead received (forwarding not configured).' });
   }
-
   try {
     const response = await fetch(n8nWebhookUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(req.body) // Forward the entire lead payload
+      body: JSON.stringify(req.body)
     });
-
     if (response.ok) {
-      res.json({ message: "Lead successfully forwarded to n8n." });
+      res.json({ message: 'Lead successfully forwarded to n8n.' });
     } else {
-      console.error(`Error forwarding lead to n8n: ${response.status} ${response.statusText}`);
-      res.status(response.status).json({ error: "Failed to forward lead to n8n." });
+      console.error(`n8n error: ${response.status}`);
+      res.status(200).json({ message: 'Lead received (forwarding failed silently).' });
     }
   } catch (error) {
-    console.error("Error forwarding lead:", error);
-    res.status(500).json({ error: "Failed to forward lead." });
+    console.error('Lead forwarding error:', error);
+    res.status(200).json({ message: 'Lead received (forwarding error).' });
   }
 });
 
-
 app.listen(port, () => {
-  console.log(`Server listening on port ${port}`);
+  console.log(`PlumbLead.ai server running on port ${port}`);
 });
