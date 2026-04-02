@@ -4,6 +4,10 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 
+// ─── API Base ─────────────────────────────────────────────────────────────────
+// Always point to Railway backend in production
+const API_BASE = 'https://plumblead-production.up.railway.app';
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface QuoteFormData {
@@ -177,11 +181,7 @@ const PhoneMockup: React.FC = () => {
           )}
         </div>
         <div style={{ height: 3, background: '#222', margin: '0 16px', borderRadius: 2, overflow: 'hidden' }}>
-          <div style={{
-            height: '100%', background: '#F5A623',
-            width: phase >= 2 ? '100%' : '0%',
-            transition: 'width 1.6s ease',
-          }} />
+          <div style={{ height: '100%', background: '#F5A623', width: phase >= 2 ? '100%' : '0%', transition: 'width 1.6s ease' }} />
         </div>
         <div style={{ textAlign: 'center', fontSize: 11, color: '#F5A623', fontWeight: 700, letterSpacing: 1, padding: '10px 16px 16px', background: 'rgba(245,166,35,0.05)' }}>
           Response in 47 seconds
@@ -213,7 +213,7 @@ const QuoteTool: React.FC<{ lang: 'en' | 'es' }> = ({ lang }) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/quote', {
+      const res = await fetch(`${API_BASE}/api/quote`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...form, language: lang }),
@@ -222,11 +222,12 @@ const QuoteTool: React.FC<{ lang: 'en' | 'es' }> = ({ lang }) => {
       const data: QuoteResult = await res.json();
       setResult(data);
       setStep(4);
-      await fetch('/api/leads', {
+      // Fire and forget lead forwarding
+      fetch(`${API_BASE}/api/leads`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...form, ...data, timestamp: new Date().toISOString() }),
-      });
+      }).catch(console.error);
     } catch {
       setError('Unable to generate quote right now. Please try again.');
     } finally {
@@ -234,7 +235,10 @@ const QuoteTool: React.FC<{ lang: 'en' | 'es' }> = ({ lang }) => {
     }
   };
 
-  const reset = () => { setStep(1); setResult(null); setError(null); setForm({ serviceType: '', details: '', location: '', name: '', phone: '', email: '', language: lang }); };
+  const reset = () => {
+    setStep(1); setResult(null); setError(null);
+    setForm({ serviceType: '', details: '', location: '', name: '', phone: '', email: '', language: lang });
+  };
 
   const inputStyle: React.CSSProperties = {
     width: '100%', padding: '14px 16px', fontSize: 15,
@@ -242,7 +246,11 @@ const QuoteTool: React.FC<{ lang: 'en' | 'es' }> = ({ lang }) => {
     fontFamily: 'DM Sans, sans-serif', outline: 'none',
     transition: 'border-color 0.2s', color: '#0D0D0D',
   };
-  const labelStyle: React.CSSProperties = { fontSize: 13, fontWeight: 700, color: '#5C5A53', textTransform: 'uppercase', letterSpacing: '0.8px', display: 'block', marginBottom: 8 };
+  const labelStyle: React.CSSProperties = {
+    fontSize: 13, fontWeight: 700, color: '#5C5A53',
+    textTransform: 'uppercase', letterSpacing: '0.8px',
+    display: 'block', marginBottom: 8,
+  };
 
   return (
     <div style={{ maxWidth: 680, margin: '0 auto' }}>
@@ -390,7 +398,6 @@ const LandingPage: React.FC = () => {
         input:focus, textarea:focus { border-color: #F5A623 !important; outline: none; }
       `}</style>
 
-      {/* TOP BAR */}
       <div style={{ background: '#F5A623', padding: '10px 40px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, fontSize: 14, fontWeight: 700, color: '#0D0D0D' }}>
         <span style={{ width: 8, height: 8, background: '#0D0D0D', borderRadius: '50%', display: 'inline-block' }} />
         {t.topbar}
@@ -401,27 +408,19 @@ const LandingPage: React.FC = () => {
         </div>
       </div>
 
-      {/* NAV */}
       <nav style={{ position: 'sticky', top: 0, zIndex: 100, background: '#0D0D0D', borderBottom: '3px solid #F5A623', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 60px', height: 64 }}>
-        <div style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 28, color: '#F5A623', letterSpacing: 1 }}>
-          Plumb<span style={{ color: '#FFF' }}>Lead</span>.ai
-        </div>
+        <div style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 28, color: '#F5A623', letterSpacing: 1 }}>Plumb<span style={{ color: '#FFF' }}>Lead</span>.ai</div>
         <div style={{ display: 'flex', gap: 32, alignItems: 'center' }}>
           {[['#how', t.nav.howIt], ['#compare', t.nav.compare], ['#pricing', t.nav.pricing], ['#faq', t.nav.faq]].map(([href, label]) => (
             <a key={href} href={href} style={{ color: '#9E9B91', textDecoration: 'none', fontSize: 14, fontWeight: 500 }}>{label}</a>
           ))}
         </div>
-        <a href="#quote" onClick={scrollToQuote} style={{ background: '#F5A623', color: '#0D0D0D', fontWeight: 700, fontSize: 14, padding: '10px 20px', textDecoration: 'none', letterSpacing: 0.5 }}>
-          {t.nav.cta}
-        </a>
+        <a href="#quote" onClick={scrollToQuote} style={{ background: '#F5A623', color: '#0D0D0D', fontWeight: 700, fontSize: 14, padding: '10px 20px', textDecoration: 'none', letterSpacing: 0.5 }}>{t.nav.cta}</a>
       </nav>
 
-      {/* HERO */}
       <section style={{ background: '#0D0D0D', display: 'grid', gridTemplateColumns: '1fr 1fr', minHeight: 620, borderBottom: '4px solid #F5A623' }}>
         <div style={{ padding: '80px 60px 80px 80px', display: 'flex', flexDirection: 'column', justifyContent: 'center', borderRight: '2px solid #222' }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#1A1A1A', border: '1px solid #333', borderLeft: '3px solid #F5A623', padding: '6px 14px', fontSize: 12, color: '#9E9B91', letterSpacing: 1.5, textTransform: 'uppercase', fontWeight: 700, marginBottom: 24, width: 'fit-content' }}>
-            {t.eyebrow}
-          </div>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#1A1A1A', border: '1px solid #333', borderLeft: '3px solid #F5A623', padding: '6px 14px', fontSize: 12, color: '#9E9B91', letterSpacing: 1.5, textTransform: 'uppercase', fontWeight: 700, marginBottom: 24, width: 'fit-content' }}>{t.eyebrow}</div>
           <h1 style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 88, lineHeight: 0.92, color: '#FFF', textTransform: 'uppercase', marginBottom: 16 }}>
             {t.hero1}<br />
             <span style={{ position: 'relative', color: '#555' }}>
@@ -435,12 +434,8 @@ const LandingPage: React.FC = () => {
             {t.heroSub.split('$3,200').map((part, i) => i === 0 ? part : <React.Fragment key={i}><strong style={{ color: '#FFF' }}>$3,200</strong>{part}</React.Fragment>)}
           </p>
           <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
-            <a href="#quote" onClick={scrollToQuote} style={{ background: '#F5A623', color: '#0D0D0D', fontWeight: 700, fontSize: 16, padding: '16px 32px', textDecoration: 'none', letterSpacing: 0.5 }}>
-              {t.heroCta}
-            </a>
-            <a href="#how" style={{ background: 'transparent', color: '#9E9B91', fontWeight: 500, fontSize: 15, padding: '16px 24px', border: '1px solid #333', textDecoration: 'none' }}>
-              {t.heroSecondary}
-            </a>
+            <a href="#quote" onClick={scrollToQuote} style={{ background: '#F5A623', color: '#0D0D0D', fontWeight: 700, fontSize: 16, padding: '16px 32px', textDecoration: 'none', letterSpacing: 0.5 }}>{t.heroCta}</a>
+            <a href="#how" style={{ background: 'transparent', color: '#9E9B91', fontWeight: 500, fontSize: 15, padding: '16px 24px', border: '1px solid #333', textDecoration: 'none' }}>{t.heroSecondary}</a>
           </div>
           <div style={{ marginTop: 40, display: 'flex', gap: 24, flexWrap: 'wrap' }}>
             {t.trust.map((item, i) => (
@@ -455,7 +450,6 @@ const LandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* STATS BAR */}
       <div style={{ background: '#F5A623', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', borderBottom: '4px solid #0D0D0D' }}>
         {[
           { num: '78%', label: 'Jobs Won by First Responder', sub: 'Speed isn\'t just nice — it\'s the job' },
@@ -470,21 +464,14 @@ const LandingPage: React.FC = () => {
         ))}
       </div>
 
-      {/* VS TABLE */}
       <section id="compare" style={{ background: '#0D0D0D', padding: '80px' }}>
         <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: 2, fontWeight: 700, color: '#F5A623', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ display: 'block', width: 24, height: 2, background: '#F5A623' }} /> Head-to-Head
         </div>
-        <h2 style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 56, lineHeight: 1, textTransform: 'uppercase', color: '#FFF', marginBottom: 40 }}>
-          Why Contractors <span style={{ color: '#F5A623' }}>Switch</span>
-        </h2>
+        <h2 style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 56, lineHeight: 1, textTransform: 'uppercase', color: '#FFF', marginBottom: 40 }}>Why Contractors <span style={{ color: '#F5A623' }}>Switch</span></h2>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
-            <tr>
-              {['Feature', 'PlumbLead.ai', 'Answering Service', 'DIY / In-House'].map((h, i) => (
-                <th key={i} style={{ padding: '16px 24px', textAlign: 'left', fontSize: 13, textTransform: 'uppercase', letterSpacing: 1.5, fontWeight: 700, borderBottom: '3px solid #F5A623', color: i === 1 ? '#F5A623' : '#5C5A53' }}>{h}</th>
-              ))}
-            </tr>
+            <tr>{['Feature', 'PlumbLead.ai', 'Answering Service', 'DIY / In-House'].map((h, i) => (<th key={i} style={{ padding: '16px 24px', textAlign: 'left', fontSize: 13, textTransform: 'uppercase', letterSpacing: 1.5, fontWeight: 700, borderBottom: '3px solid #F5A623', color: i === 1 ? '#F5A623' : '#5C5A53' }}>{h}</th>))}</tr>
           </thead>
           <tbody>
             {[
@@ -508,14 +495,11 @@ const LandingPage: React.FC = () => {
         </table>
       </section>
 
-      {/* HOW IT WORKS */}
       <section id="how" style={{ background: '#F5F4F0', padding: '80px' }}>
         <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: 2, fontWeight: 700, color: '#C4841A', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ display: 'block', width: 24, height: 2, background: '#F5A623' }} /> The Process
         </div>
-        <h2 style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 56, lineHeight: 1, textTransform: 'uppercase', marginBottom: 40 }}>
-          Three Steps. <span style={{ color: '#C4841A' }}>Zero</span> Missed Leads.
-        </h2>
+        <h2 style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 56, lineHeight: 1, textTransform: 'uppercase', marginBottom: 40 }}>Three Steps. <span style={{ color: '#C4841A' }}>Zero</span> Missed Leads.</h2>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)' }}>
           {[
             { num: '01', icon: '📲', title: 'Lead Lands', body: 'A homeowner submits a request or calls after-hours. PlumbLead captures it instantly — no missed calls, no lost form submissions.' },
@@ -527,22 +511,17 @@ const LandingPage: React.FC = () => {
               <div style={{ fontSize: 24, marginBottom: 12 }}>{step.icon}</div>
               <h3 style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 28, textTransform: 'uppercase', marginBottom: 8 }}>{step.title}</h3>
               <p style={{ fontSize: 15, color: '#5C5A53', lineHeight: 1.6 }}>{step.body}</p>
-              {i < 2 && (
-                <div style={{ position: 'absolute', right: -20, top: '50%', transform: 'translateY(-50%)', width: 40, height: 40, background: '#F5A623', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 18, zIndex: 10 }}>→</div>
-              )}
+              {i < 2 && <div style={{ position: 'absolute', right: -20, top: '50%', transform: 'translateY(-50%)', width: 40, height: 40, background: '#F5A623', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 18, zIndex: 10 }}>→</div>}
             </div>
           ))}
         </div>
       </section>
 
-      {/* TESTIMONIAL */}
       <div style={{ background: '#0D0D0D', padding: '80px' }}>
         <div style={{ maxWidth: 800, margin: '0 auto', textAlign: 'center' }}>
           <div style={{ color: '#F5A623', fontSize: 18, letterSpacing: 2, marginBottom: 24 }}>★ ★ ★ ★ ★</div>
           <div style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 120, color: '#F5A623', lineHeight: 0.5, marginBottom: 20 }}>&quot;</div>
-          <p style={{ fontSize: 26, color: '#FFF', lineHeight: 1.4, marginBottom: 32 }}>
-            We were losing probably 4–5 jobs a week to guys who answered faster. PlumbLead paid for itself in the first 48 hours. Now my guys just show up and close.
-          </p>
+          <p style={{ fontSize: 26, color: '#FFF', lineHeight: 1.4, marginBottom: 32 }}>We were losing probably 4–5 jobs a week to guys who answered faster. PlumbLead paid for itself in the first 48 hours. Now my guys just show up and close.</p>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
             <div style={{ width: 56, height: 56, borderRadius: '50%', background: '#F5A623', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 18, color: '#000' }}>MR</div>
             <div style={{ textAlign: 'left' }}>
@@ -553,26 +532,20 @@ const LandingPage: React.FC = () => {
         </div>
       </div>
 
-      {/* QUOTE TOOL */}
       <section ref={quoteRef} id="quote" style={{ background: '#FFF', padding: '80px' }}>
         <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: 2, fontWeight: 700, color: '#C4841A', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ display: 'block', width: 24, height: 2, background: '#F5A623' }} /> {t.quoteSection}
         </div>
-        <h2 style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 56, lineHeight: 1, textTransform: 'uppercase', marginBottom: 12 }}>
-          {t.quoteSectionTitle}
-        </h2>
+        <h2 style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 56, lineHeight: 1, textTransform: 'uppercase', marginBottom: 12 }}>{t.quoteSectionTitle}</h2>
         <p style={{ fontSize: 18, color: '#5C5A53', marginBottom: 48, maxWidth: 560 }}>{t.quoteSectionSub}</p>
         <QuoteTool lang={lang} />
       </section>
 
-      {/* PRICING */}
       <section id="pricing" style={{ background: '#F5F4F0', padding: '80px' }}>
         <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: 2, fontWeight: 700, color: '#C4841A', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ display: 'block', width: 24, height: 2, background: '#F5A623' }} /> Pricing
         </div>
-        <h2 style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 56, lineHeight: 1, textTransform: 'uppercase', marginBottom: 40 }}>
-          One Job Pays For <span style={{ color: '#C4841A' }}>Six Months</span>
-        </h2>
+        <h2 style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 56, lineHeight: 1, textTransform: 'uppercase', marginBottom: 40 }}>One Job Pays For <span style={{ color: '#C4841A' }}>Six Months</span></h2>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)' }}>
           {[
             { tier: 'Starter', price: '$97', features: ['AI chat widget (200 leads/mo)', 'Instant quote estimates', 'Email lead delivery', 'English only', 'Standard response templates'], featured: false },
@@ -580,9 +553,7 @@ const LandingPage: React.FC = () => {
             { tier: 'Agency', price: '$497', features: ['Up to 5 contractor accounts', 'White-label dashboard', 'Everything in Pro ×5', 'Reseller margin included', 'Dedicated onboarding call'], featured: false },
           ].map((plan, i) => (
             <div key={i} style={{ padding: '40px 36px', border: plan.featured ? '3px solid #F5A623' : '2px solid #E8E6DF', background: plan.featured ? '#0D0D0D' : '#FFF', position: 'relative', transform: plan.featured ? 'scaleY(1.02)' : 'none', zIndex: plan.featured ? 2 : 1, borderRight: !plan.featured && i === 0 ? 'none' : undefined, borderLeft: !plan.featured && i === 2 ? 'none' : undefined }}>
-              {plan.featured && (
-                <div style={{ position: 'absolute', top: -14, left: '50%', transform: 'translateX(-50%)', background: '#F5A623', color: '#000', fontWeight: 700, fontSize: 11, padding: '4px 16px', letterSpacing: 1.5, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Most Popular</div>
-              )}
+              {plan.featured && <div style={{ position: 'absolute', top: -14, left: '50%', transform: 'translateX(-50%)', background: '#F5A623', color: '#000', fontWeight: 700, fontSize: 11, padding: '4px 16px', letterSpacing: 1.5, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Most Popular</div>}
               <div style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: 2, fontWeight: 700, color: plan.featured ? '#F5A623' : '#9E9B91', marginBottom: 12 }}>{plan.tier}</div>
               <div style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 64, lineHeight: 1, color: plan.featured ? '#FFF' : '#0D0D0D', marginBottom: 4 }}>{plan.price}</div>
               <div style={{ fontSize: 14, color: '#9E9B91', marginBottom: 24 }}>per month</div>
@@ -593,23 +564,18 @@ const LandingPage: React.FC = () => {
                   </li>
                 ))}
               </ul>
-              <button onClick={() => quoteRef.current?.scrollIntoView({ behavior: 'smooth' })} style={{ display: 'block', width: '100%', padding: 14, background: plan.featured ? '#F5A623' : 'transparent', border: plan.featured ? 'none' : '2px solid #0D0D0D', fontWeight: 700, fontSize: 15, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', color: plan.featured ? '#000' : '#0D0D0D', transition: 'all 0.2s' }}>
-                Start Free Trial →
-              </button>
+              <button onClick={() => quoteRef.current?.scrollIntoView({ behavior: 'smooth' })} style={{ display: 'block', width: '100%', padding: 14, background: plan.featured ? '#F5A623' : 'transparent', border: plan.featured ? 'none' : '2px solid #0D0D0D', fontWeight: 700, fontSize: 15, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', color: plan.featured ? '#000' : '#0D0D0D' }}>Start Free Trial →</button>
             </div>
           ))}
         </div>
         <p style={{ textAlign: 'center', marginTop: 24, fontSize: 14, color: '#9E9B91' }}>14-day free trial · No credit card required · Cancel anytime</p>
       </section>
 
-      {/* FAQ */}
       <section id="faq" style={{ background: '#FFF', padding: '80px' }}>
         <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: 2, fontWeight: 700, color: '#C4841A', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ display: 'block', width: 24, height: 2, background: '#F5A623' }} /> Common Questions
         </div>
-        <h2 style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 56, lineHeight: 1, textTransform: 'uppercase', marginBottom: 40 }}>
-          No <span style={{ color: '#C4841A' }}>Surprises.</span>
-        </h2>
+        <h2 style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 56, lineHeight: 1, textTransform: 'uppercase', marginBottom: 40 }}>No <span style={{ color: '#C4841A' }}>Surprises.</span></h2>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0 }}>
           {[
             ['How long does setup take?', 'Under 30 minutes. You get a chat widget snippet — paste it on your site and you\'re live. No developer required. We handle your n8n webhook config on Pro.'],
@@ -618,41 +584,29 @@ const LandingPage: React.FC = () => {
             ['Does it work for Spanish-speaking customers?', 'Yes. The AI auto-detects language from the homeowner\'s first message and responds in kind. No configuration needed. Full bilingual on Pro plan.'],
             ['Can I cancel at any time?', 'Yes. Month-to-month, no contracts. Cancel from your dashboard. We don\'t lock you in because we don\'t need to — the ROI keeps contractors from leaving.'],
             ['What if the AI gives the wrong estimate?', 'The AI provides ballpark ranges with a disclaimer that final pricing is confirmed by you. It\'s designed to qualify and engage — not to replace your expertise.'],
-          ].map(([q, a], i) => (
-            <FaqItem key={i} question={q} answer={a} index={i} />
-          ))}
+          ].map(([q, a], i) => <FaqItem key={i} question={q} answer={a} index={i} />)}
         </div>
       </section>
 
-      {/* CTA FOOTER */}
       <div style={{ background: '#F5A623', padding: '80px', display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center', gap: 40, borderTop: '4px solid #0D0D0D' }}>
         <div>
-          <h2 style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 56, textTransform: 'uppercase', lineHeight: 1, color: '#0D0D0D' }}>
-            The Next Lead Lands<br />In 3 Minutes.
-          </h2>
+          <h2 style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 56, textTransform: 'uppercase', lineHeight: 1, color: '#0D0D0D' }}>The Next Lead Lands<br />In 3 Minutes.</h2>
           <p style={{ fontSize: 18, color: '#7A5810', marginTop: 8 }}>Will it be the last one you miss?</p>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'flex-end', minWidth: 260 }}>
-          <a href="#quote" onClick={scrollToQuote} style={{ background: '#0D0D0D', color: '#F5A623', fontWeight: 700, fontSize: 18, padding: '20px 40px', textDecoration: 'none', display: 'block', textAlign: 'center', width: '100%', letterSpacing: 0.5 }}>
-            Start Free Trial →
-          </a>
+          <a href="#quote" onClick={scrollToQuote} style={{ background: '#0D0D0D', color: '#F5A623', fontWeight: 700, fontSize: 18, padding: '20px 40px', textDecoration: 'none', display: 'block', textAlign: 'center', width: '100%', letterSpacing: 0.5 }}>Start Free Trial →</a>
           <span style={{ fontSize: 12, color: '#7A5810', fontWeight: 600 }}>14-day free trial · No credit card</span>
         </div>
       </div>
 
-      {/* FOOTER */}
       <footer style={{ background: '#0D0D0D', padding: '40px 80px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 24, color: '#F5A623' }}>
-          Plumb<span style={{ color: '#FFF' }}>Lead</span>.ai
-        </div>
+        <div style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 24, color: '#F5A623' }}>Plumb<span style={{ color: '#FFF' }}>Lead</span>.ai</div>
         <p style={{ fontSize: 13, color: '#5C5A53' }}>© 2026 PlumbLead.ai · Built for contractors who answer fast and close hard.</p>
         <p style={{ fontSize: 12, color: '#444' }}>Privacy · Terms</p>
       </footer>
     </>
   );
 };
-
-// ─── FAQ Item ─────────────────────────────────────────────────────────────────
 
 const FaqItem: React.FC<{ question: string; answer: string; index: number }> = ({ question, answer, index }) => {
   const [open, setOpen] = useState(false);
