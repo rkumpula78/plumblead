@@ -14,15 +14,15 @@ interface ChatbotProps {
   lang?: 'en' | 'es';
 }
 
-const API_BASE = (import.meta as any).env?.VITE_API_URL || '';
+// Always point to Railway backend
+const API_BASE = 'https://plumblead-production.up.railway.app';
 
 const COPY = {
   en: {
     title: 'PlumbLead Assistant',
     subtitle: 'Senior Plumbing Consultant',
     placeholder: 'Ask about a plumbing issue...',
-    greeting: "Hi! I'm your PlumbLead AI assistant \u2014 a senior plumbing consultant. Describe your issue and I'll give you expert guidance and a ballpark estimate.",
-    sending: 'Thinking...',
+    greeting: "Hi! I'm your PlumbLead AI assistant — a senior plumbing consultant. Describe your issue and I'll give you expert guidance and a ballpark estimate.",
     error: "Sorry, I'm having trouble connecting. Please try again.",
     openLabel: 'Chat with a plumbing expert',
     suggestionLabel: 'Quick questions:',
@@ -30,14 +30,13 @@ const COPY = {
   },
   es: {
     title: 'Asistente PlumbLead',
-    subtitle: 'Consultor Senior de Plomer\u00eda',
-    placeholder: 'Pregunta sobre un problema de plomer\u00eda...',
-    greeting: '\u00a1Hola! Soy tu asistente de IA de PlumbLead \u2014 consultor senior de plomer\u00eda. Describe tu problema y te dar\u00e9 orientaci\u00f3n experta y un estimado.',
-    sending: 'Pensando...',
-    error: 'Lo siento, tengo problemas de conexi\u00f3n. Por favor intenta de nuevo.',
-    openLabel: 'Habla con un experto en plomer\u00eda',
-    suggestionLabel: 'Preguntas r\u00e1pidas:',
-    suggestions: ['Mi calentador est\u00e1 goteando', '\u00bfQu\u00e9 causa la baja presi\u00f3n de agua?', '\u00bfCu\u00e1nto cuesta limpiar el drenaje?', 'Mi inodoro no para de correr'],
+    subtitle: 'Consultor Senior de Plomería',
+    placeholder: 'Pregunta sobre un problema de plomería...',
+    greeting: '¡Hola! Soy tu asistente de IA de PlumbLead — consultor senior de plomería. Describe tu problema y te daré orientación experta y un estimado.',
+    error: 'Lo siento, tengo problemas de conexión. Por favor intenta de nuevo.',
+    openLabel: 'Habla con un experto en plomería',
+    suggestionLabel: 'Preguntas rápidas:',
+    suggestions: ['Mi calentador está goteando', '¿Qué causa la baja presión de agua?', '¿Cuánto cuesta limpiar el drenaje?', 'Mi inodoro no para de correr'],
   },
 };
 
