@@ -1,12 +1,12 @@
 // src/services/geminiService.ts
 
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
 
 // Initialize Gemini API
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 
 // Make the AI model configurable via environment variable
-const QUOTE_AI_MODEL = process.env.PLUMBLEAD_QUOTE_AI_MODEL || "gemini-3-flash-preview";
+const QUOTE_AI_MODEL = process.env.PLUMBLEAD_QUOTE_AI_MODEL || "gemini-2.0-flash";
 
 export interface QuoteRequest {
   serviceType: string;
@@ -23,54 +23,50 @@ export interface QuoteResponse {
 
 export async function generateAIQuote(request: QuoteRequest): Promise<QuoteResponse> {
   const lang = request.language === "es" ? "Spanish" : "English";
+
   const prompt = `
-    You are a Senior Plumbing Technical Consultant and Educator for PlumbLead.ai. Your goal is to provide a highly professional, technically accurate, and educational ballpark estimate for the following plumbing service:
+You are a Senior Plumbing Technical Consultant for PlumbLead.ai.
+Provide a professional, technically accurate ballpark estimate for this plumbing service request.
 
-    Service Type: ${request.serviceType}
-    Details: ${request.details}
-    Location: ${request.location}
+Service Type: ${request.serviceType}
+Details: ${request.details}
+Location: ${request.location}
 
-    Personality Guidelines:
-    1. Technical Authority: Use precise industry terminology (e.g., "T&P valve," "sediment buildup," "thermal expansion"). Explain the likely technical cause of the issue based on the details provided.
-    2. Educator: Be transparent and helpful. Briefly explain *why* the price range varies (e.g., "labor complexity," "material quality") and provide one quick tip the homeowner can check themselves before the plumber arrives.
-    3. Professional & Precise: Avoid fluff. Be direct, authoritative, yet approachable.
+Guidelines:
+1. Use precise plumbing terminology (T&P valve, sediment buildup, thermal expansion, etc.)
+2. Explain why the price range varies (labor complexity, material quality, local rates)
+3. Provide one quick tip the homeowner can check before the plumber arrives
+4. Be direct, authoritative, and approachable — no fluff
+5. IMPORTANT: Respond entirely in ${lang}
 
-    Rules:
-    1. Provide a realistic price range (e.g., "$1,200 - $1,800").
-    2. Write a detailed, educational, and technically grounded message to the homeowner.
-    3. Suggest 2-3 logical next steps that prioritize safety and long-term solutions.
-    4. IMPORTANT: You MUST respond in ${lang}.
-
-    Return the response in JSON format.
-  `;
+Return ONLY a valid JSON object with exactly these fields (no markdown, no extra text):
+{
+  "estimateRange": "$X,XXX - $X,XXX",
+  "personalizedMessage": "2-4 sentence technical explanation for the homeowner",
+  "suggestedNextSteps": ["step 1", "step 2", "step 3"]
+}
+`;
 
   try {
     const response = await ai.models.generateContent({
-      model: QUOTE_AI_MODEL, // Use configurable model
-      contents: [{ role: "user", parts: [{ text: prompt }] }], // Gemini expects contents in this format
-      generationConfig: { // Use generationConfig for responseMimeType and responseSchema
-        responseMimeType: "application/json",
-      },
-      tools: [{ // Define tools for schema generation
-        functionDeclarations: [{
-          name: "QuoteResponse",
-          description: "Structure for AI-generated plumbing quote",
-          parameters: {
-            type: Type.OBJECT,
-            properties: {
-              estimateRange: { type: Type.STRING },
-              personalizedMessage: { type: Type.STRING },
-              suggestedNextSteps: { type: Type.ARRAY, items: { type: Type.STRING } }
-            },
-            required: ["estimateRange", "personalizedMessage", "suggestedNextSteps"]
-          }
-        }]
-      }]
+      model: QUOTE_AI_MODEL,
+      contents: prompt,
     });
 
-    // Parse text and then validate against schema implicitly via type casting
-    const result = JSON.parse(response.text() || "{}");
-    return result as QuoteResponse;
+    // response.text is a property in @google/genai v0.7, not a method
+    const rawText = response.text ?? "";
+
+    // Strip markdown code fences if present
+    const clean = rawText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+
+    const result = JSON.parse(clean || "{}");
+
+    // Validate shape — fall back to safe defaults if AI returns unexpected structure
+    return {
+      estimateRange: result.estimateRange || "Contact for estimate",
+      personalizedMessage: result.personalizedMessage || "Please contact a licensed plumber for an accurate assessment.",
+      suggestedNextSteps: Array.isArray(result.suggestedNextSteps) ? result.suggestedNextSteps : [],
+    };
   } catch (error) {
     console.error("Error generating AI quote:", error);
     throw new Error("Failed to generate quote. Please try again.");
