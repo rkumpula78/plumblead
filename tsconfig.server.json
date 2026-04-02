@@ -11,5 +11,5 @@
     "resolveJsonModule": true
   },
   "include": ["server.ts", "src/services/**/*"],
-  "exclude": ["node_modules", "dist", "dist-server", "src/components/**/*", "src/App.tsx"]
+  "exclude": ["node_modules", "dist", "dist-server", "src/components/**/*", "src/App.tsx", "src/main.tsx"]
 }
