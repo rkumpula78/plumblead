@@ -82,63 +82,137 @@ Example bad response: Long headers, bullet points, multiple sections. Never do t
   }
 });
 
+// --- Lead Qualification via Gemini (reliable fallback) ---
+async function qualifyLeadWithGemini(serviceType: string, details: string, location: string): Promise<{
+  leadScore: string;
+  crossSellOpportunities: string[];
+}> {
+  const prompt = `You are a plumbing lead qualifier. Analyze this service request and return ONLY a JSON object with no markdown, no backticks, no explanation.
+
+Service: ${serviceType}
+Details: ${details}
+Location: ${location}
+
+Return exactly this JSON structure:
+{
+  "leadScore": "Emergency|High Urgency|Routine",
+  "crossSellOpportunities": ["array", "of", "strings"]
+}
+
+Rules for leadScore:
+- "Emergency": active leak, burst pipe, gas leak, flooding, no hot water
+- "High Urgency": slow drain, running toilet, dripping faucet affecting daily life
+- "Routine": preventive maintenance, installation planning, general inquiry
+
+Rules for crossSellOpportunities: suggest 1-3 related services the homeowner might need.`;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.0-flash',
+      contents: prompt,
+    });
+    const text = (response.text ?? '').trim()
+      .replace(/^```json\s*/i, '')
+      .replace(/^```\s*/i, '')
+      .replace(/\s*```$/i, '')
+      .trim();
+    const parsed = JSON.parse(text);
+    return {
+      leadScore: parsed.leadScore || 'Routine',
+      crossSellOpportunities: Array.isArray(parsed.crossSellOpportunities)
+        ? parsed.crossSellOpportunities
+        : [],
+    };
+  } catch (err) {
+    console.error('Gemini lead qualification error:', err);
+    // Last resort defaults based on service type
+    const isEmergency = serviceType.toLowerCase().includes('emergency') ||
+      serviceType.toLowerCase().includes('leak') ||
+      serviceType.toLowerCase().includes('sewer');
+    return {
+      leadScore: isEmergency ? 'High Urgency' : 'Routine',
+      crossSellOpportunities: [],
+    };
+  }
+}
+
 // --- Quote ---
 app.post('/api/quote', async (req, res) => {
   const { serviceType, details, location, language = 'en', sessionId = 'plumblead-quote-user' } = req.body;
   const quoteRequest: QuoteRequest = { serviceType, details, location, language };
 
-  if (!openClawApiEndpoint || !openClawApiKey) {
+  // Step 1: Try OpenClaw for lead qualification
+  let leadScore = '';
+  let crossSellOpportunities: string[] = [];
+  let refinedDetails = details;
+
+  if (openClawApiEndpoint && openClawApiKey) {
     try {
-      const quoteResponse: QuoteResponse = await generateAIQuote(quoteRequest);
-      return res.json(quoteResponse);
-    } catch (error) {
-      console.error('Quote error:', error);
-      return res.status(500).json({ error: 'Failed to generate quote.' });
+      const qualificationPrompt = `You are a PlumbLead.ai Lead Qualifier. Analyze this request and return ONLY valid JSON with no markdown or backticks:
+{
+  "leadScore": "Emergency|High Urgency|Routine",
+  "crossSellOpportunities": ["string"],
+  "geminiPromptRefinement": "optional extra context for quote generation"
+}
+Service: ${serviceType}
+Details: ${details}
+Location: ${location}`;
+
+      const openClawResponse = await fetch(openClawApiEndpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${openClawApiKey}` },
+        body: JSON.stringify({
+          model: 'openclaw:plumblead',
+          messages: [{ role: 'user', content: qualificationPrompt }],
+          user: sessionId
+        })
+      });
+
+      if (openClawResponse.ok) {
+        const openClawResult = await openClawResponse.json() as any;
+        const raw = (openClawResult.choices?.[0]?.message?.content || openClawResult.output || '').trim()
+          .replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim();
+
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed.leadScore) leadScore = parsed.leadScore;
+          if (Array.isArray(parsed.crossSellOpportunities)) crossSellOpportunities = parsed.crossSellOpportunities;
+          if (parsed.geminiPromptRefinement) refinedDetails = `${details}\n\nAdditional context: ${parsed.geminiPromptRefinement}`;
+        }
+      }
+    } catch (err) {
+      console.error('OpenClaw qualification error, using Gemini fallback:', err);
     }
   }
 
-  try {
-    const qualificationPrompt = `You are a PlumbLead.ai Lead Qualifier. Analyze this request and return ONLY valid JSON:
-{
-  "leadScore": "High Urgency|Routine|Emergency",
-  "crossSellOpportunities": ["string"],
-  "geminiPromptRefinement": "optional extra context"
-}
-Request: Service=${serviceType}, Details=${details}, Location=${location}`;
-
-    const openClawResponse = await fetch(openClawApiEndpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${openClawApiKey}` },
-      body: JSON.stringify({
-        model: 'openclaw:plumblead',
-        messages: [{ role: 'user', content: qualificationPrompt }],
-        user: sessionId
-      })
-    });
-    const openClawResult = await openClawResponse.json() as any;
-    let openClawData: any = {};
+  // Step 2: If OpenClaw didn't return lead score, use Gemini
+  if (!leadScore) {
     try {
-      const raw = openClawResult.choices?.[0]?.message?.content || openClawResult.output || '{}';
-      openClawData = JSON.parse(raw);
-    } catch { /* ignore */ }
+      const geminiQualification = await qualifyLeadWithGemini(serviceType, details, location);
+      leadScore = geminiQualification.leadScore;
+      crossSellOpportunities = geminiQualification.crossSellOpportunities;
+    } catch (err) {
+      console.error('Gemini qualification error:', err);
+      leadScore = 'Routine';
+    }
+  }
 
-    const refinedDetails = openClawData.geminiPromptRefinement
-      ? `${details}\n\nAdditional context: ${openClawData.geminiPromptRefinement}`
-      : details;
-
+  // Step 3: Generate the price estimate
+  try {
     const quoteResponse: QuoteResponse = await generateAIQuote({ ...quoteRequest, details: refinedDetails });
     return res.json({
       ...quoteResponse,
-      ...(openClawData.leadScore && { leadScore: openClawData.leadScore }),
-      ...(openClawData.crossSellOpportunities && { crossSellOpportunities: openClawData.crossSellOpportunities }),
+      leadScore,
+      crossSellOpportunities,
     });
   } catch (error) {
-    console.error('Quote error, falling back:', error);
-    try {
-      return res.json(await generateAIQuote(quoteRequest));
-    } catch {
-      return res.status(500).json({ error: 'Failed to generate quote.' });
-    }
+    console.error('Quote generation error:', error);
+    // Return partial response with lead score even if quote fails
+    return res.status(500).json({
+      error: 'Failed to generate quote.',
+      leadScore,
+      crossSellOpportunities,
+    });
   }
 });
 
