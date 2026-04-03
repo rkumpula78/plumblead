@@ -66,6 +66,7 @@ const INPUT_BASE: React.CSSProperties = {
 // ─── Main Component ───────────────────────────────────────────────────────────
 const SubmitTrial: React.FC = () => {
   const [form, setForm] = useState<TrialFormData>(INITIAL);
+  const [smsConsent, setSmsConsent] = useState(false);
   const [submitState, setSubmitState] = useState<SubmitState>('idle');
   const [errorMsg, setErrorMsg] = useState('');
   const [focused, setFocused] = useState<string | null>(null);
@@ -76,7 +77,7 @@ const SubmitTrial: React.FC = () => {
   const set = (field: keyof TrialFormData, value: string) =>
     setForm(prev => ({ ...prev, [field]: value }));
 
-  const isValid = (
+  const isValid = Boolean(
     form.firstName.trim() &&
     form.lastName.trim() &&
     form.company.trim() &&
@@ -85,7 +86,8 @@ const SubmitTrial: React.FC = () => {
     form.trucks &&
     form.crm &&
     (form.crm !== 'other' || form.crmOther.trim()) &&
-    form.city.trim()
+    form.city.trim() &&
+    smsConsent
   );
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -97,6 +99,7 @@ const SubmitTrial: React.FC = () => {
     const payload = {
       ...form,
       crm: form.crm === 'other' ? form.crmOther : form.crm,
+      smsConsent: true,
       submittedAt: new Date().toISOString(),
       source: 'submit-trial',
       type: 'trial_signup',
@@ -342,6 +345,20 @@ const SubmitTrial: React.FC = () => {
                 </select>
                 <span style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: '#9E9B91', fontSize: 12 }}>▼</span>
               </div>
+            </div>
+
+            {/* TCPA SMS consent — required for Twilio compliance */}
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '14px 16px', background: '#FFF', border: '2px solid #E8E6DF' }}>
+              <input
+                type="checkbox"
+                id="sms-consent"
+                checked={smsConsent}
+                onChange={e => setSmsConsent(e.target.checked)}
+                style={{ marginTop: 3, accentColor: '#F5A623', width: 16, height: 16, flexShrink: 0, cursor: 'pointer' }}
+              />
+              <label htmlFor="sms-consent" style={{ fontSize: 12, color: '#5C5A53', lineHeight: 1.5, cursor: 'pointer' }}>
+                I agree to receive SMS updates about my PlumbLead.ai trial setup and account notifications. Message &amp; data rates may apply. Reply STOP to opt out at any time.
+              </label>
             </div>
 
             {/* Error */}
