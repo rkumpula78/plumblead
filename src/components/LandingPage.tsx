@@ -5,8 +5,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 
 // ─── API Base ─────────────────────────────────────────────────────────────────
-// Always point to Railway backend in production
 const API_BASE = 'https://plumblead-production.up.railway.app';
+
+// ─── Stripe Payment Links ─────────────────────────────────────────────────────
+const STRIPE_PRO     = 'https://buy.stripe.com/4gM3cvf0A8oLemBeCm2ZO00'; // $197/mo
+const STRIPE_STARTER = 'https://buy.stripe.com/3cI6oH6u4dJ57YdgKu2ZO01'; // $97/mo
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -201,6 +204,7 @@ const QuoteTool: React.FC<{ lang: 'en' | 'es' }> = ({ lang }) => {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<QuoteResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [smsConsent, setSmsConsent] = useState(false);
   const [form, setForm] = useState<QuoteFormData>({
     serviceType: '', details: '', location: '',
     name: '', phone: '', email: '', language: lang,
@@ -216,17 +220,16 @@ const QuoteTool: React.FC<{ lang: 'en' | 'es' }> = ({ lang }) => {
       const res = await fetch(`${API_BASE}/api/quote`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, language: lang }),
+        body: JSON.stringify({ ...form, language: lang, smsConsent }),
       });
       if (!res.ok) throw new Error('Server error');
       const data: QuoteResult = await res.json();
       setResult(data);
       setStep(4);
-      // Fire and forget lead forwarding
       fetch(`${API_BASE}/api/leads`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, ...data, timestamp: new Date().toISOString() }),
+        body: JSON.stringify({ ...form, ...data, smsConsent, timestamp: new Date().toISOString() }),
       }).catch(console.error);
     } catch {
       setError('Unable to generate quote right now. Please try again.');
@@ -236,7 +239,7 @@ const QuoteTool: React.FC<{ lang: 'en' | 'es' }> = ({ lang }) => {
   };
 
   const reset = () => {
-    setStep(1); setResult(null); setError(null);
+    setStep(1); setResult(null); setError(null); setSmsConsent(false);
     setForm({ serviceType: '', details: '', location: '', name: '', phone: '', email: '', language: lang });
   };
 
@@ -251,6 +254,8 @@ const QuoteTool: React.FC<{ lang: 'en' | 'es' }> = ({ lang }) => {
     textTransform: 'uppercase', letterSpacing: '0.8px',
     display: 'block', marginBottom: 8,
   };
+
+  const canSubmit = !loading && form.name.trim() && form.phone.trim() && form.email.trim() && smsConsent;
 
   return (
     <div style={{ maxWidth: 680, margin: '0 auto' }}>
@@ -318,14 +323,27 @@ const QuoteTool: React.FC<{ lang: 'en' | 'es' }> = ({ lang }) => {
               <input type="tel" value={form.phone} onChange={e => updateForm('phone', e.target.value)} placeholder={t.phonePlaceholder} style={inputStyle} />
             </div>
           </div>
-          <div style={{ marginBottom: 32 }}>
+          <div style={{ marginBottom: 20 }}>
             <label style={labelStyle}>Email</label>
             <input type="email" value={form.email} onChange={e => updateForm('email', e.target.value)} placeholder={t.emailPlaceholder} style={{ ...inputStyle, width: '100%' }} />
+          </div>
+          {/* TCPA SMS consent — required for Twilio compliance */}
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 24, padding: '12px 16px', background: '#F5F4F0', border: '1px solid #E8E6DF' }}>
+            <input
+              type="checkbox"
+              id="sms-consent"
+              checked={smsConsent}
+              onChange={e => setSmsConsent(e.target.checked)}
+              style={{ marginTop: 3, accentColor: '#F5A623', width: 16, height: 16, flexShrink: 0, cursor: 'pointer' }}
+            />
+            <label htmlFor="sms-consent" style={{ fontSize: 12, color: '#5C5A53', lineHeight: 1.5, cursor: 'pointer' }}>
+              I agree to receive SMS updates about my service request from PlumbLead.ai. Message &amp; data rates may apply. Reply STOP to opt out at any time.
+            </label>
           </div>
           {error && <div style={{ background: '#FCEBEB', border: '1px solid #F09595', padding: '12px 16px', marginBottom: 20, fontSize: 14, color: '#A32D2D' }}>{error}</div>}
           <div style={{ display: 'flex', gap: 12 }}>
             <button onClick={() => setStep(2)} style={{ padding: '14px 24px', border: '2px solid #E8E6DF', background: 'transparent', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', fontWeight: 600, color: '#5C5A53' }}>← Back</button>
-            <button onClick={handleSubmit} disabled={loading || !form.name.trim() || !form.phone.trim() || !form.email.trim()} style={{ flex: 1, padding: '14px 24px', background: (!loading && form.name.trim() && form.phone.trim() && form.email.trim()) ? '#F5A623' : '#E8E6DF', border: 'none', fontWeight: 700, fontSize: 15, cursor: (!loading && form.name.trim() && form.phone.trim() && form.email.trim()) ? 'pointer' : 'not-allowed', fontFamily: 'DM Sans, sans-serif', color: (!loading && form.name.trim() && form.phone.trim() && form.email.trim()) ? '#000' : '#9E9B91' }}>
+            <button onClick={handleSubmit} disabled={!canSubmit} style={{ flex: 1, padding: '14px 24px', background: canSubmit ? '#F5A623' : '#E8E6DF', border: 'none', fontWeight: 700, fontSize: 15, cursor: canSubmit ? 'pointer' : 'not-allowed', fontFamily: 'DM Sans, sans-serif', color: canSubmit ? '#000' : '#9E9B91' }}>
               {loading ? t.generating : t.getQuote}
             </button>
           </div>
@@ -415,7 +433,7 @@ const LandingPage: React.FC = () => {
             <a key={href} href={href} style={{ color: '#9E9B91', textDecoration: 'none', fontSize: 14, fontWeight: 500 }}>{label}</a>
           ))}
         </div>
-        <a href="#quote" onClick={scrollToQuote} style={{ background: '#F5A623', color: '#0D0D0D', fontWeight: 700, fontSize: 14, padding: '10px 20px', textDecoration: 'none', letterSpacing: 0.5 }}>{t.nav.cta}</a>
+        <a href="/submit-trial" style={{ background: '#F5A623', color: '#0D0D0D', fontWeight: 700, fontSize: 14, padding: '10px 20px', textDecoration: 'none', letterSpacing: 0.5 }}>{t.nav.cta}</a>
       </nav>
 
       <section style={{ background: '#0D0D0D', display: 'grid', gridTemplateColumns: '1fr 1fr', minHeight: 620, borderBottom: '4px solid #F5A623' }}>
@@ -548,9 +566,27 @@ const LandingPage: React.FC = () => {
         <h2 style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 56, lineHeight: 1, textTransform: 'uppercase', marginBottom: 40 }}>One Job Pays For <span style={{ color: '#C4841A' }}>Six Months</span></h2>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)' }}>
           {[
-            { tier: 'Starter', price: '$97', features: ['AI chat widget (200 leads/mo)', 'Instant quote estimates', 'Email lead delivery', 'English only', 'Standard response templates'], featured: false },
-            { tier: 'Pro', price: '$197', features: ['Unlimited leads', 'AI quote + lead scoring', 'CRM / n8n webhook routing', 'English + Spanish (auto)', 'Custom AI branding', 'Priority support'], featured: true },
-            { tier: 'Agency', price: '$497', features: ['Up to 5 contractor accounts', 'White-label dashboard', 'Everything in Pro ×5', 'Reseller margin included', 'Dedicated onboarding call'], featured: false },
+            {
+              tier: 'Starter', price: '$97',
+              features: ['AI chat widget (200 leads/mo)', 'Instant quote estimates', 'Email lead delivery', 'English only', 'Standard response templates'],
+              featured: false,
+              trialUrl: '/submit-trial',
+              stripeUrl: STRIPE_STARTER,
+            },
+            {
+              tier: 'Pro', price: '$197',
+              features: ['Unlimited leads', 'AI quote + lead scoring', 'CRM / n8n webhook routing', 'English + Spanish (auto)', 'Custom AI branding', 'Priority support'],
+              featured: true,
+              trialUrl: '/submit-trial',
+              stripeUrl: STRIPE_PRO,
+            },
+            {
+              tier: 'Agency', price: '$497',
+              features: ['Up to 5 contractor accounts', 'White-label dashboard', 'Everything in Pro ×5', 'Reseller margin included', 'Dedicated onboarding call'],
+              featured: false,
+              trialUrl: 'mailto:ryan@plumblead.ai?subject=Agency Plan Inquiry',
+              stripeUrl: 'mailto:ryan@plumblead.ai?subject=Agency Plan Inquiry',
+            },
           ].map((plan, i) => (
             <div key={i} style={{ padding: '40px 36px', border: plan.featured ? '3px solid #F5A623' : '2px solid #E8E6DF', background: plan.featured ? '#0D0D0D' : '#FFF', position: 'relative', transform: plan.featured ? 'scaleY(1.02)' : 'none', zIndex: plan.featured ? 2 : 1, borderRight: !plan.featured && i === 0 ? 'none' : undefined, borderLeft: !plan.featured && i === 2 ? 'none' : undefined }}>
               {plan.featured && <div style={{ position: 'absolute', top: -14, left: '50%', transform: 'translateX(-50%)', background: '#F5A623', color: '#000', fontWeight: 700, fontSize: 11, padding: '4px 16px', letterSpacing: 1.5, textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Most Popular</div>}
@@ -564,7 +600,16 @@ const LandingPage: React.FC = () => {
                   </li>
                 ))}
               </ul>
-              <button onClick={() => quoteRef.current?.scrollIntoView({ behavior: 'smooth' })} style={{ display: 'block', width: '100%', padding: 14, background: plan.featured ? '#F5A623' : 'transparent', border: plan.featured ? 'none' : '2px solid #0D0D0D', fontWeight: 700, fontSize: 15, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', color: plan.featured ? '#000' : '#0D0D0D' }}>Start Free Trial →</button>
+              {/* Primary CTA: 14-day free trial */}
+              <a href={plan.trialUrl} style={{ display: 'block', width: '100%', padding: '14px', background: plan.featured ? '#F5A623' : 'transparent', border: plan.featured ? 'none' : '2px solid #0D0D0D', fontWeight: 700, fontSize: 15, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', color: plan.featured ? '#000' : '#0D0D0D', textDecoration: 'none', textAlign: 'center', marginBottom: 10 }}>
+                {plan.tier === 'Agency' ? 'Contact Us →' : 'Start Free Trial →'}
+              </a>
+              {/* Secondary CTA: direct Stripe subscribe */}
+              {plan.tier !== 'Agency' && (
+                <a href={plan.stripeUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'block', width: '100%', padding: '10px', background: 'transparent', border: `1px solid ${plan.featured ? '#444' : '#E8E6DF'}`, fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', color: plan.featured ? '#9E9B91' : '#9E9B91', textDecoration: 'none', textAlign: 'center' }}>
+                  Subscribe — {plan.price}/mo →
+                </a>
+              )}
             </div>
           ))}
         </div>
@@ -594,7 +639,7 @@ const LandingPage: React.FC = () => {
           <p style={{ fontSize: 18, color: '#7A5810', marginTop: 8 }}>Will it be the last one you miss?</p>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'flex-end', minWidth: 260 }}>
-          <a href="#quote" onClick={scrollToQuote} style={{ background: '#0D0D0D', color: '#F5A623', fontWeight: 700, fontSize: 18, padding: '20px 40px', textDecoration: 'none', display: 'block', textAlign: 'center', width: '100%', letterSpacing: 0.5 }}>Start Free Trial →</a>
+          <a href="/submit-trial" style={{ background: '#0D0D0D', color: '#F5A623', fontWeight: 700, fontSize: 18, padding: '20px 40px', textDecoration: 'none', display: 'block', textAlign: 'center', width: '100%', letterSpacing: 0.5 }}>Start Free Trial →</a>
           <span style={{ fontSize: 12, color: '#7A5810', fontWeight: 600 }}>14-day free trial · No credit card</span>
         </div>
       </div>
