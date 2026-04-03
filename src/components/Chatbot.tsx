@@ -1,5 +1,6 @@
 // src/components/Chatbot.tsx
 // PlumbLead.ai — Floating AI chat widget
+// NOTE: Uses 'plc-' prefix for CSS classes to avoid conflict with widget.js 'pl-' classes
 
 import React, { useState, useRef, useEffect } from 'react';
 
@@ -87,13 +88,14 @@ const Chatbot: React.FC<ChatbotProps> = ({ lang = 'en' }) => {
 
   return (
     <>
-      <style>{`@keyframes pl-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}@keyframes pl-fadein{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}@keyframes pl-bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-4px)}}.pl-msg{animation:pl-fadein 0.25s ease}.pl-widget{animation:pl-fadein 0.3s ease}`}</style>
-      <button onClick={() => setOpen(!open)} aria-label={t.openLabel} style={{ position:'fixed',bottom:28,right:28,zIndex:9999,width:60,height:60,borderRadius:'50%',background:open?'#0D0D0D':'#F5A623',border:'3px solid #0D0D0D',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:24,boxShadow:'0 4px 20px rgba(0,0,0,0.25)',transition:'all 0.2s',animation:!open?'pl-pulse 3s infinite':'none' }}>
+      {/* Use plc- prefix to avoid collision with widget.js pl- classes */}
+      <style>{`@keyframes plc-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}@keyframes plc-fadein{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}@keyframes plc-bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-4px)}}.plc-msg{animation:plc-fadein 0.25s ease}.plc-widget{animation:plc-fadein 0.3s ease}`}</style>
+      <button onClick={() => setOpen(!open)} aria-label={t.openLabel} style={{ position:'fixed',bottom:28,right:28,zIndex:9999,width:60,height:60,borderRadius:'50%',background:open?'#0D0D0D':'#F5A623',border:'3px solid #0D0D0D',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:24,boxShadow:'0 4px 20px rgba(0,0,0,0.25)',transition:'all 0.2s',animation:!open?'plc-pulse 3s infinite':'none' }}>
         {open ? <span style={{color:'#F5A623',fontSize:20,fontWeight:700,lineHeight:1}}>✕</span> : <span style={{fontSize:22}}>🔧</span>}
         {unread > 0 && !open && <div style={{position:'absolute',top:-4,right:-4,width:20,height:20,borderRadius:'50%',background:'#D83030',border:'2px solid #FFF',fontSize:11,fontWeight:700,color:'#FFF',display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'DM Sans, sans-serif'}}>{unread}</div>}
       </button>
       {open && (
-        <div className="pl-widget" style={{position:'fixed',bottom:100,right:28,zIndex:9998,width:360,maxHeight:560,background:'#FFF',border:'3px solid #0D0D0D',display:'flex',flexDirection:'column',fontFamily:'DM Sans, sans-serif',boxShadow:'0 8px 40px rgba(0,0,0,0.2)'}}>
+        <div className="plc-widget" style={{position:'fixed',bottom:100,right:28,zIndex:9998,width:360,maxHeight:560,background:'#FFF',border:'3px solid #0D0D0D',display:'flex',flexDirection:'column',fontFamily:'DM Sans, sans-serif',boxShadow:'0 8px 40px rgba(0,0,0,0.2)'}}>
           <div style={{background:'#0D0D0D',padding:'14px 18px',display:'flex',alignItems:'center',gap:12,borderBottom:'3px solid #F5A623'}}>
             <div style={{width:40,height:40,borderRadius:'50%',background:'#F5A623',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,flexShrink:0}}>🔧</div>
             <div style={{flex:1}}>
@@ -103,7 +105,7 @@ const Chatbot: React.FC<ChatbotProps> = ({ lang = 'en' }) => {
           </div>
           <div style={{flex:1,overflowY:'auto',padding:'16px',display:'flex',flexDirection:'column',gap:12,maxHeight:360,background:'#F5F4F0'}}>
             {messages.map(msg => (
-              <div key={msg.id} className="pl-msg" style={{display:'flex',flexDirection:msg.role==='user'?'row-reverse':'row',alignItems:'flex-end',gap:8}}>
+              <div key={msg.id} className="plc-msg" style={{display:'flex',flexDirection:msg.role==='user'?'row-reverse':'row',alignItems:'flex-end',gap:8}}>
                 {msg.role==='assistant' && <div style={{width:28,height:28,borderRadius:'50%',background:'#F5A623',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,flexShrink:0}}>🔧</div>}
                 <div style={{maxWidth:'78%'}}>
                   <div style={{padding:'10px 14px',background:msg.role==='user'?'#0D0D0D':'#FFF',color:msg.role==='user'?'#FFF':'#0D0D0D',fontSize:14,lineHeight:1.5,borderRadius:msg.role==='user'?'12px 4px 12px 12px':'4px 12px 12px 12px',border:msg.role==='assistant'?'1px solid #E8E6DF':'none'}}>{msg.content}</div>
@@ -112,10 +114,10 @@ const Chatbot: React.FC<ChatbotProps> = ({ lang = 'en' }) => {
               </div>
             ))}
             {loading && (
-              <div className="pl-msg" style={{display:'flex',alignItems:'flex-end',gap:8}}>
+              <div className="plc-msg" style={{display:'flex',alignItems:'flex-end',gap:8}}>
                 <div style={{width:28,height:28,borderRadius:'50%',background:'#F5A623',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13}}>🔧</div>
                 <div style={{padding:'12px 16px',background:'#FFF',border:'1px solid #E8E6DF',borderRadius:'4px 12px 12px 12px',display:'flex',gap:4,alignItems:'center'}}>
-                  {[0,150,300].map((d,i)=><div key={i} style={{width:6,height:6,borderRadius:'50%',background:'#9E9B91',animation:`pl-bounce 1s ${d}ms infinite`}}/>)}
+                  {[0,150,300].map((d,i)=><div key={i} style={{width:6,height:6,borderRadius:'50%',background:'#9E9B91',animation:`plc-bounce 1s ${d}ms infinite`}}/>)}
                 </div>
               </div>
             )}
