@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PlumbLead.ai Widget Demo — Smith Plumbing</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: #fff; color: #111; }
+
+    /* ── Demo banner ── */
+    .demo-banner {
+      background: #0D0D0D;
+      color: #F5A623;
+      text-align: center;
+      padding: 10px 20px;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+      position: sticky;
+      top: 0;
+      z-index: 9000;
+    }
+    .demo-banner span { color: #fff; }
+
+    /* ── Fake plumber site ── */
+    nav {
+      background: #1a3a5c;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 48px;
+      height: 68px;
+    }
+    .nav-logo { color: #fff; font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+    .nav-logo span { color: #F5A623; }
+    .nav-links { display: flex; gap: 28px; }
+    .nav-links a { color: rgba(255,255,255,0.75); text-decoration: none; font-size: 14px; font-weight: 500; }
+    .nav-cta {
+      background: #F5A623;
+      color: #000;
+      font-weight: 700;
+      font-size: 14px;
+      padding: 10px 20px;
+      text-decoration: none;
+    }
+
+    /* ── Hero ── */
+    .hero {
+      background: linear-gradient(135deg, #1a3a5c 0%, #0d2137 100%);
+      padding: 80px 48px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 60px;
+      align-items: center;
+    }
+    .hero h1 { font-size: 48px; font-weight: 700; color: #fff; line-height: 1.1; margin-bottom: 16px; }
+    .hero h1 span { color: #F5A623; }
+    .hero p { font-size: 17px; color: rgba(255,255,255,0.7); line-height: 1.6; margin-bottom: 32px; }
+    .hero-btns { display: flex; gap: 14px; }
+    .btn-primary {
+      background: #F5A623; color: #000; font-weight: 700;
+      font-size: 15px; padding: 14px 28px; text-decoration: none; display: inline-block;
+    }
+    .btn-secondary {
+      background: transparent; color: #fff; font-weight: 600;
+      font-size: 15px; padding: 14px 28px; text-decoration: none;
+      border: 2px solid rgba(255,255,255,0.3); display: inline-block;
+    }
+    .hero-image {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      padding: 32px;
+      text-align: center;
+    }
+    .hero-image .emoji { font-size: 80px; display: block; margin-bottom: 16px; }
+    .hero-image p { color: rgba(255,255,255,0.5); font-size: 14px; }
+
+    /* ── Services ── */
+    .services { padding: 72px 48px; background: #f8f9fa; }
+    .services h2 { font-size: 32px; font-weight: 700; margin-bottom: 8px; }
+    .services .sub { color: #666; font-size: 16px; margin-bottom: 40px; }
+    .service-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+    .service-card {
+      background: #fff;
+      padding: 28px 24px;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+    }
+    .service-card .icon { font-size: 32px; margin-bottom: 12px; }
+    .service-card h3 { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+    .service-card p { font-size: 14px; color: #666; line-height: 1.5; }
+
+    /* ── Why Us ── */
+    .why { padding: 72px 48px; }
+    .why h2 { font-size: 32px; font-weight: 700; margin-bottom: 8px; }
+    .why .sub { color: #666; font-size: 16px; margin-bottom: 40px; }
+    .why-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; }
+    .why-card { text-align: center; padding: 24px 16px; }
+    .why-card .num { font-size: 40px; font-weight: 700; color: #1a3a5c; margin-bottom: 8px; }
+    .why-card p { font-size: 14px; color: #666; line-height: 1.5; }
+
+    /* ── CTA strip ── */
+    .cta-strip {
+      background: #1a3a5c;
+      padding: 56px 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 40px;
+    }
+    .cta-strip h2 { font-size: 28px; font-weight: 700; color: #fff; }
+    .cta-strip p { color: rgba(255,255,255,0.6); margin-top: 6px; font-size: 15px; }
+
+    /* ── Footer ── */
+    footer {
+      background: #0d1117;
+      padding: 32px 48px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    footer p { color: #5c5a53; font-size: 13px; }
+    footer .logo { color: #F5A623; font-weight: 700; font-size: 18px; }
+
+    /* ── Widget label arrow ── */
+    .widget-label {
+      position: fixed;
+      bottom: 100px;
+      right: 100px;
+      background: #0D0D0D;
+      color: #F5A623;
+      padding: 8px 14px;
+      font-size: 12px;
+      font-weight: 700;
+      font-family: 'Inter', sans-serif;
+      border-radius: 4px;
+      z-index: 888888;
+      pointer-events: none;
+      white-space: nowrap;
+      animation: fadeInLabel 1s ease 4s both;
+    }
+    .widget-label::after {
+      content: '';
+      position: absolute;
+      bottom: -20px;
+      right: 12px;
+      font-size: 20px;
+      color: #F5A623;
+    }
+    @keyframes fadeInLabel {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 768px) {
+      nav { padding: 0 20px; }
+      .nav-links { display: none; }
+      .hero { grid-template-columns: 1fr; padding: 48px 20px; }
+      .hero h1 { font-size: 32px; }
+      .hero-image { display: none; }
+      .services { padding: 48px 20px; }
+      .service-grid { grid-template-columns: 1fr; }
+      .why { padding: 48px 20px; }
+      .why-grid { grid-template-columns: 1fr 1fr; }
+      .cta-strip { flex-direction: column; padding: 40px 20px; text-align: center; }
+      footer { flex-direction: column; gap: 12px; padding: 24px 20px; text-align: center; }
+      .widget-label { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Demo banner -->
+  <div class="demo-banner">
+    👀 This is a <span>PlumbLead.ai widget demo</span> — see the chat bubble in the bottom-right corner
+  </div>
+
+  <!-- Fake plumber site -->
+  <nav>
+    <div class="nav-logo">Smith<span>Plumbing</span></div>
+    <div class="nav-links">
+      <a href="#">Services</a>
+      <a href="#">About</a>
+      <a href="#">Reviews</a>
+      <a href="#">Contact</a>
+    </div>
+    <a href="#" class="nav-cta">Call (602) 555-0100</a>
+  </nav>
+
+  <section class="hero">
+    <div>
+      <h1>Phoenix's Most <span>Trusted</span> Plumbers</h1>
+      <p>Fast, reliable plumbing services for homeowners across the Valley. Available 24/7 for emergencies. Licensed &amp; insured.</p>
+      <div class="hero-btns">
+        <a href="#" class="btn-primary">Get a Free Quote</a>
+        <a href="#" class="btn-secondary">(602) 555-0100</a>
+      </div>
+    </div>
+    <div class="hero-image">
+      <span class="emoji">🔧</span>
+      <p>Licensed &amp; Insured · 4.9 Stars · 500+ Reviews</p>
+    </div>
+  </section>
+
+  <section class="services">
+    <h2>Our Services</h2>
+    <p class="sub">We handle everything from dripping faucets to full repipes.</p>
+    <div class="service-grid">
+      <div class="service-card"><div class="icon">🚧</div><h3>Water Heater Install</h3><p>Tank &amp; tankless water heater installation, replacement, and repair.</p></div>
+      <div class="service-card"><div class="icon">🚰</div><h3>Drain Cleaning</h3><p>Clogged drains cleared fast. We use professional-grade equipment.</p></div>
+      <div class="service-card"><div class="icon">🔍</div><h3>Leak Detection</h3><p>Non-invasive leak detection to find hidden leaks before they cause damage.</p></div>
+      <div class="service-card"><div class="icon">🛁</div><h3>Toilet Repair</h3><p>Running toilets, clogs, replacements — handled same day.</p></div>
+      <div class="service-card"><div class="icon">💧</div><h3>Water Treatment</h3><p>Whole-home softeners, RO systems, and filtration installation.</p></div>
+      <div class="service-card"><div class="icon">🚨</div><h3>Emergency Service</h3><p>Burst pipes, flooding, gas leaks — we're available 24/7.</p></div>
+    </div>
+  </section>
+
+  <section class="why">
+    <h2>Why Homeowners Choose Us</h2>
+    <p class="sub">We show up on time and get it done right the first time.</p>
+    <div class="why-grid">
+      <div class="why-card"><div class="num">24/7</div><p>Emergency service available around the clock</p></div>
+      <div class="why-card"><div class="num">4.9★</div><p>Average rating across 500+ Google reviews</p></div>
+      <div class="why-card"><div class="num">&lt;1hr</div><p>Average response time for urgent requests</p></div>
+      <div class="why-card"><div class="num">12yr</div><p>Serving Phoenix homeowners since 2012</p></div>
+    </div>
+  </section>
+
+  <section class="cta-strip">
+    <div>
+      <h2>Need a plumber today?</h2>
+      <p>Get an instant quote in 30 seconds — no phone call required.</p>
+    </div>
+    <a href="#" class="btn-primary" style="white-space:nowrap;font-size:16px;padding:16px 32px;">Get Instant Quote →</a>
+  </section>
+
+  <footer>
+    <div class="logo">SmithPlumbing</div>
+    <p>© 2026 Smith Plumbing LLC · Phoenix, AZ · ROC #123456</p>
+    <p>Licensed &amp; Insured</p>
+  </footer>
+
+  <!-- Arrow label pointing to widget -->
+  <div class="widget-label">👇 Try the AI Quote Widget</div>
+
+  <!-- PlumbLead.ai Widget -->
+  <script
+    src="/widget.js"
+    data-client="demo"
+    data-color="#F5A623"
+    data-position="right"
+    data-lang="en"
+  ></script>
+
+</body>
+</html>
