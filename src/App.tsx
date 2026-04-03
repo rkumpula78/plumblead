@@ -5,6 +5,7 @@ import QuoteTool from './components/QuoteTool';
 import WaterQualityReport from './components/WaterQualityReport';
 import Dashboard from './components/Dashboard';
 import SubmitTrial from './components/SubmitTrial';
+import WidgetDemo from './components/WidgetDemo';
 import Chatbot from './components/Chatbot';
 
 function App() {
@@ -16,7 +17,9 @@ function App() {
         <Route path="/water-quality" element={<WaterQualityReport />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/submit-trial" element={<SubmitTrial />} />
+        <Route path="/widget-demo" element={<WidgetDemo />} />
       </Routes>
+      {/* Only show chatbot on non-demo routes */}
       <Chatbot lang="en" />
     </Router>
   );
