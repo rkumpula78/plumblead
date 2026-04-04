@@ -22,6 +22,14 @@ interface PriceRange {
   label: string;
 }
 
+interface AIQuoteResult {
+  estimateRange: string;
+  personalizedMessage: string;
+  suggestedNextSteps: string[];
+  leadScore?: string;
+  crossSellOpportunities?: string[];
+}
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const PRICE_RANGES: Record<string, PriceRange> = {
@@ -116,7 +124,14 @@ const T = {
     timeASAP: 'ASAP',
     timeMorning: 'Morning',
     timeAfternoon: 'Afternoon',
-    timeEvening: 'Evening'
+    timeEvening: 'Evening',
+    loadingQuote: 'Generating your AI estimate...',
+    aiQuoteLabel: 'AI-Powered Estimate',
+    whyRange: 'Why a range?',
+    whyRangeText: 'Final price depends on site conditions, parts, and local labor rates.',
+    nextSteps: 'Suggested next steps:',
+    crossSell: 'You might also need:',
+    quoteError: 'Could not load AI estimate. Showing typical range.',
   },
   es: {
     mainTitle: 'Obtenga Su Presupuesto Instantáneo',
@@ -158,9 +173,18 @@ const T = {
     timeASAP: 'Lo antes posible',
     timeMorning: 'Mañana',
     timeAfternoon: 'Tarde',
-    timeEvening: 'Noche'
+    timeEvening: 'Noche',
+    loadingQuote: 'Generando su estimado con IA...',
+    aiQuoteLabel: 'Estimado con Inteligencia Artificial',
+    whyRange: '¿Por qué un rango?',
+    whyRangeText: 'El precio final depende de las condiciones del sitio, piezas y tarifas locales.',
+    nextSteps: 'Próximos pasos sugeridos:',
+    crossSell: 'También podría necesitar:',
+    quoteError: 'No se pudo cargar el estimado. Mostrando rango típico.',
   }
 };
+
+const API_BASE = 'https://plumblead-production.up.railway.app';
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
@@ -181,6 +205,9 @@ const QuoteTool: React.FC = () => {
 
   const [countdown, setCountdown] = useState(60);
   const [submitLoading, setSubmitLoading] = useState(false);
+  const [aiQuote, setAiQuote] = useState<AIQuoteResult | null>(null);
+  const [quoteLoading, setQuoteLoading] = useState(false);
+  const [quoteError, setQuoteError] = useState(false);
 
   const t = T[state.language];
 
@@ -202,6 +229,39 @@ const QuoteTool: React.FC = () => {
     setState(prev => ({ ...prev, preferredTime: time }));
   };
 
+  // Fetch AI quote as soon as user moves to step 3
+  const fetchAIQuote = async (currentState: QuoteState) => {
+    setQuoteLoading(true);
+    setQuoteError(false);
+    setAiQuote(null);
+    try {
+      const res = await fetch(`${API_BASE}/api/quote`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          serviceType: currentState.serviceLabel || currentState.service,
+          details: currentState.details || currentState.serviceLabel,
+          location: currentState.zipCode || 'unknown',
+          language: currentState.language,
+        }),
+      });
+      if (!res.ok) throw new Error('Quote API error');
+      const data: AIQuoteResult = await res.json();
+      setAiQuote(data);
+    } catch (err) {
+      console.error('AI quote fetch error:', err);
+      setQuoteError(true);
+    } finally {
+      setQuoteLoading(false);
+    }
+  };
+
+  const handleSeeEstimate = () => {
+    const nextState = { ...state };
+    goToStep(3);
+    fetchAIQuote(nextState);
+  };
+
   const submitLead = async () => {
     if (!state.name.trim() || !state.phone.trim()) {
       alert('Please enter your name and phone number');
@@ -219,25 +279,31 @@ const QuoteTool: React.FC = () => {
       phone: state.phone,
       email: state.email,
       service: state.service,
+      serviceLabel: state.serviceLabel,
       urgency: state.urgency,
       details: state.details || '',
       zipCode: state.zipCode || '',
       preferredTime: state.preferredTime,
+      estimateRange: aiQuote?.estimateRange || '',
+      leadScore: aiQuote?.leadScore || '',
       source: 'quote-tool',
       campaign: '',
       clientId: 'demo',
       clientName: 'Your Local Plumber',
-      lang: state.language
+      lang: state.language,
+      submittedAt: new Date().toISOString(),
     };
 
     try {
-      await fetch('https://plumblead-production.up.railway.app/api/quote', {
+      // Fire /api/leads to forward to n8n — this is the primary lead capture
+      await fetch(`${API_BASE}/api/leads`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       });
     } catch (err) {
-      console.error('Submit error:', err);
+      console.error('Lead submit error:', err);
+      // Non-blocking — proceed to success even if n8n webhook fails
     }
 
     setSubmitLoading(false);
@@ -250,13 +316,12 @@ const QuoteTool: React.FC = () => {
     const timer = setInterval(() => {
       seconds--;
       setCountdown(seconds);
-      if (seconds <= 0) {
-        clearInterval(timer);
-      }
+      if (seconds <= 0) clearInterval(timer);
     }, 1000);
   };
 
   const priceRange = PRICE_RANGES[state.service];
+  const displayRange = aiQuote?.estimateRange || (priceRange ? `$${priceRange.low.toLocaleString()} – $${priceRange.high.toLocaleString()}` : '');
 
   return (
     <div style={{ maxWidth: 640, margin: '0 auto', padding: '24px 16px', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
@@ -420,7 +485,8 @@ const QuoteTool: React.FC = () => {
                 color: '#1e293b',
                 fontFamily: 'inherit',
                 resize: 'vertical',
-                outline: 'none'
+                outline: 'none',
+                boxSizing: 'border-box',
               }}
             />
           </div>
@@ -442,13 +508,14 @@ const QuoteTool: React.FC = () => {
                 borderRadius: 8,
                 fontSize: 15,
                 color: '#1e293b',
-                outline: 'none'
+                outline: 'none',
+                boxSizing: 'border-box',
               }}
             />
           </div>
 
           <button
-            onClick={() => goToStep(3)}
+            onClick={handleSeeEstimate}
             style={{
               width: '100%',
               padding: 16,
@@ -480,24 +547,99 @@ const QuoteTool: React.FC = () => {
       )}
 
       {/* Step 3: Quote Result + Lead Capture */}
-      {state.currentStep === 3 && priceRange && (
+      {state.currentStep === 3 && (
         <div>
           <div style={{ fontSize: 14, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12 }}>
             {t.step3}
           </div>
 
-          <div style={{ background: '#fff', borderRadius: 16, padding: '32px 24px', textAlign: 'center', boxShadow: '0 4px 24px rgba(0,0,0,0.08)', marginBottom: 24 }}>
-            <div style={{ fontSize: 14, color: '#64748b', marginBottom: 4 }}>{t.estimateFor}</div>
-            <div style={{ fontSize: 18, fontWeight: 700, color: '#0f172a', marginBottom: 16 }}>{priceRange.label}</div>
-            <div style={{ fontSize: 42, fontWeight: 800, color: '#0ea5e9', lineHeight: 1, marginBottom: 4 }}>
-              ${priceRange.low.toLocaleString()} – ${priceRange.high.toLocaleString()}
+          {/* Quote Card */}
+          <div style={{ background: '#fff', borderRadius: 16, padding: '28px 24px', textAlign: 'center', boxShadow: '0 4px 24px rgba(0,0,0,0.08)', marginBottom: 20 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#0ea5e9', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>
+              {t.aiQuoteLabel}
             </div>
-            <div style={{ fontSize: 14, color: '#94a3b8', marginBottom: 24 }}>
-              {state.urgency === 'emergency' ? 'Emergency service may include after-hours rates' : t.basedOn}
+            <div style={{ fontSize: 16, fontWeight: 700, color: '#0f172a', marginBottom: 12 }}>
+              {priceRange?.label || state.serviceLabel}
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontSize: 13, color: '#64748b' }}>
-              <span style={{ color: '#10b981' }}>✓</span> {t.licensed}
-              <span style={{ color: '#10b981' }}>✓</span> {t.noObligation}
+
+            {quoteLoading ? (
+              <div style={{ padding: '24px 0' }}>
+                <div style={{ fontSize: 14, color: '#64748b', marginBottom: 12 }}>{t.loadingQuote}</div>
+                <div style={{ display: 'flex', justifyContent: 'center', gap: 6 }}>
+                  {[0, 150, 300].map((d, i) => (
+                    <div key={i} style={{
+                      width: 8, height: 8, borderRadius: '50%', background: '#0ea5e9',
+                      animation: `bounce 1s ${d}ms infinite`
+                    }} />
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <>
+                <div style={{ fontSize: 40, fontWeight: 800, color: '#0ea5e9', lineHeight: 1, marginBottom: 4 }}>
+                  {displayRange || '—'}
+                </div>
+                <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 16 }}>
+                  {state.urgency === 'emergency' ? 'Emergency service may include after-hours rates' : t.basedOn}
+                </div>
+
+                {/* AI Personalized Message */}
+                {aiQuote?.personalizedMessage && !quoteError && (
+                  <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: '14px 16px', textAlign: 'left', marginBottom: 16, fontSize: 14, color: '#334155', lineHeight: 1.6 }}>
+                    {aiQuote.personalizedMessage}
+                  </div>
+                )}
+
+                {quoteError && (
+                  <div style={{ fontSize: 13, color: '#94a3b8', marginBottom: 16, fontStyle: 'italic' }}>
+                    {t.quoteError}
+                  </div>
+                )}
+
+                {/* Suggested Next Steps */}
+                {aiQuote?.suggestedNextSteps && aiQuote.suggestedNextSteps.length > 0 && (
+                  <div style={{ textAlign: 'left', marginBottom: 16 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>
+                      {t.nextSteps}
+                    </div>
+                    <ol style={{ margin: 0, paddingLeft: 20 }}>
+                      {aiQuote.suggestedNextSteps.map((step, i) => (
+                        <li key={i} style={{ fontSize: 13, color: '#334155', marginBottom: 4, lineHeight: 1.5 }}>{step}</li>
+                      ))}
+                    </ol>
+                  </div>
+                )}
+
+                {/* Cross-sell */}
+                {aiQuote?.crossSellOpportunities && aiQuote.crossSellOpportunities.length > 0 && (
+                  <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: '10px 14px', textAlign: 'left', marginBottom: 8 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#166534', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>
+                      {t.crossSell}
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      {aiQuote.crossSellOpportunities.map((opp, i) => (
+                        <span key={i} style={{ fontSize: 12, background: '#dcfce7', color: '#166534', padding: '3px 8px', borderRadius: 4 }}>{opp}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Lead score badge */}
+                {aiQuote?.leadScore && (
+                  <div style={{ display: 'inline-block', marginTop: 8, padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 700,
+                    background: aiQuote.leadScore === 'Emergency' ? '#fef2f2' : aiQuote.leadScore === 'High Urgency' ? '#fffbeb' : '#f0f9ff',
+                    color: aiQuote.leadScore === 'Emergency' ? '#dc2626' : aiQuote.leadScore === 'High Urgency' ? '#d97706' : '#0369a1',
+                    border: `1px solid ${aiQuote.leadScore === 'Emergency' ? '#fecaca' : aiQuote.leadScore === 'High Urgency' ? '#fde68a' : '#bae6fd'}`
+                  }}>
+                    {aiQuote.leadScore}
+                  </div>
+                )}
+              </>
+            )}
+
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, fontSize: 12, color: '#64748b', marginTop: 16 }}>
+              <span><span style={{ color: '#10b981' }}>✓</span> {t.licensed}</span>
+              <span><span style={{ color: '#10b981' }}>✓</span> {t.noObligation}</span>
             </div>
           </div>
 
@@ -511,7 +653,8 @@ const QuoteTool: React.FC = () => {
             </div>
           )}
 
-          <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 20 }}>{t.getExact}</h2>
+          {/* Lead Capture Form */}
+          <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 20 }}>{t.getExact}</h2>
 
           <div style={{ marginBottom: 16 }}>
             <label style={{ display: 'block', fontSize: 14, fontWeight: 600, color: '#334155', marginBottom: 6 }}>{t.nameLabel}</label>
@@ -520,7 +663,7 @@ const QuoteTool: React.FC = () => {
               value={state.name}
               onChange={e => setState(prev => ({ ...prev, name: e.target.value }))}
               placeholder="John Smith"
-              style={{ width: '100%', padding: '12px 14px', border: '2px solid #e2e8f0', borderRadius: 8, fontSize: 15, outline: 'none' }}
+              style={{ width: '100%', padding: '12px 14px', border: '2px solid #e2e8f0', borderRadius: 8, fontSize: 15, outline: 'none', boxSizing: 'border-box' }}
             />
           </div>
 
@@ -531,7 +674,7 @@ const QuoteTool: React.FC = () => {
               value={state.phone}
               onChange={e => setState(prev => ({ ...prev, phone: e.target.value }))}
               placeholder="(602) 555-1234"
-              style={{ width: '100%', padding: '12px 14px', border: '2px solid #e2e8f0', borderRadius: 8, fontSize: 15, outline: 'none' }}
+              style={{ width: '100%', padding: '12px 14px', border: '2px solid #e2e8f0', borderRadius: 8, fontSize: 15, outline: 'none', boxSizing: 'border-box' }}
             />
           </div>
 
@@ -542,7 +685,7 @@ const QuoteTool: React.FC = () => {
               value={state.email}
               onChange={e => setState(prev => ({ ...prev, email: e.target.value }))}
               placeholder="john@email.com"
-              style={{ width: '100%', padding: '12px 14px', border: '2px solid #e2e8f0', borderRadius: 8, fontSize: 15, outline: 'none' }}
+              style={{ width: '100%', padding: '12px 14px', border: '2px solid #e2e8f0', borderRadius: 8, fontSize: 15, outline: 'none', boxSizing: 'border-box' }}
             />
           </div>
 
@@ -555,12 +698,12 @@ const QuoteTool: React.FC = () => {
                   onClick={() => selectTime(time)}
                   style={{
                     flex: 1,
-                    minWidth: 120,
-                    padding: '12px 16px',
+                    minWidth: 100,
+                    padding: '12px 10px',
                     background: state.preferredTime === time ? '#f0f9ff' : '#fff',
                     border: state.preferredTime === time ? '2px solid #0ea5e9' : '2px solid #e2e8f0',
                     borderRadius: 8,
-                    fontSize: 14,
+                    fontSize: 13,
                     fontWeight: 500,
                     color: state.preferredTime === time ? '#0369a1' : '#334155',
                     cursor: 'pointer',
@@ -624,6 +767,13 @@ const QuoteTool: React.FC = () => {
       <div style={{ textAlign: 'center', padding: 20, fontSize: 12, color: '#cbd5e1' }}>
         Powered by <a href="https://plumblead.ai" target="_blank" rel="noopener noreferrer" style={{ color: '#94a3b8', textDecoration: 'none' }}>PlumbLead.ai</a>
       </div>
+
+      <style>{`
+        @keyframes bounce {
+          0%, 60%, 100% { transform: translateY(0); }
+          30% { transform: translateY(-5px); }
+        }
+      `}</style>
     </div>
   );
 };
