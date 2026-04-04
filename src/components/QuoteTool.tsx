@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -127,8 +128,6 @@ const T = {
     timeEvening: 'Evening',
     loadingQuote: 'Generating your AI estimate...',
     aiQuoteLabel: 'AI-Powered Estimate',
-    whyRange: 'Why a range?',
-    whyRangeText: 'Final price depends on site conditions, parts, and local labor rates.',
     nextSteps: 'Suggested next steps:',
     crossSell: 'You might also need:',
     quoteError: 'Could not load AI estimate. Showing typical range.',
@@ -176,8 +175,6 @@ const T = {
     timeEvening: 'Noche',
     loadingQuote: 'Generando su estimado con IA...',
     aiQuoteLabel: 'Estimado con Inteligencia Artificial',
-    whyRange: '¿Por qué un rango?',
-    whyRangeText: 'El precio final depende de las condiciones del sitio, piezas y tarifas locales.',
     nextSteps: 'Próximos pasos sugeridos:',
     crossSell: 'También podría necesitar:',
     quoteError: 'No se pudo cargar el estimado. Mostrando rango típico.',
@@ -189,6 +186,8 @@ const API_BASE = 'https://plumblead-production.up.railway.app';
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 const QuoteTool: React.FC = () => {
+  const navigate = useNavigate();
+
   const [state, setState] = useState<QuoteState>({
     currentStep: 1,
     service: '',
@@ -217,6 +216,11 @@ const QuoteTool: React.FC = () => {
   };
 
   const selectService = (key: string, label: string) => {
+    // Water quality report gets its own dedicated page
+    if (key === 'water-test') {
+      navigate('/water-quality');
+      return;
+    }
     setState(prev => ({ ...prev, service: key, serviceLabel: PRICE_RANGES[key]?.label || label }));
     setTimeout(() => goToStep(2), 300);
   };
@@ -229,7 +233,6 @@ const QuoteTool: React.FC = () => {
     setState(prev => ({ ...prev, preferredTime: time }));
   };
 
-  // Fetch AI quote as soon as user moves to step 3
   const fetchAIQuote = async (currentState: QuoteState) => {
     setQuoteLoading(true);
     setQuoteError(false);
@@ -295,7 +298,6 @@ const QuoteTool: React.FC = () => {
     };
 
     try {
-      // Fire /api/leads to forward to n8n — this is the primary lead capture
       await fetch(`${API_BASE}/api/leads`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -303,7 +305,6 @@ const QuoteTool: React.FC = () => {
       });
     } catch (err) {
       console.error('Lead submit error:', err);
-      // Non-blocking — proceed to success even if n8n webhook fails
     }
 
     setSubmitLoading(false);
@@ -328,98 +329,37 @@ const QuoteTool: React.FC = () => {
       {/* Header */}
       <div style={{ textAlign: 'center', marginBottom: 32 }}>
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8, gap: 0 }}>
-          <button
-            onClick={() => setState(prev => ({ ...prev, language: 'en' }))}
-            style={{
-              padding: '4px 10px',
-              border: '2px solid #0ea5e9',
-              background: state.language === 'en' ? '#0ea5e9' : '#fff',
-              color: state.language === 'en' ? '#fff' : '#0ea5e9',
-              borderRadius: '4px 0 0 4px',
-              fontSize: 12,
-              fontWeight: 600,
-              cursor: 'pointer'
-            }}>
-            English
-          </button>
-          <button
-            onClick={() => setState(prev => ({ ...prev, language: 'es' }))}
-            style={{
-              padding: '4px 10px',
-              border: '2px solid #0ea5e9',
-              background: state.language === 'es' ? '#0ea5e9' : '#fff',
-              color: state.language === 'es' ? '#fff' : '#0ea5e9',
-              borderRadius: '0 4px 4px 0',
-              fontSize: 12,
-              fontWeight: 600,
-              cursor: 'pointer'
-            }}>
-            Español
-          </button>
+          <button onClick={() => setState(prev => ({ ...prev, language: 'en' }))} style={{ padding: '4px 10px', border: '2px solid #0ea5e9', background: state.language === 'en' ? '#0ea5e9' : '#fff', color: state.language === 'en' ? '#fff' : '#0ea5e9', borderRadius: '4px 0 0 4px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>English</button>
+          <button onClick={() => setState(prev => ({ ...prev, language: 'es' }))} style={{ padding: '4px 10px', border: '2px solid #0ea5e9', background: state.language === 'es' ? '#0ea5e9' : '#fff', color: state.language === 'es' ? '#fff' : '#0ea5e9', borderRadius: '0 4px 4px 0', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Español</button>
         </div>
-        <div style={{ fontSize: 14, fontWeight: 600, color: '#0ea5e9', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>
-          Your Local Plumber
-        </div>
-        <h1 style={{ fontSize: 28, fontWeight: 700, color: '#0f172a', lineHeight: 1.2 }}>
-          {t.mainTitle}
-        </h1>
-        <p style={{ fontSize: 16, color: '#64748b', marginTop: 8 }}>
-          {t.mainSubtitle}
-        </p>
+        <div style={{ fontSize: 14, fontWeight: 600, color: '#0ea5e9', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Your Local Plumber</div>
+        <h1 style={{ fontSize: 28, fontWeight: 700, color: '#0f172a', lineHeight: 1.2 }}>{t.mainTitle}</h1>
+        <p style={{ fontSize: 16, color: '#64748b', marginTop: 8 }}>{t.mainSubtitle}</p>
       </div>
 
       {/* Progress Bar */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 32 }}>
         {[1, 2, 3, 4].map(i => (
-          <div
-            key={i}
-            style={{
-              flex: 1,
-              height: 4,
-              background: state.currentStep > i ? '#10b981' : state.currentStep === i ? '#0ea5e9' : '#e2e8f0',
-              borderRadius: 2,
-              transition: 'background 0.3s'
-            }}
-          />
+          <div key={i} style={{ flex: 1, height: 4, background: state.currentStep > i ? '#10b981' : state.currentStep === i ? '#0ea5e9' : '#e2e8f0', borderRadius: 2, transition: 'background 0.3s' }} />
         ))}
       </div>
 
       {/* Step 1: Service Selection */}
       {state.currentStep === 1 && (
         <div>
-          <div style={{ fontSize: 14, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12 }}>
-            {t.step1}
-          </div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12 }}>{t.step1}</div>
           <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 20 }}>{t.whatNeed}</h2>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             {SERVICES.map(svc => (
               <div
                 key={svc.key}
                 onClick={() => selectService(svc.key, svc.label)}
-                style={{
-                  background: svc.highlight ? '#f0f9ff' : '#fff',
-                  border: svc.highlight ? '2px solid #0ea5e9' : '2px solid #e2e8f0',
-                  borderRadius: 12,
-                  padding: '20px 16px',
-                  textAlign: 'center',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s'
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.borderColor = '#0ea5e9';
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.borderColor = svc.highlight ? '#0ea5e9' : '#e2e8f0';
-                  e.currentTarget.style.transform = 'translateY(0)';
-                }}>
+                style={{ background: svc.highlight ? '#f0f9ff' : '#fff', border: svc.highlight ? '2px solid #0ea5e9' : '2px solid #e2e8f0', borderRadius: 12, padding: '20px 16px', textAlign: 'center', cursor: 'pointer', transition: 'all 0.2s' }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = '#0ea5e9'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = svc.highlight ? '#0ea5e9' : '#e2e8f0'; e.currentTarget.style.transform = 'translateY(0)'; }}>
                 <div style={{ fontSize: 32, marginBottom: 8 }}>{svc.icon}</div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: '#334155' }}>
-                  {state.language === 'es' ? (SERVICES_ES[svc.key] || svc.label) : svc.label}
-                </div>
-                <div style={{ fontSize: 12, color: svc.highlight ? '#10b981' : '#94a3b8', marginTop: 4, fontWeight: svc.highlight ? 700 : 400 }}>
-                  {svc.priceHint}
-                </div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: '#334155' }}>{state.language === 'es' ? (SERVICES_ES[svc.key] || svc.label) : svc.label}</div>
+                <div style={{ fontSize: 12, color: svc.highlight ? '#10b981' : '#94a3b8', marginTop: 4, fontWeight: svc.highlight ? 700 : 400 }}>{svc.priceHint}</div>
               </div>
             ))}
           </div>
@@ -429,214 +369,78 @@ const QuoteTool: React.FC = () => {
       {/* Step 2: Details & Urgency */}
       {state.currentStep === 2 && (
         <div>
-          <div style={{ fontSize: 14, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12 }}>
-            {t.step2}
-          </div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12 }}>{t.step2}</div>
           <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 20 }}>{t.fewDetails}</h2>
-
           <div style={{ marginBottom: 20 }}>
-            <label style={{ display: 'block', fontSize: 15, fontWeight: 600, color: '#334155', marginBottom: 10 }}>
-              {t.urgencyQ}
-            </label>
+            <label style={{ display: 'block', fontSize: 15, fontWeight: 600, color: '#334155', marginBottom: 10 }}>{t.urgencyQ}</label>
             <div style={{ display: 'flex', gap: 10 }}>
               {(['emergency', 'soon', 'routine'] as const).map(u => (
-                <div
-                  key={u}
-                  onClick={() => selectUrgency(u)}
-                  style={{
-                    flex: 1,
-                    padding: 14,
-                    border: state.urgency === u ? '2px solid #0ea5e9' : '2px solid #e2e8f0',
-                    background: state.urgency === u ? '#f0f9ff' : '#fff',
-                    borderRadius: 8,
-                    textAlign: 'center',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s'
-                  }}>
-                  <div style={{ fontSize: 24, marginBottom: 4 }}>
-                    {u === 'emergency' ? '🚨' : u === 'soon' ? '📅' : '🕐'}
-                  </div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: '#334155' }}>
-                    {u === 'emergency' ? t.emergency : u === 'soon' ? t.thisWeek : t.flexible}
-                  </div>
-                  <div style={{ fontSize: 11, color: '#94a3b8' }}>
-                    {u === 'emergency' ? t.emergencyDesc : u === 'soon' ? t.thisWeekDesc : t.flexibleDesc}
-                  </div>
+                <div key={u} onClick={() => selectUrgency(u)} style={{ flex: 1, padding: 14, border: state.urgency === u ? '2px solid #0ea5e9' : '2px solid #e2e8f0', background: state.urgency === u ? '#f0f9ff' : '#fff', borderRadius: 8, textAlign: 'center', cursor: 'pointer', transition: 'all 0.2s' }}>
+                  <div style={{ fontSize: 24, marginBottom: 4 }}>{u === 'emergency' ? '🚨' : u === 'soon' ? '📅' : '🕐'}</div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: '#334155' }}>{u === 'emergency' ? t.emergency : u === 'soon' ? t.thisWeek : t.flexible}</div>
+                  <div style={{ fontSize: 11, color: '#94a3b8' }}>{u === 'emergency' ? t.emergencyDesc : u === 'soon' ? t.thisWeekDesc : t.flexibleDesc}</div>
                 </div>
               ))}
             </div>
           </div>
-
           <div style={{ marginBottom: 16 }}>
-            <label style={{ display: 'block', fontSize: 15, fontWeight: 600, color: '#334155', marginBottom: 10 }}>
-              {t.detailsLabel}
-            </label>
-            <textarea
-              value={state.details}
-              onChange={e => setState(prev => ({ ...prev, details: e.target.value }))}
-              placeholder={t.detailsPlaceholder}
-              rows={4}
-              style={{
-                width: '100%',
-                padding: '12px 14px',
-                border: '2px solid #e2e8f0',
-                borderRadius: 8,
-                fontSize: 15,
-                color: '#1e293b',
-                fontFamily: 'inherit',
-                resize: 'vertical',
-                outline: 'none',
-                boxSizing: 'border-box',
-              }}
-            />
+            <label style={{ display: 'block', fontSize: 15, fontWeight: 600, color: '#334155', marginBottom: 10 }}>{t.detailsLabel}</label>
+            <textarea value={state.details} onChange={e => setState(prev => ({ ...prev, details: e.target.value }))} placeholder={t.detailsPlaceholder} rows={4} style={{ width: '100%', padding: '12px 14px', border: '2px solid #e2e8f0', borderRadius: 8, fontSize: 15, color: '#1e293b', fontFamily: 'inherit', resize: 'vertical', outline: 'none', boxSizing: 'border-box' }} />
           </div>
-
           <div style={{ marginBottom: 32 }}>
-            <label style={{ display: 'block', fontSize: 15, fontWeight: 600, color: '#334155', marginBottom: 10 }}>
-              {t.zipLabel}
-            </label>
-            <input
-              type="text"
-              value={state.zipCode}
-              onChange={e => setState(prev => ({ ...prev, zipCode: e.target.value }))}
-              placeholder="85383"
-              maxLength={5}
-              style={{
-                width: '100%',
-                padding: '12px 14px',
-                border: '2px solid #e2e8f0',
-                borderRadius: 8,
-                fontSize: 15,
-                color: '#1e293b',
-                outline: 'none',
-                boxSizing: 'border-box',
-              }}
-            />
+            <label style={{ display: 'block', fontSize: 15, fontWeight: 600, color: '#334155', marginBottom: 10 }}>{t.zipLabel}</label>
+            <input type="text" value={state.zipCode} onChange={e => setState(prev => ({ ...prev, zipCode: e.target.value }))} placeholder="85383" maxLength={5} style={{ width: '100%', padding: '12px 14px', border: '2px solid #e2e8f0', borderRadius: 8, fontSize: 15, color: '#1e293b', outline: 'none', boxSizing: 'border-box' }} />
           </div>
-
-          <button
-            onClick={handleSeeEstimate}
-            style={{
-              width: '100%',
-              padding: 16,
-              background: '#0ea5e9',
-              color: '#fff',
-              border: 'none',
-              borderRadius: 10,
-              fontSize: 16,
-              fontWeight: 700,
-              cursor: 'pointer',
-              marginBottom: 8
-            }}>
-            {t.seeEstimate}
-          </button>
-          <button
-            onClick={() => goToStep(1)}
-            style={{
-              width: '100%',
-              padding: 12,
-              background: 'transparent',
-              color: '#64748b',
-              border: 'none',
-              fontSize: 14,
-              cursor: 'pointer'
-            }}>
-            {t.back}
-          </button>
+          <button onClick={handleSeeEstimate} style={{ width: '100%', padding: 16, background: '#0ea5e9', color: '#fff', border: 'none', borderRadius: 10, fontSize: 16, fontWeight: 700, cursor: 'pointer', marginBottom: 8 }}>{t.seeEstimate}</button>
+          <button onClick={() => goToStep(1)} style={{ width: '100%', padding: 12, background: 'transparent', color: '#64748b', border: 'none', fontSize: 14, cursor: 'pointer' }}>{t.back}</button>
         </div>
       )}
 
       {/* Step 3: Quote Result + Lead Capture */}
       {state.currentStep === 3 && (
         <div>
-          <div style={{ fontSize: 14, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12 }}>
-            {t.step3}
-          </div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12 }}>{t.step3}</div>
 
-          {/* Quote Card */}
           <div style={{ background: '#fff', borderRadius: 16, padding: '28px 24px', textAlign: 'center', boxShadow: '0 4px 24px rgba(0,0,0,0.08)', marginBottom: 20 }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: '#0ea5e9', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>
-              {t.aiQuoteLabel}
-            </div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: '#0f172a', marginBottom: 12 }}>
-              {priceRange?.label || state.serviceLabel}
-            </div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#0ea5e9', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>{t.aiQuoteLabel}</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: '#0f172a', marginBottom: 12 }}>{priceRange?.label || state.serviceLabel}</div>
 
             {quoteLoading ? (
               <div style={{ padding: '24px 0' }}>
                 <div style={{ fontSize: 14, color: '#64748b', marginBottom: 12 }}>{t.loadingQuote}</div>
                 <div style={{ display: 'flex', justifyContent: 'center', gap: 6 }}>
-                  {[0, 150, 300].map((d, i) => (
-                    <div key={i} style={{
-                      width: 8, height: 8, borderRadius: '50%', background: '#0ea5e9',
-                      animation: `bounce 1s ${d}ms infinite`
-                    }} />
-                  ))}
+                  {[0, 150, 300].map((d, i) => <div key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: '#0ea5e9', animation: `bounce 1s ${d}ms infinite` }} />)}
                 </div>
               </div>
             ) : (
               <>
-                <div style={{ fontSize: 40, fontWeight: 800, color: '#0ea5e9', lineHeight: 1, marginBottom: 4 }}>
-                  {displayRange || '—'}
-                </div>
-                <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 16 }}>
-                  {state.urgency === 'emergency' ? 'Emergency service may include after-hours rates' : t.basedOn}
-                </div>
-
-                {/* AI Personalized Message */}
+                <div style={{ fontSize: 40, fontWeight: 800, color: '#0ea5e9', lineHeight: 1, marginBottom: 4 }}>{displayRange || '—'}</div>
+                <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 16 }}>{state.urgency === 'emergency' ? 'Emergency service may include after-hours rates' : t.basedOn}</div>
                 {aiQuote?.personalizedMessage && !quoteError && (
-                  <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: '14px 16px', textAlign: 'left', marginBottom: 16, fontSize: 14, color: '#334155', lineHeight: 1.6 }}>
-                    {aiQuote.personalizedMessage}
-                  </div>
+                  <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: '14px 16px', textAlign: 'left', marginBottom: 16, fontSize: 14, color: '#334155', lineHeight: 1.6 }}>{aiQuote.personalizedMessage}</div>
                 )}
-
-                {quoteError && (
-                  <div style={{ fontSize: 13, color: '#94a3b8', marginBottom: 16, fontStyle: 'italic' }}>
-                    {t.quoteError}
-                  </div>
-                )}
-
-                {/* Suggested Next Steps */}
+                {quoteError && <div style={{ fontSize: 13, color: '#94a3b8', marginBottom: 16, fontStyle: 'italic' }}>{t.quoteError}</div>}
                 {aiQuote?.suggestedNextSteps && aiQuote.suggestedNextSteps.length > 0 && (
                   <div style={{ textAlign: 'left', marginBottom: 16 }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>
-                      {t.nextSteps}
-                    </div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>{t.nextSteps}</div>
                     <ol style={{ margin: 0, paddingLeft: 20 }}>
-                      {aiQuote.suggestedNextSteps.map((step, i) => (
-                        <li key={i} style={{ fontSize: 13, color: '#334155', marginBottom: 4, lineHeight: 1.5 }}>{step}</li>
-                      ))}
+                      {aiQuote.suggestedNextSteps.map((step, i) => <li key={i} style={{ fontSize: 13, color: '#334155', marginBottom: 4, lineHeight: 1.5 }}>{step}</li>)}
                     </ol>
                   </div>
                 )}
-
-                {/* Cross-sell */}
                 {aiQuote?.crossSellOpportunities && aiQuote.crossSellOpportunities.length > 0 && (
                   <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: '10px 14px', textAlign: 'left', marginBottom: 8 }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, color: '#166534', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>
-                      {t.crossSell}
-                    </div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#166534', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>{t.crossSell}</div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                      {aiQuote.crossSellOpportunities.map((opp, i) => (
-                        <span key={i} style={{ fontSize: 12, background: '#dcfce7', color: '#166534', padding: '3px 8px', borderRadius: 4 }}>{opp}</span>
-                      ))}
+                      {aiQuote.crossSellOpportunities.map((opp, i) => <span key={i} style={{ fontSize: 12, background: '#dcfce7', color: '#166534', padding: '3px 8px', borderRadius: 4 }}>{opp}</span>)}
                     </div>
                   </div>
                 )}
-
-                {/* Lead score badge */}
                 {aiQuote?.leadScore && (
-                  <div style={{ display: 'inline-block', marginTop: 8, padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 700,
-                    background: aiQuote.leadScore === 'Emergency' ? '#fef2f2' : aiQuote.leadScore === 'High Urgency' ? '#fffbeb' : '#f0f9ff',
-                    color: aiQuote.leadScore === 'Emergency' ? '#dc2626' : aiQuote.leadScore === 'High Urgency' ? '#d97706' : '#0369a1',
-                    border: `1px solid ${aiQuote.leadScore === 'Emergency' ? '#fecaca' : aiQuote.leadScore === 'High Urgency' ? '#fde68a' : '#bae6fd'}`
-                  }}>
-                    {aiQuote.leadScore}
-                  </div>
+                  <div style={{ display: 'inline-block', marginTop: 8, padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 700, background: aiQuote.leadScore === 'Emergency' ? '#fef2f2' : aiQuote.leadScore === 'High Urgency' ? '#fffbeb' : '#f0f9ff', color: aiQuote.leadScore === 'Emergency' ? '#dc2626' : aiQuote.leadScore === 'High Urgency' ? '#d97706' : '#0369a1', border: `1px solid ${aiQuote.leadScore === 'Emergency' ? '#fecaca' : aiQuote.leadScore === 'High Urgency' ? '#fde68a' : '#bae6fd'}` }}>{aiQuote.leadScore}</div>
                 )}
               </>
             )}
-
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, fontSize: 12, color: '#64748b', marginTop: 16 }}>
               <span><span style={{ color: '#10b981' }}>✓</span> {t.licensed}</span>
               <span><span style={{ color: '#10b981' }}>✓</span> {t.noObligation}</span>
@@ -653,99 +457,31 @@ const QuoteTool: React.FC = () => {
             </div>
           )}
 
-          {/* Lead Capture Form */}
           <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 20 }}>{t.getExact}</h2>
-
           <div style={{ marginBottom: 16 }}>
             <label style={{ display: 'block', fontSize: 14, fontWeight: 600, color: '#334155', marginBottom: 6 }}>{t.nameLabel}</label>
-            <input
-              type="text"
-              value={state.name}
-              onChange={e => setState(prev => ({ ...prev, name: e.target.value }))}
-              placeholder="John Smith"
-              style={{ width: '100%', padding: '12px 14px', border: '2px solid #e2e8f0', borderRadius: 8, fontSize: 15, outline: 'none', boxSizing: 'border-box' }}
-            />
+            <input type="text" value={state.name} onChange={e => setState(prev => ({ ...prev, name: e.target.value }))} placeholder="John Smith" style={{ width: '100%', padding: '12px 14px', border: '2px solid #e2e8f0', borderRadius: 8, fontSize: 15, outline: 'none', boxSizing: 'border-box' }} />
           </div>
-
           <div style={{ marginBottom: 16 }}>
             <label style={{ display: 'block', fontSize: 14, fontWeight: 600, color: '#334155', marginBottom: 6 }}>{t.phoneLabel}</label>
-            <input
-              type="tel"
-              value={state.phone}
-              onChange={e => setState(prev => ({ ...prev, phone: e.target.value }))}
-              placeholder="(602) 555-1234"
-              style={{ width: '100%', padding: '12px 14px', border: '2px solid #e2e8f0', borderRadius: 8, fontSize: 15, outline: 'none', boxSizing: 'border-box' }}
-            />
+            <input type="tel" value={state.phone} onChange={e => setState(prev => ({ ...prev, phone: e.target.value }))} placeholder="(602) 555-1234" style={{ width: '100%', padding: '12px 14px', border: '2px solid #e2e8f0', borderRadius: 8, fontSize: 15, outline: 'none', boxSizing: 'border-box' }} />
           </div>
-
           <div style={{ marginBottom: 16 }}>
             <label style={{ display: 'block', fontSize: 14, fontWeight: 600, color: '#334155', marginBottom: 6 }}>{t.emailLabel}</label>
-            <input
-              type="email"
-              value={state.email}
-              onChange={e => setState(prev => ({ ...prev, email: e.target.value }))}
-              placeholder="john@email.com"
-              style={{ width: '100%', padding: '12px 14px', border: '2px solid #e2e8f0', borderRadius: 8, fontSize: 15, outline: 'none', boxSizing: 'border-box' }}
-            />
+            <input type="email" value={state.email} onChange={e => setState(prev => ({ ...prev, email: e.target.value }))} placeholder="john@email.com" style={{ width: '100%', padding: '12px 14px', border: '2px solid #e2e8f0', borderRadius: 8, fontSize: 15, outline: 'none', boxSizing: 'border-box' }} />
           </div>
-
           <div style={{ marginBottom: 24 }}>
             <label style={{ display: 'block', fontSize: 14, fontWeight: 600, color: '#334155', marginBottom: 6 }}>{t.timeLabel}</label>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               {(['ASAP', 'Morning', 'Afternoon', 'Evening'] as const).map(time => (
-                <div
-                  key={time}
-                  onClick={() => selectTime(time)}
-                  style={{
-                    flex: 1,
-                    minWidth: 100,
-                    padding: '12px 10px',
-                    background: state.preferredTime === time ? '#f0f9ff' : '#fff',
-                    border: state.preferredTime === time ? '2px solid #0ea5e9' : '2px solid #e2e8f0',
-                    borderRadius: 8,
-                    fontSize: 13,
-                    fontWeight: 500,
-                    color: state.preferredTime === time ? '#0369a1' : '#334155',
-                    cursor: 'pointer',
-                    textAlign: 'center',
-                    transition: 'all 0.2s'
-                  }}>
+                <div key={time} onClick={() => selectTime(time)} style={{ flex: 1, minWidth: 100, padding: '12px 10px', background: state.preferredTime === time ? '#f0f9ff' : '#fff', border: state.preferredTime === time ? '2px solid #0ea5e9' : '2px solid #e2e8f0', borderRadius: 8, fontSize: 13, fontWeight: 500, color: state.preferredTime === time ? '#0369a1' : '#334155', cursor: 'pointer', textAlign: 'center', transition: 'all 0.2s' }}>
                   {time === 'ASAP' ? t.timeASAP : time === 'Morning' ? t.timeMorning : time === 'Afternoon' ? t.timeAfternoon : t.timeEvening}
                 </div>
               ))}
             </div>
           </div>
-
-          <button
-            onClick={submitLead}
-            disabled={submitLoading}
-            style={{
-              width: '100%',
-              padding: 16,
-              background: submitLoading ? '#94a3b8' : '#0ea5e9',
-              color: '#fff',
-              border: 'none',
-              borderRadius: 10,
-              fontSize: 16,
-              fontWeight: 700,
-              cursor: submitLoading ? 'not-allowed' : 'pointer',
-              marginBottom: 8
-            }}>
-            {submitLoading ? 'Sending...' : t.submitBtn}
-          </button>
-          <button
-            onClick={() => goToStep(2)}
-            style={{
-              width: '100%',
-              padding: 12,
-              background: 'transparent',
-              color: '#64748b',
-              border: 'none',
-              fontSize: 14,
-              cursor: 'pointer'
-            }}>
-            {t.back}
-          </button>
+          <button onClick={submitLead} disabled={submitLoading} style={{ width: '100%', padding: 16, background: submitLoading ? '#94a3b8' : '#0ea5e9', color: '#fff', border: 'none', borderRadius: 10, fontSize: 16, fontWeight: 700, cursor: submitLoading ? 'not-allowed' : 'pointer', marginBottom: 8 }}>{submitLoading ? 'Sending...' : t.submitBtn}</button>
+          <button onClick={() => goToStep(2)} style={{ width: '100%', padding: 12, background: 'transparent', color: '#64748b', border: 'none', fontSize: 14, cursor: 'pointer' }}>{t.back}</button>
         </div>
       )}
 
@@ -755,25 +491,17 @@ const QuoteTool: React.FC = () => {
           <div style={{ fontSize: 64, marginBottom: 16 }}>✅</div>
           <h2 style={{ fontSize: 24, color: '#10b981', marginBottom: 8 }}>{t.successTitle}</h2>
           <p style={{ fontSize: 16, color: '#64748b', lineHeight: 1.6 }} dangerouslySetInnerHTML={{ __html: t.successMsg }} />
-          <div style={{ fontSize: 48, fontWeight: 800, color: countdown > 0 ? '#0ea5e9' : '#10b981', margin: '24px 0' }}>
-            {countdown > 0 ? countdown : '✓'}
-          </div>
+          <div style={{ fontSize: 48, fontWeight: 800, color: countdown > 0 ? '#0ea5e9' : '#10b981', margin: '24px 0' }}>{countdown > 0 ? countdown : '✓'}</div>
           <div style={{ fontSize: 14, color: '#94a3b8' }}>{t.seconds}</div>
           <p style={{ fontSize: 14, color: '#64748b', marginTop: 24 }}>{t.successFooter}</p>
         </div>
       )}
 
-      {/* Powered By */}
       <div style={{ textAlign: 'center', padding: 20, fontSize: 12, color: '#cbd5e1' }}>
         Powered by <a href="https://plumblead.ai" target="_blank" rel="noopener noreferrer" style={{ color: '#94a3b8', textDecoration: 'none' }}>PlumbLead.ai</a>
       </div>
 
-      <style>{`
-        @keyframes bounce {
-          0%, 60%, 100% { transform: translateY(0); }
-          30% { transform: translateY(-5px); }
-        }
-      `}</style>
+      <style>{`@keyframes bounce { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(-5px); } }`}</style>
     </div>
   );
 };
