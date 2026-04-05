@@ -9,14 +9,16 @@ import WidgetDemo from './components/WidgetDemo';
 import Chatbot from './components/Chatbot';
 import ProMaxDemo from './components/demos/ProMaxDemo';
 import GPSPlumbingDemo from './components/demos/GPSPlumbingDemo';
+import Terms from './components/Terms';
+import Privacy from './components/Privacy';
 
-// Only show Chatbot on routes where it makes sense
 const ChatbotConditional: React.FC = () => {
   const location = useLocation();
-  const isWidgetDemo = location.pathname === '/widget-demo';
-  const isWidgetIframe = location.pathname === '/quote' && new URLSearchParams(location.search).get('widget') === '1';
-  const isDemo = location.pathname.startsWith('/demo/');
-  if (isWidgetDemo || isWidgetIframe || isDemo) return null;
+  const hide =
+    ['/widget-demo', '/terms', '/privacy'].includes(location.pathname) ||
+    location.pathname.startsWith('/demo/') ||
+    (location.pathname === '/quote' && new URLSearchParams(location.search).get('widget') === '1');
+  if (hide) return null;
   return <Chatbot lang="en" />;
 };
 
@@ -30,7 +32,8 @@ function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/submit-trial" element={<SubmitTrial />} />
         <Route path="/widget-demo" element={<WidgetDemo />} />
-        {/* Contractor demo pages */}
+        <Route path="/terms" element={<Terms />} />
+        <Route path="/privacy" element={<Privacy />} />
         <Route path="/demo/promax" element={<ProMaxDemo />} />
         <Route path="/demo/gps" element={<GPSPlumbingDemo />} />
       </Routes>
