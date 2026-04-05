@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import waterData from '../data/az-water-data.json';
+import azWaterData from '../data/az-water-data.json';
+import waWaterData from '../data/wa-water-data.json';
 
 const API_BASE = 'https://plumblead-production.up.railway.app';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ─── Types ─────────────────────────────────────────────────────────────────────
 
 interface CityData {
   name: string;
@@ -33,6 +34,7 @@ interface Recommendation {
 
 interface WaterReport {
   city: string;
+  state: string;
   zipCode: string;
   hardness: { low: number; high: number; avg: number; ppm: number; level: string; color: string; emoji: string };
   tds: number;
@@ -91,27 +93,38 @@ function getFacts(city: CityData, hardnessAvg: number, tds: number): string[] {
   const facts: string[] = [];
   if (hardnessAvg >= 15) facts.push(`${city.name} water is ${Math.round(hardnessAvg / 3.5)}× harder than what's considered "soft" water.`);
   if (hardnessAvg >= 12) facts.push(`Hard water can reduce your water heater's lifespan by 30-50%. In ${city.name}, that means replacing it every 6-8 years instead of 12-15.`);
+  if (hardnessAvg <= 3.5) facts.push(`${city.name} has naturally soft water from Cascade snowmelt — one of the cleanest municipal supplies in the country. Scale buildup is minimal.`);
   facts.push(`You're using up to ${Math.round(50 + (hardnessAvg / 15) * 25)}% more soap and detergent than homes with soft water.`);
   if (city.disinfection === 'chloramine') facts.push(`${city.name} uses chloramine (chlorine + ammonia) to disinfect water. Unlike chlorine, it doesn't evaporate — a standard Brita filter won't remove it.`);
   if (tds > 500) facts.push(`Your water has approximately ${tds} ppm of total dissolved solids — about ${Math.round((tds / 500) * 100)}% above the EPA's recommended aesthetic limit of 500 ppm.`);
   return facts;
 }
 
+// Searches all loaded state datasets
 function getWaterReport(zipCode: string): WaterReport | null {
-  for (const [, city] of Object.entries(waterData.cities)) {
-    const c = city as CityData;
-    if (c.zip_codes.includes(zipCode)) {
-      const hardnessAvg = c.hardness_gpg.avg;
-      const hardnessInfo = getHardnessLevel(hardnessAvg);
-      const tds = c.tds_ppm.avg;
-      return {
-        city: c.name, zipCode,
-        hardness: { low: c.hardness_gpg.low, high: c.hardness_gpg.high, avg: hardnessAvg, ppm: Math.round(hardnessAvg * 17.1), level: hardnessInfo.level, color: hardnessInfo.color, emoji: hardnessInfo.emoji },
-        tds, ph: c.ph.avg, disinfection: c.disinfection,
-        annualCost: estimateAnnualCost(hardnessAvg),
-        recommendation: getRecommendations(c, hardnessAvg, tds),
-        facts: getFacts(c, hardnessAvg, tds)
-      };
+  const datasets: Array<{ data: typeof azWaterData; state: string }> = [
+    { data: azWaterData, state: 'AZ' },
+    { data: waWaterData, state: 'WA' },
+  ];
+
+  for (const { data, state } of datasets) {
+    for (const [, city] of Object.entries(data.cities)) {
+      const c = city as CityData;
+      if (c.zip_codes.includes(zipCode)) {
+        const hardnessAvg = c.hardness_gpg.avg;
+        const hardnessInfo = getHardnessLevel(hardnessAvg);
+        const tds = c.tds_ppm.avg;
+        return {
+          city: c.name,
+          state,
+          zipCode,
+          hardness: { low: c.hardness_gpg.low, high: c.hardness_gpg.high, avg: hardnessAvg, ppm: Math.round(hardnessAvg * 17.1), level: hardnessInfo.level, color: hardnessInfo.color, emoji: hardnessInfo.emoji },
+          tds, ph: c.ph.avg, disinfection: c.disinfection,
+          annualCost: estimateAnnualCost(hardnessAvg),
+          recommendation: getRecommendations(c, hardnessAvg, tds),
+          facts: getFacts(c, hardnessAvg, tds)
+        };
+      }
     }
   }
   return null;
@@ -155,6 +168,7 @@ const WaterLeadCapture: React.FC<LeadFormProps> = ({ zipCode, report }) => {
           annualCostEstimate: `$${report.annualCost.low.toLocaleString()} – $${report.annualCost.high.toLocaleString()}/yr`,
           recommendations: report.recommendation.map(r => r.product).join(', '),
           city: report.city,
+          state: report.state,
           submittedAt: new Date().toISOString(),
         }),
       });
@@ -185,24 +199,10 @@ const WaterLeadCapture: React.FC<LeadFormProps> = ({ zipCode, report }) => {
         A licensed plumber will review your water report and give you an exact installation quote — no pressure, no obligation.
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <input
-          type="text" value={name} onChange={e => setName(e.target.value)}
-          placeholder="Your name"
-          style={{ padding: '12px 14px', border: '2px solid #e2e8f0', borderRadius: 8, fontSize: 15, outline: 'none', fontFamily: 'inherit' }}
-        />
-        <input
-          type="tel" value={phone} onChange={e => setPhone(e.target.value)}
-          placeholder="Phone number"
-          style={{ padding: '12px 14px', border: '2px solid #e2e8f0', borderRadius: 8, fontSize: 15, outline: 'none', fontFamily: 'inherit' }}
-        />
-        <input
-          type="email" value={email} onChange={e => setEmail(e.target.value)}
-          placeholder="Email (optional)"
-          style={{ padding: '12px 14px', border: '2px solid #e2e8f0', borderRadius: 8, fontSize: 15, outline: 'none', fontFamily: 'inherit' }}
-        />
-        <button
-          onClick={handleSubmit} disabled={loading}
-          style={{ padding: '14px', background: loading ? '#94a3b8' : '#0ea5e9', color: '#fff', border: 'none', borderRadius: 8, fontSize: 16, fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer' }}>
+        <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Your name" style={{ padding: '12px 14px', border: '2px solid #e2e8f0', borderRadius: 8, fontSize: 15, outline: 'none', fontFamily: 'inherit' }} />
+        <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="Phone number" style={{ padding: '12px 14px', border: '2px solid #e2e8f0', borderRadius: 8, fontSize: 15, outline: 'none', fontFamily: 'inherit' }} />
+        <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Email (optional)" style={{ padding: '12px 14px', border: '2px solid #e2e8f0', borderRadius: 8, fontSize: 15, outline: 'none', fontFamily: 'inherit' }} />
+        <button onClick={handleSubmit} disabled={loading} style={{ padding: '14px', background: loading ? '#94a3b8' : '#0ea5e9', color: '#fff', border: 'none', borderRadius: 8, fontSize: 16, fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer' }}>
           {loading ? 'Sending...' : 'Get My Free Water Consultation 🔒'}
         </button>
       </div>
@@ -213,7 +213,7 @@ const WaterLeadCapture: React.FC<LeadFormProps> = ({ zipCode, report }) => {
   );
 };
 
-// ─── Main Component ───────────────────────────────────────────────────────────
+// ─── Main Component ────────────────────────────────────────────────────────────
 
 const WaterQualityReport: React.FC = () => {
   const [zipCode, setZipCode] = useState('');
@@ -229,7 +229,7 @@ const WaterQualityReport: React.FC = () => {
     }
     const waterReport = getWaterReport(zipCode);
     if (!waterReport) {
-      setError('Sorry, we don\'t have water data for that zip code yet. Currently covering Phoenix metro area.');
+      setError('Sorry, we don\'t have water data for that zip code yet. Currently covering Arizona and Washington State. Call (833) 558-0877 for a free consultation in your area.');
       setReport(null);
     } else {
       setReport(waterReport);
@@ -248,7 +248,7 @@ const WaterQualityReport: React.FC = () => {
 
       <form onSubmit={handleSubmit} style={{ maxWidth: 400, margin: '0 auto 40px' }}>
         <div style={{ display: 'flex', gap: 12 }}>
-          <input type="text" value={zipCode} onChange={e => setZipCode(e.target.value)} placeholder="Enter zip code (e.g. 85383)" maxLength={5} style={{ flex: 1, padding: '14px 16px', border: '2px solid #e2e8f0', borderRadius: 8, fontSize: 16, outline: 'none', fontFamily: 'inherit' }} />
+          <input type="text" value={zipCode} onChange={e => setZipCode(e.target.value)} placeholder="Enter zip code" maxLength={5} style={{ flex: 1, padding: '14px 16px', border: '2px solid #e2e8f0', borderRadius: 8, fontSize: 16, outline: 'none', fontFamily: 'inherit' }} />
           <button type="submit" style={{ padding: '14px 28px', background: '#0ea5e9', color: '#fff', border: 'none', borderRadius: 8, fontSize: 16, fontWeight: 600, cursor: 'pointer' }}>Get Report</button>
         </div>
         {error && <div style={{ marginTop: 12, padding: '12px 16px', background: '#fee2e2', border: '1px solid #fecaca', borderRadius: 8, fontSize: 14, color: '#991b1b' }}>{error}</div>}
@@ -258,7 +258,7 @@ const WaterQualityReport: React.FC = () => {
         <div style={{ background: '#fff', borderRadius: 16, padding: '28px', boxShadow: '0 4px 24px rgba(0,0,0,0.08)' }}>
           <div style={{ textAlign: 'center', marginBottom: 20 }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: '#64748b', textTransform: 'uppercase', letterSpacing: 1 }}>Free Water Quality Report</div>
-            <div style={{ fontSize: 20, fontWeight: 700, color: '#0f172a', marginTop: 4 }}>{report.city}, AZ — {report.zipCode}</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: '#0f172a', marginTop: 4 }}>{report.city}, {report.state} — {report.zipCode}</div>
           </div>
 
           <div style={{ textAlign: 'center', margin: '24px 0' }}>
@@ -311,7 +311,7 @@ const WaterQualityReport: React.FC = () => {
 
           <div style={{ margin: '20px 0' }}>
             <div style={{ fontSize: 15, fontWeight: 700, color: '#0f172a', marginBottom: 12 }}>✅ What We Recommend</div>
-            {report.recommendation.map((rec, i) => (
+            {report.recommendation.length > 0 ? report.recommendation.map((rec, i) => (
               <div key={i} style={{ border: '1px solid #e2e8f0', borderRadius: 10, padding: 16, marginBottom: 10, borderLeft: rec.priority === 'high' ? '4px solid #0ea5e9' : '1px solid #e2e8f0' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ fontSize: 15, fontWeight: 700, color: '#0f172a' }}>{rec.product}</div>
@@ -319,17 +319,21 @@ const WaterQualityReport: React.FC = () => {
                 </div>
                 <div style={{ fontSize: 13, color: '#64748b', marginTop: 6, lineHeight: 1.5 }}>{rec.reason}</div>
               </div>
-            ))}
+            )) : (
+              <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: 16 }}>
+                <div style={{ fontSize: 14, color: '#166534', lineHeight: 1.5 }}>Your water is naturally soft — great news for your plumbing and appliances! If you notice any taste or odor from chloramine treatment, an under-sink RO or carbon filter can help.</div>
+              </div>
+            )}
           </div>
 
-          {/* Lead Capture */}
           <WaterLeadCapture zipCode={zipCode} report={report} />
         </div>
       )}
 
       {!report && !error && (
         <div style={{ textAlign: 'center', marginTop: 40, fontSize: 13, color: '#94a3b8' }}>
-          <div>Try: 85383 (Peoria), 85254 (Scottsdale), 85225 (Chandler)</div>
+          <div>Arizona: 85383 (Peoria), 85254 (Scottsdale), 85225 (Chandler)</div>
+          <div style={{ marginTop: 4 }}>Washington: 98101 (Seattle), 99201 (Spokane), 99336 (Kennewick)</div>
         </div>
       )}
     </div>
