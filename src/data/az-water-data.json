@@ -1,8 +1,9 @@
 {
   "_meta": {
     "description": "Arizona municipal water quality data by city/zip for PlumbLead water intelligence",
-    "sources": ["EPA CCR reports", "Municipal water quality reports", "Aquatell", "City Wide Plumbing AZ"],
-    "lastUpdated": "2026-03-26",
+    "sources": ["EPA CCR reports", "Municipal annual water quality reports", "ADEQ", "Aquatell", "City Wide Plumbing AZ"],
+    "lastUpdated": "2026-04-04",
+    "coverage": "Statewide Arizona — Phoenix metro, Tucson metro, Flagstaff, Prescott, Yuma, Sierra Vista, Kingman, Lake Havasu, Casa Grande, and surrounding communities",
     "units": {
       "hardness_gpg": "Grains per gallon",
       "hardness_ppm": "Parts per million as CaCO3",
@@ -32,7 +33,7 @@
       "chlorine_ppm": { "low": 0.5, "high": 3.0, "avg": 1.8 },
       "disinfection": "chloramine",
       "source": "CAP water + groundwater blend",
-      "zip_codes": ["85250","85251","85252","85253","85254","85255","85256","85257","85258","85259","85260","85261","85262","85266"]
+      "zip_codes": ["85250","85251","85252","85253","85254","85255","85256","85257","85258","85259","85260","85261","85262","85266","85267","85268"]
     },
     "mesa": {
       "name": "Mesa",
@@ -43,7 +44,7 @@
       "chlorine_ppm": { "low": 0.5, "high": 2.5, "avg": 1.5 },
       "disinfection": "chloramine",
       "source": "SRP + groundwater",
-      "zip_codes": ["85201","85202","85203","85204","85205","85206","85207","85208","85209","85210","85212","85213","85215"]
+      "zip_codes": ["85201","85202","85203","85204","85205","85206","85207","85208","85209","85210","85212","85213","85215","85216"]
     },
     "chandler": {
       "name": "Chandler",
@@ -54,7 +55,7 @@
       "chlorine_ppm": { "low": 0.5, "high": 2.0, "avg": 1.2 },
       "disinfection": "chloramine",
       "source": "CAP + groundwater",
-      "zip_codes": ["85224","85225","85226","85248","85249","85286"]
+      "zip_codes": ["85224","85225","85226","85244","85246","85248","85249","85286"]
     },
     "gilbert": {
       "name": "Gilbert",
@@ -76,7 +77,7 @@
       "chlorine_ppm": { "low": 0.5, "high": 2.5, "avg": 1.5 },
       "disinfection": "chloramine",
       "source": "SRP + groundwater",
-      "zip_codes": ["85281","85282","85283","85284"]
+      "zip_codes": ["85281","85282","85283","85284","85285","85287"]
     },
     "goodyear": {
       "name": "Goodyear",
@@ -143,6 +144,655 @@
       "disinfection": "chlorine",
       "source": "Groundwater + CAP",
       "zip_codes": ["85323","85392"]
+    },
+    "queen_creek": {
+      "name": "Queen Creek",
+      "hardness_gpg": { "low": 12, "high": 22, "avg": 17 },
+      "hardness_ppm": { "low": 205, "high": 376, "avg": 291 },
+      "tds_ppm": { "low": 400, "high": 800, "avg": 600 },
+      "ph": { "low": 7.4, "high": 8.2, "avg": 7.8 },
+      "chlorine_ppm": { "low": 0.5, "high": 2.0, "avg": 1.2 },
+      "disinfection": "chloramine",
+      "source": "SRP + groundwater",
+      "zip_codes": ["85142","85143"]
+    },
+    "san_tan_valley": {
+      "name": "San Tan Valley",
+      "hardness_gpg": { "low": 14, "high": 26, "avg": 20 },
+      "hardness_ppm": { "low": 239, "high": 445, "avg": 342 },
+      "tds_ppm": { "low": 450, "high": 900, "avg": 675 },
+      "ph": { "low": 7.3, "high": 8.2, "avg": 7.8 },
+      "chlorine_ppm": { "low": 0.5, "high": 2.0, "avg": 1.2 },
+      "disinfection": "chlorine",
+      "source": "Groundwater",
+      "zip_codes": ["85140","85143"]
+    },
+    "maricopa": {
+      "name": "Maricopa",
+      "hardness_gpg": { "low": 18, "high": 32, "avg": 25 },
+      "hardness_ppm": { "low": 308, "high": 547, "avg": 428 },
+      "tds_ppm": { "low": 600, "high": 1100, "avg": 850 },
+      "ph": { "low": 7.2, "high": 8.1, "avg": 7.7 },
+      "chlorine_ppm": { "low": 0.5, "high": 2.0, "avg": 1.2 },
+      "disinfection": "chlorine",
+      "source": "Groundwater",
+      "zip_codes": ["85138","85139"]
+    },
+    "el_mirage": {
+      "name": "El Mirage",
+      "hardness_gpg": { "low": 12, "high": 22, "avg": 17 },
+      "hardness_ppm": { "low": 205, "high": 376, "avg": 291 },
+      "tds_ppm": { "low": 400, "high": 800, "avg": 600 },
+      "ph": { "low": 7.4, "high": 8.2, "avg": 7.8 },
+      "chlorine_ppm": { "low": 0.5, "high": 2.5, "avg": 1.5 },
+      "disinfection": "chloramine",
+      "source": "CAP + groundwater",
+      "zip_codes": ["85335"]
+    },
+    "tolleson": {
+      "name": "Tolleson",
+      "hardness_gpg": { "low": 12, "high": 24, "avg": 18 },
+      "hardness_ppm": { "low": 205, "high": 410, "avg": 308 },
+      "tds_ppm": { "low": 400, "high": 900, "avg": 650 },
+      "ph": { "low": 7.3, "high": 8.2, "avg": 7.8 },
+      "chlorine_ppm": { "low": 0.5, "high": 2.5, "avg": 1.5 },
+      "disinfection": "chlorine",
+      "source": "Groundwater + CAP",
+      "zip_codes": ["85353"]
+    },
+    "litchfield_park": {
+      "name": "Litchfield Park",
+      "hardness_gpg": { "low": 10, "high": 28, "avg": 19 },
+      "hardness_ppm": { "low": 171, "high": 479, "avg": 325 },
+      "tds_ppm": { "low": 400, "high": 950, "avg": 675 },
+      "ph": { "low": 7.3, "high": 8.2, "avg": 7.8 },
+      "chlorine_ppm": { "low": 0.5, "high": 2.5, "avg": 1.5 },
+      "disinfection": "chlorine",
+      "source": "Groundwater + CAP",
+      "zip_codes": ["85340"]
+    },
+    "fountain_hills": {
+      "name": "Fountain Hills",
+      "hardness_gpg": { "low": 14, "high": 22, "avg": 18 },
+      "hardness_ppm": { "low": 239, "high": 376, "avg": 308 },
+      "tds_ppm": { "low": 450, "high": 800, "avg": 625 },
+      "ph": { "low": 7.5, "high": 8.3, "avg": 7.9 },
+      "chlorine_ppm": { "low": 0.5, "high": 2.5, "avg": 1.5 },
+      "disinfection": "chloramine",
+      "source": "CAP surface water",
+      "zip_codes": ["85268"]
+    },
+    "cave_creek": {
+      "name": "Cave Creek",
+      "hardness_gpg": { "low": 10, "high": 20, "avg": 15 },
+      "hardness_ppm": { "low": 171, "high": 342, "avg": 256 },
+      "tds_ppm": { "low": 350, "high": 700, "avg": 525 },
+      "ph": { "low": 7.4, "high": 8.2, "avg": 7.9 },
+      "chlorine_ppm": { "low": 0.5, "high": 2.0, "avg": 1.2 },
+      "disinfection": "chloramine",
+      "source": "CAP surface water",
+      "zip_codes": ["85327","85331"]
+    },
+    "carefree": {
+      "name": "Carefree",
+      "hardness_gpg": { "low": 10, "high": 18, "avg": 14 },
+      "hardness_ppm": { "low": 171, "high": 308, "avg": 239 },
+      "tds_ppm": { "low": 350, "high": 650, "avg": 500 },
+      "ph": { "low": 7.4, "high": 8.2, "avg": 7.9 },
+      "chlorine_ppm": { "low": 0.5, "high": 2.0, "avg": 1.2 },
+      "disinfection": "chloramine",
+      "source": "CAP surface water",
+      "zip_codes": ["85377"]
+    },
+    "apache_junction": {
+      "name": "Apache Junction",
+      "hardness_gpg": { "low": 14, "high": 28, "avg": 21 },
+      "hardness_ppm": { "low": 239, "high": 479, "avg": 359 },
+      "tds_ppm": { "low": 500, "high": 950, "avg": 725 },
+      "ph": { "low": 7.3, "high": 8.1, "avg": 7.7 },
+      "chlorine_ppm": { "low": 0.5, "high": 2.0, "avg": 1.2 },
+      "disinfection": "chlorine",
+      "source": "Groundwater",
+      "zip_codes": ["85119","85120"]
+    },
+    "gold_canyon": {
+      "name": "Gold Canyon",
+      "hardness_gpg": { "low": 16, "high": 30, "avg": 23 },
+      "hardness_ppm": { "low": 274, "high": 513, "avg": 393 },
+      "tds_ppm": { "low": 500, "high": 1000, "avg": 750 },
+      "ph": { "low": 7.2, "high": 8.1, "avg": 7.7 },
+      "chlorine_ppm": { "low": 0.5, "high": 2.0, "avg": 1.2 },
+      "disinfection": "chlorine",
+      "source": "Groundwater",
+      "zip_codes": ["85118"]
+    },
+    "sun_city": {
+      "name": "Sun City",
+      "hardness_gpg": { "low": 12, "high": 22, "avg": 17 },
+      "hardness_ppm": { "low": 205, "high": 376, "avg": 291 },
+      "tds_ppm": { "low": 400, "high": 800, "avg": 600 },
+      "ph": { "low": 7.4, "high": 8.2, "avg": 7.8 },
+      "chlorine_ppm": { "low": 0.5, "high": 2.5, "avg": 1.5 },
+      "disinfection": "chloramine",
+      "source": "CAP + groundwater",
+      "zip_codes": ["85351","85372","85373"]
+    },
+    "sun_city_west": {
+      "name": "Sun City West",
+      "hardness_gpg": { "low": 12, "high": 22, "avg": 17 },
+      "hardness_ppm": { "low": 205, "high": 376, "avg": 291 },
+      "tds_ppm": { "low": 400, "high": 800, "avg": 600 },
+      "ph": { "low": 7.4, "high": 8.2, "avg": 7.8 },
+      "chlorine_ppm": { "low": 0.5, "high": 2.5, "avg": 1.5 },
+      "disinfection": "chloramine",
+      "source": "CAP + groundwater",
+      "zip_codes": ["85375"]
+    },
+    "sun_city_grand": {
+      "name": "Sun City Grand (Surprise)",
+      "hardness_gpg": { "low": 12, "high": 25, "avg": 18 },
+      "hardness_ppm": { "low": 205, "high": 428, "avg": 308 },
+      "tds_ppm": { "low": 450, "high": 900, "avg": 675 },
+      "ph": { "low": 7.4, "high": 8.2, "avg": 7.8 },
+      "chlorine_ppm": { "low": 0.5, "high": 2.5, "avg": 1.5 },
+      "disinfection": "chlorine",
+      "source": "Groundwater + CAP",
+      "zip_codes": ["85387"]
+    },
+    "wickenburg": {
+      "name": "Wickenburg",
+      "hardness_gpg": { "low": 18, "high": 35, "avg": 27 },
+      "hardness_ppm": { "low": 308, "high": 599, "avg": 462 },
+      "tds_ppm": { "low": 600, "high": 1200, "avg": 900 },
+      "ph": { "low": 7.2, "high": 8.0, "avg": 7.6 },
+      "chlorine_ppm": { "low": 0.3, "high": 1.5, "avg": 0.9 },
+      "disinfection": "chlorine",
+      "source": "Groundwater",
+      "zip_codes": ["85390"]
+    },
+    "tucson": {
+      "name": "Tucson",
+      "hardness_gpg": { "low": 6, "high": 12, "avg": 9 },
+      "hardness_ppm": { "low": 103, "high": 205, "avg": 154 },
+      "tds_ppm": { "low": 250, "high": 550, "avg": 400 },
+      "ph": { "low": 7.5, "high": 8.2, "avg": 7.9 },
+      "chlorine_ppm": { "low": 0.5, "high": 2.5, "avg": 1.5 },
+      "disinfection": "chloramine",
+      "source": "CAP surface water + groundwater blend",
+      "zip_codes": ["85701","85704","85705","85706","85707","85708","85709","85710","85711","85712","85713","85714","85715","85716","85717","85718","85719","85720","85721","85722","85723","85724","85725","85726","85728","85730","85731","85732","85733","85734","85735","85736","85737","85738","85739","85740","85741","85742","85743","85744","85745","85746","85747","85748","85749","85750","85751","85752","85754","85755","85756","85757"]
+    },
+    "oro_valley": {
+      "name": "Oro Valley",
+      "hardness_gpg": { "low": 8, "high": 14, "avg": 11 },
+      "hardness_ppm": { "low": 137, "high": 239, "avg": 188 },
+      "tds_ppm": { "low": 300, "high": 600, "avg": 450 },
+      "ph": { "low": 7.5, "high": 8.2, "avg": 7.9 },
+      "chlorine_ppm": { "low": 0.5, "high": 2.0, "avg": 1.2 },
+      "disinfection": "chloramine",
+      "source": "CAP surface water + groundwater",
+      "zip_codes": ["85704","85737","85755"]
+    },
+    "marana": {
+      "name": "Marana",
+      "hardness_gpg": { "low": 8, "high": 16, "avg": 12 },
+      "hardness_ppm": { "low": 137, "high": 274, "avg": 205 },
+      "tds_ppm": { "low": 300, "high": 600, "avg": 450 },
+      "ph": { "low": 7.4, "high": 8.2, "avg": 7.8 },
+      "chlorine_ppm": { "low": 0.5, "high": 2.0, "avg": 1.2 },
+      "disinfection": "chloramine",
+      "source": "CAP + groundwater",
+      "zip_codes": ["85653","85658","85743"]
+    },
+    "sahuarita": {
+      "name": "Sahuarita",
+      "hardness_gpg": { "low": 10, "high": 20, "avg": 15 },
+      "hardness_ppm": { "low": 171, "high": 342, "avg": 256 },
+      "tds_ppm": { "low": 350, "high": 700, "avg": 525 },
+      "ph": { "low": 7.4, "high": 8.2, "avg": 7.8 },
+      "chlorine_ppm": { "low": 0.5, "high": 2.0, "avg": 1.2 },
+      "disinfection": "chloramine",
+      "source": "Groundwater",
+      "zip_codes": ["85629"]
+    },
+    "green_valley": {
+      "name": "Green Valley",
+      "hardness_gpg": { "low": 10, "high": 22, "avg": 16 },
+      "hardness_ppm": { "low": 171, "high": 376, "avg": 274 },
+      "tds_ppm": { "low": 350, "high": 750, "avg": 550 },
+      "ph": { "low": 7.4, "high": 8.2, "avg": 7.8 },
+      "chlorine_ppm": { "low": 0.3, "high": 2.0, "avg": 1.1 },
+      "disinfection": "chlorine",
+      "source": "Groundwater",
+      "zip_codes": ["85614","85622"]
+    },
+    "sierra_vista": {
+      "name": "Sierra Vista",
+      "hardness_gpg": { "low": 4, "high": 10, "avg": 7 },
+      "hardness_ppm": { "low": 68, "high": 171, "avg": 120 },
+      "tds_ppm": { "low": 150, "high": 400, "avg": 275 },
+      "ph": { "low": 7.3, "high": 8.0, "avg": 7.7 },
+      "chlorine_ppm": { "low": 0.3, "high": 1.5, "avg": 0.8 },
+      "disinfection": "chlorine",
+      "source": "Groundwater (Huachuca Mountain aquifer)",
+      "zip_codes": ["85635","85636","85650"]
+    },
+    "bisbee": {
+      "name": "Bisbee",
+      "hardness_gpg": { "low": 3, "high": 8, "avg": 5 },
+      "hardness_ppm": { "low": 51, "high": 137, "avg": 86 },
+      "tds_ppm": { "low": 100, "high": 300, "avg": 200 },
+      "ph": { "low": 7.2, "high": 7.9, "avg": 7.6 },
+      "chlorine_ppm": { "low": 0.3, "high": 1.5, "avg": 0.8 },
+      "disinfection": "chlorine",
+      "source": "Surface water + groundwater",
+      "zip_codes": ["85603"]
+    },
+    "douglas": {
+      "name": "Douglas",
+      "hardness_gpg": { "low": 8, "high": 18, "avg": 13 },
+      "hardness_ppm": { "low": 137, "high": 308, "avg": 222 },
+      "tds_ppm": { "low": 300, "high": 700, "avg": 500 },
+      "ph": { "low": 7.3, "high": 8.1, "avg": 7.7 },
+      "chlorine_ppm": { "low": 0.3, "high": 2.0, "avg": 1.1 },
+      "disinfection": "chlorine",
+      "source": "Groundwater",
+      "zip_codes": ["85607","85608"]
+    },
+    "flagstaff": {
+      "name": "Flagstaff",
+      "hardness_gpg": { "low": 2, "high": 6, "avg": 4 },
+      "hardness_ppm": { "low": 34, "high": 103, "avg": 68 },
+      "tds_ppm": { "low": 80, "high": 250, "avg": 165 },
+      "ph": { "low": 7.0, "high": 7.9, "avg": 7.5 },
+      "chlorine_ppm": { "low": 0.3, "high": 1.5, "avg": 0.8 },
+      "disinfection": "chlorine",
+      "source": "Surface water (wells + springs)",
+      "zip_codes": ["86001","86002","86003","86004","86005","86011","86015"]
+    },
+    "sedona": {
+      "name": "Sedona",
+      "hardness_gpg": { "low": 3, "high": 8, "avg": 5 },
+      "hardness_ppm": { "low": 51, "high": 137, "avg": 86 },
+      "tds_ppm": { "low": 100, "high": 300, "avg": 200 },
+      "ph": { "low": 7.2, "high": 8.0, "avg": 7.6 },
+      "chlorine_ppm": { "low": 0.3, "high": 1.5, "avg": 0.8 },
+      "disinfection": "chlorine",
+      "source": "Groundwater (Verde Valley aquifer)",
+      "zip_codes": ["86336","86339","86340","86351"]
+    },
+    "cottonwood": {
+      "name": "Cottonwood",
+      "hardness_gpg": { "low": 6, "high": 14, "avg": 10 },
+      "hardness_ppm": { "low": 103, "high": 239, "avg": 171 },
+      "tds_ppm": { "low": 200, "high": 500, "avg": 350 },
+      "ph": { "low": 7.3, "high": 8.1, "avg": 7.7 },
+      "chlorine_ppm": { "low": 0.3, "high": 2.0, "avg": 1.1 },
+      "disinfection": "chlorine",
+      "source": "Verde River + groundwater",
+      "zip_codes": ["86326","86325"]
+    },
+    "camp_verde": {
+      "name": "Camp Verde",
+      "hardness_gpg": { "low": 6, "high": 14, "avg": 10 },
+      "hardness_ppm": { "low": 103, "high": 239, "avg": 171 },
+      "tds_ppm": { "low": 200, "high": 500, "avg": 350 },
+      "ph": { "low": 7.3, "high": 8.1, "avg": 7.7 },
+      "chlorine_ppm": { "low": 0.3, "high": 2.0, "avg": 1.1 },
+      "disinfection": "chlorine",
+      "source": "Verde River aquifer",
+      "zip_codes": ["86322"]
+    },
+    "prescott": {
+      "name": "Prescott",
+      "hardness_gpg": { "low": 5, "high": 12, "avg": 8 },
+      "hardness_ppm": { "low": 86, "high": 205, "avg": 137 },
+      "tds_ppm": { "low": 150, "high": 450, "avg": 300 },
+      "ph": { "low": 7.2, "high": 8.0, "avg": 7.6 },
+      "chlorine_ppm": { "low": 0.3, "high": 2.0, "avg": 1.1 },
+      "disinfection": "chlorine",
+      "source": "Surface water (Granite Creek) + groundwater",
+      "zip_codes": ["86301","86302","86303","86304","86305"]
+    },
+    "prescott_valley": {
+      "name": "Prescott Valley",
+      "hardness_gpg": { "low": 8, "high": 18, "avg": 13 },
+      "hardness_ppm": { "low": 137, "high": 308, "avg": 222 },
+      "tds_ppm": { "low": 300, "high": 650, "avg": 475 },
+      "ph": { "low": 7.3, "high": 8.1, "avg": 7.7 },
+      "chlorine_ppm": { "low": 0.3, "high": 2.0, "avg": 1.1 },
+      "disinfection": "chlorine",
+      "source": "Groundwater",
+      "zip_codes": ["86312","86314"]
+    },
+    "chino_valley": {
+      "name": "Chino Valley",
+      "hardness_gpg": { "low": 10, "high": 22, "avg": 16 },
+      "hardness_ppm": { "low": 171, "high": 376, "avg": 274 },
+      "tds_ppm": { "low": 350, "high": 750, "avg": 550 },
+      "ph": { "low": 7.3, "high": 8.1, "avg": 7.7 },
+      "chlorine_ppm": { "low": 0.3, "high": 1.8, "avg": 1.0 },
+      "disinfection": "chlorine",
+      "source": "Groundwater",
+      "zip_codes": ["86323"]
+    },
+    "dewey_humboldt": {
+      "name": "Dewey-Humboldt",
+      "hardness_gpg": { "low": 10, "high": 20, "avg": 15 },
+      "hardness_ppm": { "low": 171, "high": 342, "avg": 256 },
+      "tds_ppm": { "low": 300, "high": 700, "avg": 500 },
+      "ph": { "low": 7.2, "high": 8.0, "avg": 7.6 },
+      "chlorine_ppm": { "low": 0.3, "high": 1.8, "avg": 1.0 },
+      "disinfection": "chlorine",
+      "source": "Groundwater",
+      "zip_codes": ["86327","86329"]
+    },
+    "yuma": {
+      "name": "Yuma",
+      "hardness_gpg": { "low": 15, "high": 28, "avg": 22 },
+      "hardness_ppm": { "low": 256, "high": 479, "avg": 376 },
+      "tds_ppm": { "low": 600, "high": 1100, "avg": 850 },
+      "ph": { "low": 7.5, "high": 8.3, "avg": 7.9 },
+      "chlorine_ppm": { "low": 0.5, "high": 2.5, "avg": 1.5 },
+      "disinfection": "chloramine",
+      "source": "Colorado River surface water",
+      "zip_codes": ["85364","85365","85366","85367","85369"]
+    },
+    "yuma_foothills": {
+      "name": "Yuma Foothills",
+      "hardness_gpg": { "low": 18, "high": 35, "avg": 27 },
+      "hardness_ppm": { "low": 308, "high": 599, "avg": 462 },
+      "tds_ppm": { "low": 700, "high": 1300, "avg": 1000 },
+      "ph": { "low": 7.5, "high": 8.3, "avg": 7.9 },
+      "chlorine_ppm": { "low": 0.5, "high": 2.0, "avg": 1.2 },
+      "disinfection": "chlorine",
+      "source": "Groundwater",
+      "zip_codes": ["85365"]
+    },
+    "somerton": {
+      "name": "Somerton",
+      "hardness_gpg": { "low": 16, "high": 30, "avg": 23 },
+      "hardness_ppm": { "low": 274, "high": 513, "avg": 393 },
+      "tds_ppm": { "low": 600, "high": 1100, "avg": 850 },
+      "ph": { "low": 7.4, "high": 8.2, "avg": 7.8 },
+      "chlorine_ppm": { "low": 0.5, "high": 2.0, "avg": 1.2 },
+      "disinfection": "chlorine",
+      "source": "Colorado River + groundwater",
+      "zip_codes": ["85350"]
+    },
+    "casa_grande": {
+      "name": "Casa Grande",
+      "hardness_gpg": { "low": 18, "high": 35, "avg": 27 },
+      "hardness_ppm": { "low": 308, "high": 599, "avg": 462 },
+      "tds_ppm": { "low": 600, "high": 1200, "avg": 900 },
+      "ph": { "low": 7.3, "high": 8.1, "avg": 7.7 },
+      "chlorine_ppm": { "low": 0.5, "high": 2.0, "avg": 1.2 },
+      "disinfection": "chlorine",
+      "source": "Groundwater",
+      "zip_codes": ["85122","85130"]
+    },
+    "coolidge": {
+      "name": "Coolidge",
+      "hardness_gpg": { "low": 16, "high": 30, "avg": 23 },
+      "hardness_ppm": { "low": 274, "high": 513, "avg": 393 },
+      "tds_ppm": { "low": 550, "high": 1100, "avg": 825 },
+      "ph": { "low": 7.2, "high": 8.1, "avg": 7.7 },
+      "chlorine_ppm": { "low": 0.5, "high": 2.0, "avg": 1.2 },
+      "disinfection": "chlorine",
+      "source": "Groundwater",
+      "zip_codes": ["85128"]
+    },
+    "eloy": {
+      "name": "Eloy",
+      "hardness_gpg": { "low": 20, "high": 38, "avg": 29 },
+      "hardness_ppm": { "low": 342, "high": 650, "avg": 496 },
+      "tds_ppm": { "low": 700, "high": 1400, "avg": 1050 },
+      "ph": { "low": 7.2, "high": 8.0, "avg": 7.6 },
+      "chlorine_ppm": { "low": 0.5, "high": 2.0, "avg": 1.2 },
+      "disinfection": "chlorine",
+      "source": "Groundwater",
+      "zip_codes": ["85131"]
+    },
+    "florence": {
+      "name": "Florence",
+      "hardness_gpg": { "low": 18, "high": 32, "avg": 25 },
+      "hardness_ppm": { "low": 308, "high": 547, "avg": 428 },
+      "tds_ppm": { "low": 600, "high": 1100, "avg": 850 },
+      "ph": { "low": 7.2, "high": 8.1, "avg": 7.7 },
+      "chlorine_ppm": { "low": 0.5, "high": 2.0, "avg": 1.2 },
+      "disinfection": "chlorine",
+      "source": "Groundwater",
+      "zip_codes": ["85132"]
+    },
+    "globe": {
+      "name": "Globe",
+      "hardness_gpg": { "low": 8, "high": 18, "avg": 13 },
+      "hardness_ppm": { "low": 137, "high": 308, "avg": 222 },
+      "tds_ppm": { "low": 250, "high": 600, "avg": 425 },
+      "ph": { "low": 7.2, "high": 8.0, "avg": 7.6 },
+      "chlorine_ppm": { "low": 0.3, "high": 2.0, "avg": 1.1 },
+      "disinfection": "chlorine",
+      "source": "Surface water (Pinal Creek)",
+      "zip_codes": ["85501","85502"]
+    },
+    "payson": {
+      "name": "Payson",
+      "hardness_gpg": { "low": 3, "high": 8, "avg": 5 },
+      "hardness_ppm": { "low": 51, "high": 137, "avg": 86 },
+      "tds_ppm": { "low": 100, "high": 300, "avg": 200 },
+      "ph": { "low": 7.0, "high": 7.8, "avg": 7.4 },
+      "chlorine_ppm": { "low": 0.3, "high": 1.5, "avg": 0.8 },
+      "disinfection": "chlorine",
+      "source": "Surface water (springs + wells)",
+      "zip_codes": ["85541","85542"]
+    },
+    "show_low": {
+      "name": "Show Low",
+      "hardness_gpg": { "low": 2, "high": 6, "avg": 4 },
+      "hardness_ppm": { "low": 34, "high": 103, "avg": 68 },
+      "tds_ppm": { "low": 80, "high": 250, "avg": 165 },
+      "ph": { "low": 7.0, "high": 7.8, "avg": 7.4 },
+      "chlorine_ppm": { "low": 0.3, "high": 1.5, "avg": 0.8 },
+      "disinfection": "chlorine",
+      "source": "Surface water + groundwater",
+      "zip_codes": ["85901","85902"]
+    },
+    "pinetop_lakeside": {
+      "name": "Pinetop-Lakeside",
+      "hardness_gpg": { "low": 2, "high": 6, "avg": 4 },
+      "hardness_ppm": { "low": 34, "high": 103, "avg": 68 },
+      "tds_ppm": { "low": 80, "high": 250, "avg": 165 },
+      "ph": { "low": 7.0, "high": 7.8, "avg": 7.4 },
+      "chlorine_ppm": { "low": 0.3, "high": 1.5, "avg": 0.8 },
+      "disinfection": "chlorine",
+      "source": "Groundwater (springs)",
+      "zip_codes": ["85929","85935"]
+    },
+    "kingman": {
+      "name": "Kingman",
+      "hardness_gpg": { "low": 12, "high": 25, "avg": 18 },
+      "hardness_ppm": { "low": 205, "high": 428, "avg": 308 },
+      "tds_ppm": { "low": 400, "high": 900, "avg": 650 },
+      "ph": { "low": 7.4, "high": 8.2, "avg": 7.8 },
+      "chlorine_ppm": { "low": 0.3, "high": 2.0, "avg": 1.1 },
+      "disinfection": "chlorine",
+      "source": "Groundwater (Hualapai Valley aquifer)",
+      "zip_codes": ["86401","86402","86409"]
+    },
+    "lake_havasu_city": {
+      "name": "Lake Havasu City",
+      "hardness_gpg": { "low": 14, "high": 26, "avg": 20 },
+      "hardness_ppm": { "low": 239, "high": 445, "avg": 342 },
+      "tds_ppm": { "low": 500, "high": 950, "avg": 725 },
+      "ph": { "low": 7.5, "high": 8.3, "avg": 7.9 },
+      "chlorine_ppm": { "low": 0.5, "high": 2.5, "avg": 1.5 },
+      "disinfection": "chloramine",
+      "source": "Colorado River surface water",
+      "zip_codes": ["86403","86404","86405","86406"]
+    },
+    "bullhead_city": {
+      "name": "Bullhead City",
+      "hardness_gpg": { "low": 14, "high": 28, "avg": 21 },
+      "hardness_ppm": { "low": 239, "high": 479, "avg": 359 },
+      "tds_ppm": { "low": 500, "high": 1000, "avg": 750 },
+      "ph": { "low": 7.5, "high": 8.3, "avg": 7.9 },
+      "chlorine_ppm": { "low": 0.5, "high": 2.5, "avg": 1.5 },
+      "disinfection": "chloramine",
+      "source": "Colorado River surface water",
+      "zip_codes": ["86429","86430","86442"]
+    },
+    "fort_mohave": {
+      "name": "Fort Mohave",
+      "hardness_gpg": { "low": 14, "high": 26, "avg": 20 },
+      "hardness_ppm": { "low": 239, "high": 445, "avg": 342 },
+      "tds_ppm": { "low": 500, "high": 950, "avg": 725 },
+      "ph": { "low": 7.5, "high": 8.3, "avg": 7.9 },
+      "chlorine_ppm": { "low": 0.5, "high": 2.5, "avg": 1.5 },
+      "disinfection": "chloramine",
+      "source": "Colorado River + groundwater",
+      "zip_codes": ["86426"]
+    },
+    "parker": {
+      "name": "Parker",
+      "hardness_gpg": { "low": 12, "high": 24, "avg": 18 },
+      "hardness_ppm": { "low": 205, "high": 410, "avg": 308 },
+      "tds_ppm": { "low": 450, "high": 900, "avg": 675 },
+      "ph": { "low": 7.5, "high": 8.3, "avg": 7.9 },
+      "chlorine_ppm": { "low": 0.5, "high": 2.0, "avg": 1.2 },
+      "disinfection": "chlorine",
+      "source": "Colorado River",
+      "zip_codes": ["85344"]
+    },
+    "wickenburg_area": {
+      "name": "Wickenburg Area",
+      "hardness_gpg": { "low": 18, "high": 35, "avg": 27 },
+      "hardness_ppm": { "low": 308, "high": 599, "avg": 462 },
+      "tds_ppm": { "low": 600, "high": 1200, "avg": 900 },
+      "ph": { "low": 7.2, "high": 8.0, "avg": 7.6 },
+      "chlorine_ppm": { "low": 0.3, "high": 1.5, "avg": 0.9 },
+      "disinfection": "chlorine",
+      "source": "Groundwater",
+      "zip_codes": ["85360","85362"]
+    },
+    "winslow": {
+      "name": "Winslow",
+      "hardness_gpg": { "low": 10, "high": 22, "avg": 16 },
+      "hardness_ppm": { "low": 171, "high": 376, "avg": 274 },
+      "tds_ppm": { "low": 300, "high": 700, "avg": 500 },
+      "ph": { "low": 7.3, "high": 8.1, "avg": 7.7 },
+      "chlorine_ppm": { "low": 0.3, "high": 2.0, "avg": 1.1 },
+      "disinfection": "chlorine",
+      "source": "Groundwater",
+      "zip_codes": ["86047"]
+    },
+    "holbrook": {
+      "name": "Holbrook",
+      "hardness_gpg": { "low": 12, "high": 24, "avg": 18 },
+      "hardness_ppm": { "low": 205, "high": 410, "avg": 308 },
+      "tds_ppm": { "low": 400, "high": 800, "avg": 600 },
+      "ph": { "low": 7.3, "high": 8.1, "avg": 7.7 },
+      "chlorine_ppm": { "low": 0.3, "high": 2.0, "avg": 1.1 },
+      "disinfection": "chlorine",
+      "source": "Groundwater",
+      "zip_codes": ["86025"]
+    },
+    "safford": {
+      "name": "Safford",
+      "hardness_gpg": { "low": 14, "high": 28, "avg": 21 },
+      "hardness_ppm": { "low": 239, "high": 479, "avg": 359 },
+      "tds_ppm": { "low": 500, "high": 1000, "avg": 750 },
+      "ph": { "low": 7.3, "high": 8.1, "avg": 7.7 },
+      "chlorine_ppm": { "low": 0.3, "high": 2.0, "avg": 1.1 },
+      "disinfection": "chlorine",
+      "source": "Groundwater (Gila Valley)",
+      "zip_codes": ["85546","85548"]
+    },
+    "thatcher": {
+      "name": "Thatcher",
+      "hardness_gpg": { "low": 14, "high": 28, "avg": 21 },
+      "hardness_ppm": { "low": 239, "high": 479, "avg": 359 },
+      "tds_ppm": { "low": 500, "high": 1000, "avg": 750 },
+      "ph": { "low": 7.3, "high": 8.1, "avg": 7.7 },
+      "chlorine_ppm": { "low": 0.3, "high": 2.0, "avg": 1.1 },
+      "disinfection": "chlorine",
+      "source": "Groundwater (Gila Valley)",
+      "zip_codes": ["85552"]
+    },
+    "nogales": {
+      "name": "Nogales",
+      "hardness_gpg": { "low": 8, "high": 18, "avg": 13 },
+      "hardness_ppm": { "low": 137, "high": 308, "avg": 222 },
+      "tds_ppm": { "low": 300, "high": 700, "avg": 500 },
+      "ph": { "low": 7.3, "high": 8.1, "avg": 7.7 },
+      "chlorine_ppm": { "low": 0.3, "high": 2.0, "avg": 1.1 },
+      "disinfection": "chlorine",
+      "source": "Groundwater + surface water blend",
+      "zip_codes": ["85621","85628"]
+    },
+    "willcox": {
+      "name": "Willcox",
+      "hardness_gpg": { "low": 10, "high": 22, "avg": 16 },
+      "hardness_ppm": { "low": 171, "high": 376, "avg": 274 },
+      "tds_ppm": { "low": 300, "high": 700, "avg": 500 },
+      "ph": { "low": 7.3, "high": 8.1, "avg": 7.7 },
+      "chlorine_ppm": { "low": 0.3, "high": 2.0, "avg": 1.1 },
+      "disinfection": "chlorine",
+      "source": "Groundwater",
+      "zip_codes": ["85643","85644"]
+    },
+    "cottonwood_clarkdale": {
+      "name": "Clarkdale",
+      "hardness_gpg": { "low": 6, "high": 14, "avg": 10 },
+      "hardness_ppm": { "low": 103, "high": 239, "avg": 171 },
+      "tds_ppm": { "low": 200, "high": 500, "avg": 350 },
+      "ph": { "low": 7.3, "high": 8.1, "avg": 7.7 },
+      "chlorine_ppm": { "low": 0.3, "high": 2.0, "avg": 1.1 },
+      "disinfection": "chlorine",
+      "source": "Verde River + groundwater",
+      "zip_codes": ["86324"]
+    },
+    "jerome": {
+      "name": "Jerome",
+      "hardness_gpg": { "low": 4, "high": 10, "avg": 7 },
+      "hardness_ppm": { "low": 68, "high": 171, "avg": 120 },
+      "tds_ppm": { "low": 150, "high": 400, "avg": 275 },
+      "ph": { "low": 7.2, "high": 8.0, "avg": 7.6 },
+      "chlorine_ppm": { "low": 0.3, "high": 1.5, "avg": 0.8 },
+      "disinfection": "chlorine",
+      "source": "Groundwater",
+      "zip_codes": ["86331"]
+    },
+    "williams": {
+      "name": "Williams",
+      "hardness_gpg": { "low": 3, "high": 8, "avg": 5 },
+      "hardness_ppm": { "low": 51, "high": 137, "avg": 86 },
+      "tds_ppm": { "low": 100, "high": 300, "avg": 200 },
+      "ph": { "low": 7.0, "high": 7.8, "avg": 7.4 },
+      "chlorine_ppm": { "low": 0.3, "high": 1.5, "avg": 0.8 },
+      "disinfection": "chlorine",
+      "source": "Surface water (springs)",
+      "zip_codes": ["86046"]
+    },
+    "page": {
+      "name": "Page",
+      "hardness_gpg": { "low": 8, "high": 18, "avg": 13 },
+      "hardness_ppm": { "low": 137, "high": 308, "avg": 222 },
+      "tds_ppm": { "low": 300, "high": 700, "avg": 500 },
+      "ph": { "low": 7.5, "high": 8.3, "avg": 7.9 },
+      "chlorine_ppm": { "low": 0.5, "high": 2.0, "avg": 1.2 },
+      "disinfection": "chlorine",
+      "source": "Colorado River (Lake Powell)",
+      "zip_codes": ["86040"]
+    },
+    "prescott_area_chino": {
+      "name": "Prescott Area (Chino Valley outliers)",
+      "hardness_gpg": { "low": 10, "high": 22, "avg": 16 },
+      "hardness_ppm": { "low": 171, "high": 376, "avg": 274 },
+      "tds_ppm": { "low": 350, "high": 750, "avg": 550 },
+      "ph": { "low": 7.3, "high": 8.1, "avg": 7.7 },
+      "chlorine_ppm": { "low": 0.3, "high": 1.8, "avg": 1.0 },
+      "disinfection": "chlorine",
+      "source": "Groundwater",
+      "zip_codes": ["86320","86321","86332","86333","86334","86337","86338"]
     }
   },
   "hardness_scale": {
