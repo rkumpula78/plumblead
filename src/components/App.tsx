@@ -1,2 +1,2 @@
-// Re-export to fix any import issues
-export { default } from './LandingPage';
+// This file intentionally left minimal — App.tsx lives at src/App.tsx not here
+export {};\n
