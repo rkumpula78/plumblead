@@ -7,19 +7,39 @@ import Dashboard from './components/Dashboard';
 import SubmitTrial from './components/SubmitTrial';
 import WidgetDemo from './components/WidgetDemo';
 import Chatbot from './components/Chatbot';
+import QuoteModal from './components/QuoteModal';
 import ProMaxDemo from './components/demos/ProMaxDemo';
 import GPSPlumbingDemo from './components/demos/GPSPlumbingDemo';
 import Terms from './components/Terms';
 import Privacy from './components/Privacy';
 
-const ChatbotConditional: React.FC = () => {
+const ChatbotWithModal: React.FC = () => {
   const location = useLocation();
+  const [quoteModalOpen, setQuoteModalOpen] = React.useState(false);
+
   const hide =
-    ['/widget-demo', '/terms', '/privacy'].includes(location.pathname) ||
+    ['/widget-demo', '/terms', '/privacy', '/'].includes(location.pathname) ||
     location.pathname.startsWith('/demo/') ||
+    location.pathname.startsWith('/dashboard') ||
     (location.pathname === '/quote' && new URLSearchParams(location.search).get('widget') === '1');
+
   if (hide) return null;
-  return <Chatbot lang="en" />;
+
+  return (
+    <>
+      <QuoteModal
+        isOpen={quoteModalOpen}
+        onClose={() => setQuoteModalOpen(false)}
+        clientId="demo"
+        clientName="Your Local Plumber"
+        clientColor="#0ea5e9"
+      />
+      <Chatbot
+        lang="en"
+        onOpenQuote={() => setQuoteModalOpen(true)}
+      />
+    </>
+  );
 };
 
 function App() {
@@ -37,7 +57,7 @@ function App() {
         <Route path="/demo/promax" element={<ProMaxDemo />} />
         <Route path="/demo/gps" element={<GPSPlumbingDemo />} />
       </Routes>
-      <ChatbotConditional />
+      <ChatbotWithModal />
     </Router>
   );
 }
