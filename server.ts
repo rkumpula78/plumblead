@@ -4,8 +4,7 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import { generateAIQuote, QuoteRequest, QuoteResponse } from './src/services/geminiService';
 import fetch from 'node-fetch';
-import fs from 'fs';
-import path from 'path';
+import { Pool } from 'pg';
 
 dotenv.config();
 
@@ -25,69 +24,129 @@ const openClawApiEndpoint = process.env.OPENCLAW_API_ENDPOINT;
 const openClawApiKey = process.env.OPENCLAW_API_KEY;
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
 
-// ─── Lead Store ───────────────────────────────────────────────────────────────
-// Simple JSON file store on Railway filesystem
-// Persists between requests, survives restarts (Railway mounts a writable FS)
+// ─── Postgres ─────────────────────────────────────────────────────────────────
+// DATABASE_URL is injected automatically by Railway when you add a Postgres service
 
-const LEADS_FILE = path.join('/tmp', 'plumblead-leads.json');
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.DATABASE_URL?.includes('railway') ? { rejectUnauthorized: false } : false,
+});
+
+// Create the leads table on first startup if it doesn't exist
+async function initDb() {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS leads (
+        id           TEXT PRIMARY KEY,
+        received_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        status       TEXT NOT NULL DEFAULT 'New',
+        job_value    NUMERIC,
+        status_note  TEXT,
+        status_updated_at TIMESTAMPTZ,
+        payload      JSONB NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS leads_client_id ON leads ((payload->>'clientId'));
+      CREATE INDEX IF NOT EXISTS leads_source    ON leads ((payload->>'source'));
+      CREATE INDEX IF NOT EXISTS leads_status    ON leads (status);
+    `);
+    console.log('Database ready.');
+  } catch (err) {
+    console.error('Database init error:', err);
+  }
+}
 
 interface StoredLead {
   id: string;
   receivedAt: string;
   status: 'New' | 'Contacted' | 'Quoted' | 'Won' | 'Lost';
-  jobValue?: number;       // dollar amount if Won
-  statusNote?: string;     // optional note on status change
+  jobValue?: number;
+  statusNote?: string;
   statusUpdatedAt?: string;
-  // all original lead fields
   [key: string]: unknown;
 }
 
-function readLeads(): StoredLead[] {
-  try {
-    if (!fs.existsSync(LEADS_FILE)) return [];
-    return JSON.parse(fs.readFileSync(LEADS_FILE, 'utf8'));
-  } catch {
-    return [];
-  }
-}
-
-function writeLeads(leads: StoredLead[]): void {
-  try {
-    // Keep only last 500 leads to prevent unbounded growth
-    const trimmed = leads.slice(-500);
-    fs.writeFileSync(LEADS_FILE, JSON.stringify(trimmed, null, 2));
-  } catch (err) {
-    console.error('Failed to write leads file:', err);
-  }
-}
-
-function saveLead(payload: Record<string, unknown>): StoredLead {
-  const leads = readLeads();
-  const lead: StoredLead = {
+// Map a DB row to the StoredLead shape the dashboard expects
+function rowToLead(row: Record<string, unknown>): StoredLead {
+  const payload = (row.payload as Record<string, unknown>) || {};
+  return {
     ...payload,
-    id: `lead-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-    receivedAt: new Date().toISOString(),
-    status: 'New',
+    id: row.id as string,
+    receivedAt: row.received_at as string,
+    status: row.status as StoredLead['status'],
+    ...(row.job_value != null  && { jobValue: Number(row.job_value) }),
+    ...(row.status_note        && { statusNote: row.status_note as string }),
+    ...(row.status_updated_at  && { statusUpdatedAt: row.status_updated_at as string }),
   };
-  leads.push(lead);
-  writeLeads(leads);
-  return lead;
 }
 
-// Admin key auth for dashboard API calls
+async function saveLead(payload: Record<string, unknown>): Promise<StoredLead> {
+  const id = `lead-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+  await pool.query(
+    `INSERT INTO leads (id, payload) VALUES ($1, $2)`,
+    [id, JSON.stringify(payload)]
+  );
+  return { ...payload, id, receivedAt: new Date().toISOString(), status: 'New' };
+}
+
+async function queryLeads(filters: { clientId?: string; status?: string; source?: string; limit: number; offset: number }) {
+  const conditions: string[] = [];
+  const values: unknown[] = [];
+  let i = 1;
+
+  if (filters.clientId) { conditions.push(`payload->>'clientId' = $${i++}`); values.push(filters.clientId); }
+  if (filters.status)   { conditions.push(`status = $${i++}`);              values.push(filters.status); }
+  if (filters.source)   { conditions.push(`payload->>'source' = $${i++}`);  values.push(filters.source); }
+
+  const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+
+  const countRes = await pool.query(`SELECT COUNT(*) FROM leads ${where}`, values);
+  const total = parseInt(countRes.rows[0].count);
+
+  values.push(filters.limit, filters.offset);
+  const dataRes = await pool.query(
+    `SELECT * FROM leads ${where} ORDER BY received_at DESC LIMIT $${i++} OFFSET $${i++}`,
+    values
+  );
+
+  return { leads: dataRes.rows.map(rowToLead), total };
+}
+
+async function patchLead(id: string, update: { status?: string; jobValue?: number; statusNote?: string }): Promise<StoredLead | null> {
+  const sets: string[] = [];
+  const values: unknown[] = [];
+  let i = 1;
+
+  if (update.status    != null) { sets.push(`status = $${i++}`);               values.push(update.status); }
+  if (update.jobValue  != null) { sets.push(`job_value = $${i++}`);             values.push(update.jobValue); }
+  if (update.statusNote != null) { sets.push(`status_note = $${i++}`);          values.push(update.statusNote); }
+  sets.push(`status_updated_at = NOW()`);
+
+  values.push(id);
+  const res = await pool.query(
+    `UPDATE leads SET ${sets.join(', ')} WHERE id = $${i} RETURNING *`,
+    values
+  );
+  if (!res.rows.length) return null;
+  return rowToLead(res.rows[0]);
+}
+
+// Admin key auth
 const ADMIN_KEY = process.env.DASHBOARD_ADMIN_KEY || 'plumblead-admin-2026';
 
 function requireAdminKey(req: express.Request, res: express.Response, next: express.NextFunction) {
   const key = req.headers['x-admin-key'] || req.query.adminKey;
-  if (key !== ADMIN_KEY) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
+  if (key !== ADMIN_KEY) return res.status(401).json({ error: 'Unauthorized' });
   next();
 }
 
 // ─── Health Check ─────────────────────────────────────────────────────────────
-app.get('/api/health', (_req, res) => {
-  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+app.get('/api/health', async (_req, res) => {
+  try {
+    await pool.query('SELECT 1');
+    res.json({ status: 'ok', db: 'connected', timestamp: new Date().toISOString() });
+  } catch {
+    res.json({ status: 'ok', db: 'not connected', timestamp: new Date().toISOString() });
+  }
 });
 
 // ─── Chat ─────────────────────────────────────────────────────────────────────
@@ -190,12 +249,10 @@ app.post('/api/quote', async (req, res) => {
 
   if (!leadScore) {
     try {
-      const geminiQualification = await qualifyLeadWithGemini(serviceType, details, location);
-      leadScore = geminiQualification.leadScore;
-      crossSellOpportunities = geminiQualification.crossSellOpportunities;
-    } catch {
-      leadScore = 'Routine';
-    }
+      const q = await qualifyLeadWithGemini(serviceType, details, location);
+      leadScore = q.leadScore;
+      crossSellOpportunities = q.crossSellOpportunities;
+    } catch { leadScore = 'Routine'; }
   }
 
   try {
@@ -207,75 +264,65 @@ app.post('/api/quote', async (req, res) => {
   }
 });
 
-// ─── POST /api/leads — receive, store, then forward to n8n ───────────────────
+// ─── POST /api/leads ──────────────────────────────────────────────────────────
 app.post('/api/leads', async (req, res) => {
-  // 1. Save to local store
-  const stored = saveLead(req.body);
+  let stored: StoredLead;
+  try {
+    stored = await saveLead(req.body);
+  } catch (err) {
+    console.error('Failed to save lead to DB:', err);
+    // Still acknowledge the lead so the user doesn't see an error
+    return res.json({ message: 'Lead received.' });
+  }
 
-  // 2. Forward to n8n (non-blocking on failure)
+  // Forward to n8n asynchronously
   const n8nWebhookUrl = process.env.N8N_WEBHOOK_URL;
   if (n8nWebhookUrl) {
-    try {
-      const response = await fetch(n8nWebhookUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...req.body, leadId: stored.id })
-      });
-      if (!response.ok) console.error(`n8n forward failed: ${response.status}`);
-    } catch (error) {
-      console.error('Lead forwarding error:', error);
-    }
+    fetch(n8nWebhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...req.body, leadId: stored.id })
+    }).catch(err => console.error('n8n forward error:', err));
   }
 
   res.json({ message: 'Lead received.', leadId: stored.id });
 });
 
-// ─── GET /api/leads — fetch leads for dashboard ───────────────────────────────
-app.get('/api/leads', requireAdminKey, (req, res) => {
-  const leads = readLeads();
-  const { clientId, status, source, limit = '100', offset = '0' } = req.query as Record<string, string>;
-
-  let filtered = leads;
-  if (clientId) filtered = filtered.filter(l => l.clientId === clientId);
-  if (status) filtered = filtered.filter(l => l.status === status);
-  if (source) filtered = filtered.filter(l => l.source === source);
-
-  // Most recent first
-  filtered = filtered.reverse();
-
-  const total = filtered.length;
-  const page = filtered.slice(parseInt(offset), parseInt(offset) + parseInt(limit));
-
-  res.json({ leads: page, total, offset: parseInt(offset), limit: parseInt(limit) });
+// ─── GET /api/leads ───────────────────────────────────────────────────────────
+app.get('/api/leads', requireAdminKey, async (req, res) => {
+  const { clientId, status, source, limit = '200', offset = '0' } = req.query as Record<string, string>;
+  try {
+    const result = await queryLeads({
+      clientId: clientId === '__all__' ? undefined : clientId,
+      status,
+      source,
+      limit: Math.min(parseInt(limit), 500),
+      offset: parseInt(offset),
+    });
+    res.json(result);
+  } catch (err) {
+    console.error('GET /api/leads error:', err);
+    res.status(500).json({ error: 'Failed to fetch leads.' });
+  }
 });
 
-// ─── PATCH /api/leads/:id — update status, job value, notes ──────────────────
-app.patch('/api/leads/:id', requireAdminKey, (req, res) => {
+// ─── PATCH /api/leads/:id ─────────────────────────────────────────────────────
+app.patch('/api/leads/:id', requireAdminKey, async (req, res) => {
   const { id } = req.params;
-  const { status, jobValue, statusNote } = req.body as {
-    status?: 'New' | 'Contacted' | 'Quoted' | 'Won' | 'Lost';
-    jobValue?: number;
-    statusNote?: string;
-  };
-
-  const leads = readLeads();
-  const idx = leads.findIndex(l => l.id === id);
-
-  if (idx === -1) return res.status(404).json({ error: 'Lead not found' });
-
-  const updated: StoredLead = {
-    ...leads[idx],
-    ...(status && { status }),
-    ...(jobValue !== undefined && { jobValue }),
-    ...(statusNote !== undefined && { statusNote }),
-    statusUpdatedAt: new Date().toISOString(),
-  };
-
-  leads[idx] = updated;
-  writeLeads(leads);
-  res.json({ lead: updated });
+  const { status, jobValue, statusNote } = req.body;
+  try {
+    const updated = await patchLead(id, { status, jobValue, statusNote });
+    if (!updated) return res.status(404).json({ error: 'Lead not found' });
+    res.json({ lead: updated });
+  } catch (err) {
+    console.error('PATCH /api/leads error:', err);
+    res.status(500).json({ error: 'Failed to update lead.' });
+  }
 });
 
-app.listen(port, () => {
-  console.log(`PlumbLead.ai server running on port ${port}`);
+// ─── Start ────────────────────────────────────────────────────────────────────
+initDb().then(() => {
+  app.listen(port, () => {
+    console.log(`PlumbLead.ai server running on port ${port}`);
+  });
 });

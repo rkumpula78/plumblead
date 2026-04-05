@@ -1,6 +1,6 @@
 {
   "name": "plumblead-ai",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "AI-powered instant quotes and speed-to-lead for plumbing contractors",
   "scripts": {
     "dev": "concurrently \"npm run dev:client\" \"npm run dev:server\"",
@@ -19,6 +19,7 @@
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "node-fetch": "^2.7.0",
+    "pg": "^8.12.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-markdown": "^9.0.1",
@@ -30,6 +31,7 @@
     "@types/express": "^4.17.21",
     "@types/node": "^20.14.0",
     "@types/node-fetch": "^2.6.11",
+    "@types/pg": "^8.11.6",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
