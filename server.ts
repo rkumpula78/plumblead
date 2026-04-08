@@ -11,18 +11,29 @@ dotenv.config();
 const app = express();
 const port = process.env.PORT || 3000;
 
+// Raw body needed for Stripe webhook signature verification
+app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }));
 app.use(cors({
   origin: (origin, callback) => { callback(null, true); },
   methods: ['GET', 'POST', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Admin-Key', 'x-admin-key'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Admin-Key', 'x-admin-key', 'stripe-signature'],
   credentials: true,
 }));
-
 app.use(express.json());
 
 const openClawApiEndpoint = process.env.OPENCLAW_API_ENDPOINT;
 const openClawApiKey = process.env.OPENCLAW_API_KEY;
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || '';
+
+// ─── Stripe plan mapping ──────────────────────────────────────────────────────
+// Map Stripe price IDs to plan names. Add your actual price IDs from Stripe dashboard.
+const STRIPE_PRICE_TO_PLAN: Record<string, string> = {
+  // Fill these in from your Stripe dashboard → Products → Price ID
+  // e.g. 'price_1abc123': 'starter'
+  // e.g. 'price_1def456': 'pro'
+  // e.g. 'price_1ghi789': 'agency'
+};
 
 // ─── Postgres ─────────────────────────────────────────────────────────────────
 
@@ -59,17 +70,20 @@ async function initDb() {
     // Migrations — idempotent, safe to run every startup
     await pool.query(`
       ALTER TABLE contractors
-        ADD COLUMN IF NOT EXISTS phone           TEXT,
-        ADD COLUMN IF NOT EXISTS callback_phone  TEXT,
-        ADD COLUMN IF NOT EXISTS email           TEXT,
-        ADD COLUMN IF NOT EXISTS address         TEXT,
-        ADD COLUMN IF NOT EXISTS city            TEXT,
-        ADD COLUMN IF NOT EXISTS state           TEXT,
-        ADD COLUMN IF NOT EXISTS zip_codes       TEXT,
-        ADD COLUMN IF NOT EXISTS crm_system      TEXT,
-        ADD COLUMN IF NOT EXISTS bilingual       BOOLEAN NOT NULL DEFAULT false,
-        ADD COLUMN IF NOT EXISTS services        JSONB,
-        ADD COLUMN IF NOT EXISTS dashboard_code  TEXT;
+        ADD COLUMN IF NOT EXISTS phone                TEXT,
+        ADD COLUMN IF NOT EXISTS callback_phone       TEXT,
+        ADD COLUMN IF NOT EXISTS email                TEXT,
+        ADD COLUMN IF NOT EXISTS address              TEXT,
+        ADD COLUMN IF NOT EXISTS city                 TEXT,
+        ADD COLUMN IF NOT EXISTS state                TEXT,
+        ADD COLUMN IF NOT EXISTS zip_codes            TEXT,
+        ADD COLUMN IF NOT EXISTS crm_system           TEXT,
+        ADD COLUMN IF NOT EXISTS bilingual            BOOLEAN NOT NULL DEFAULT false,
+        ADD COLUMN IF NOT EXISTS services             JSONB,
+        ADD COLUMN IF NOT EXISTS dashboard_code       TEXT,
+        ADD COLUMN IF NOT EXISTS subscription_status  TEXT NOT NULL DEFAULT 'trial',
+        ADD COLUMN IF NOT EXISTS stripe_customer_id   TEXT,
+        ADD COLUMN IF NOT EXISTS stripe_subscription_id TEXT;
     `);
 
     // Seed demo contractors
@@ -82,11 +96,22 @@ async function initDb() {
       ON CONFLICT (client_id) DO NOTHING;
     `);
 
-    // Seed dashboard codes for existing contractors that don't have one
+    // Auto-assign dashboard codes to any contractor missing one
     await pool.query(`
       UPDATE contractors
       SET dashboard_code = client_id || '-' || EXTRACT(YEAR FROM NOW())::TEXT
       WHERE dashboard_code IS NULL;
+    `);
+
+    // Backfill subscription_status from active flag for existing records
+    await pool.query(`
+      UPDATE contractors
+      SET subscription_status = CASE
+        WHEN active = true AND plan != 'trial' THEN 'active'
+        WHEN plan = 'trial' THEN 'trial'
+        ELSE 'cancelled'
+      END
+      WHERE subscription_status = 'trial' AND plan != 'trial';
     `);
 
     console.log('Database ready.');
@@ -153,15 +178,22 @@ async function patchLead(id: string, update: { status?: string; jobValue?: numbe
   return rowToLead(res.rows[0]);
 }
 
-// ─── Contractor helpers ────────────────────────────────────────────────────────
-async function isContractorActive(clientId: string): Promise<boolean> {
-  if (!clientId || clientId === 'demo') return true;
+// ─── Contractor status check ───────────────────────────────────────────────────
+async function getContractorStatus(clientId: string): Promise<{ active: boolean; subscriptionStatus: string; callbackPhone: string | null }> {
+  if (!clientId || clientId === 'demo') return { active: true, subscriptionStatus: 'active', callbackPhone: null };
   try {
-    const res = await pool.query(`SELECT active FROM contractors WHERE client_id = $1`, [clientId]);
-    if (!res.rows.length) return true;
-    return res.rows[0].active === true;
+    const res = await pool.query(
+      `SELECT active, subscription_status, callback_phone FROM contractors WHERE client_id = $1`,
+      [clientId]
+    );
+    if (!res.rows.length) return { active: true, subscriptionStatus: 'active', callbackPhone: null };
+    return {
+      active: res.rows[0].active === true,
+      subscriptionStatus: res.rows[0].subscription_status || 'trial',
+      callbackPhone: res.rows[0].callback_phone || null,
+    };
   } catch {
-    return true;
+    return { active: true, subscriptionStatus: 'active', callbackPhone: null };
   }
 }
 
@@ -179,12 +211,27 @@ app.get('/api/health', async (_req, res) => {
   catch { res.json({ status: 'ok', db: 'not connected', timestamp: new Date().toISOString() }); }
 });
 
-// ─── Dashboard Auth — looks up contractor by dashboard_code ──────────────────
-// No admin key required — this is the public-facing login endpoint
+// ─── Contractor status — public endpoint for widget ───────────────────────────
+// Used by QuoteTool to check if contractor is active before showing the widget
+app.get('/api/contractor-status', async (req, res) => {
+  const clientId = (req.query.clientId as string || 'demo').trim();
+  try {
+    const status = await getContractorStatus(clientId);
+    res.json({
+      active: status.active,
+      subscriptionStatus: status.subscriptionStatus,
+      // Only surface callbackPhone so widget can show it in fallback state
+      callbackPhone: status.active ? null : status.callbackPhone,
+    });
+  } catch (err) {
+    res.json({ active: true, subscriptionStatus: 'active', callbackPhone: null });
+  }
+});
+
+// ─── Dashboard Auth ────────────────────────────────────────────────────────────
 app.get('/api/auth/dashboard', async (req, res) => {
   const code = (req.query.code as string || '').trim();
   if (!code) return res.status(400).json({ error: 'code is required' });
-
   try {
     const result = await pool.query(
       `SELECT client_id, client_name, active FROM contractors WHERE dashboard_code = $1`,
@@ -198,6 +245,79 @@ app.get('/api/auth/dashboard', async (req, res) => {
     console.error('Dashboard auth error:', err);
     res.status(500).json({ error: 'Auth failed' });
   }
+});
+
+// ─── Stripe Webhook ───────────────────────────────────────────────────────────
+// Handles subscription lifecycle events from Stripe
+// Setup: Stripe Dashboard → Webhooks → Add endpoint → https://plumblead-production.up.railway.app/api/stripe/webhook
+// Events to enable: customer.subscription.created, customer.subscription.updated,
+//                   customer.subscription.deleted, invoice.payment_failed
+app.post('/api/stripe/webhook', async (req, res) => {
+  const sig = req.headers['stripe-signature'] as string;
+
+  // If no webhook secret configured, skip verification (useful for manual testing)
+  let event: any;
+  if (STRIPE_WEBHOOK_SECRET && sig) {
+    try {
+      // Dynamic import so missing stripe package doesn't crash server
+      const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+      event = stripe.webhooks.constructEvent(req.body, sig, STRIPE_WEBHOOK_SECRET);
+    } catch (err: any) {
+      console.error('Stripe webhook signature failed:', err.message);
+      return res.status(400).json({ error: 'Invalid signature' });
+    }
+  } else {
+    // No secret — parse raw body directly (dev/test mode)
+    try { event = JSON.parse(req.body.toString()); }
+    catch { return res.status(400).json({ error: 'Invalid JSON' }); }
+  }
+
+  const obj = event.data?.object;
+  const customerId = obj?.customer;
+  const priceId = obj?.items?.data?.[0]?.price?.id || obj?.plan?.id;
+  const subId = obj?.id;
+
+  try {
+    switch (event.type) {
+      case 'customer.subscription.created':
+      case 'customer.subscription.updated': {
+        const plan = STRIPE_PRICE_TO_PLAN[priceId] || 'starter';
+        const subStatus = obj.status === 'active' ? 'active' : 'past_due';
+        await pool.query(
+          `UPDATE contractors
+           SET plan = $1, subscription_status = $2, active = true,
+               stripe_customer_id = $3, stripe_subscription_id = $4
+           WHERE stripe_customer_id = $3 OR stripe_subscription_id = $4`,
+          [plan, subStatus, customerId, subId]
+        );
+        console.log(`Stripe: subscription ${event.type} — plan=${plan}, status=${subStatus}`);
+        break;
+      }
+      case 'customer.subscription.deleted': {
+        await pool.query(
+          `UPDATE contractors
+           SET subscription_status = 'cancelled', active = false
+           WHERE stripe_customer_id = $1 OR stripe_subscription_id = $2`,
+          [customerId, subId]
+        );
+        console.log(`Stripe: subscription cancelled for customer ${customerId}`);
+        break;
+      }
+      case 'invoice.payment_failed': {
+        await pool.query(
+          `UPDATE contractors SET subscription_status = 'past_due'
+           WHERE stripe_customer_id = $1`,
+          [customerId]
+        );
+        console.log(`Stripe: payment failed for customer ${customerId}`);
+        break;
+      }
+    }
+  } catch (err) {
+    console.error('Stripe webhook DB error:', err);
+  }
+
+  res.json({ received: true });
 });
 
 // ─── Chat ─────────────────────────────────────────────────────────────────────
@@ -277,9 +397,13 @@ app.post('/api/quote', async (req, res) => {
 // ─── POST /api/leads ──────────────────────────────────────────────────────────
 app.post('/api/leads', async (req, res) => {
   const clientId = req.body.clientId || 'demo';
-  const active = await isContractorActive(clientId);
-  if (!active) {
-    return res.status(403).json({ error: 'Service unavailable', message: 'This service is currently paused.' });
+  const status = await getContractorStatus(clientId);
+  if (!status.active || status.subscriptionStatus === 'cancelled') {
+    return res.status(403).json({
+      error: 'Service unavailable',
+      message: 'This service is currently paused.',
+      callbackPhone: status.callbackPhone,
+    });
   }
 
   let stored: StoredLead;
@@ -324,47 +448,26 @@ app.get('/api/contractors', requireAdminKey, async (_req, res) => {
 
 // ─── POST /api/contractors ────────────────────────────────────────────────────
 app.post('/api/contractors', requireAdminKey, async (req, res) => {
-  const {
-    clientId, companyName, phone, callbackPhone, email,
-    address, city, state, zipCodes, crmSystem,
-    bilingual, plan, services, notes,
-  } = req.body;
-
-  if (!clientId || !companyName || !phone) {
-    return res.status(400).json({ error: 'clientId, companyName, and phone are required.' });
-  }
-
-  // Auto-generate dashboard code: clientId-year
+  const { clientId, companyName, phone, callbackPhone, email, address, city, state, zipCodes, crmSystem, bilingual, plan, services, notes } = req.body;
+  if (!clientId || !companyName || !phone) return res.status(400).json({ error: 'clientId, companyName, and phone are required.' });
   const dashboardCode = `${clientId}-${new Date().getFullYear()}`;
-
   try {
     const result = await pool.query(
       `INSERT INTO contractors
-        (client_id, client_name, active, plan, phone, callback_phone, email,
+        (client_id, client_name, active, plan, subscription_status, phone, callback_phone, email,
          address, city, state, zip_codes, crm_system, bilingual, services, notes, dashboard_code)
-       VALUES ($1,$2,true,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+       VALUES ($1,$2,true,$3,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
        ON CONFLICT (client_id) DO UPDATE SET
-         client_name    = EXCLUDED.client_name,
-         plan           = EXCLUDED.plan,
-         phone          = EXCLUDED.phone,
-         callback_phone = EXCLUDED.callback_phone,
-         email          = EXCLUDED.email,
-         address        = EXCLUDED.address,
-         city           = EXCLUDED.city,
-         state          = EXCLUDED.state,
-         zip_codes      = EXCLUDED.zip_codes,
-         crm_system     = EXCLUDED.crm_system,
-         bilingual      = EXCLUDED.bilingual,
-         services       = EXCLUDED.services,
-         notes          = EXCLUDED.notes,
+         client_name = EXCLUDED.client_name, plan = EXCLUDED.plan,
+         phone = EXCLUDED.phone, callback_phone = EXCLUDED.callback_phone,
+         email = EXCLUDED.email, address = EXCLUDED.address, city = EXCLUDED.city,
+         state = EXCLUDED.state, zip_codes = EXCLUDED.zip_codes, crm_system = EXCLUDED.crm_system,
+         bilingual = EXCLUDED.bilingual, services = EXCLUDED.services, notes = EXCLUDED.notes,
          dashboard_code = COALESCE(contractors.dashboard_code, EXCLUDED.dashboard_code)
        RETURNING *`,
-      [
-        clientId, companyName, plan || 'trial', phone, callbackPhone || phone,
-        email || null, address || null, city || null, state || null,
-        zipCodes || null, crmSystem || null, bilingual || false,
-        JSON.stringify(services || []), notes || null, dashboardCode,
-      ]
+      [clientId, companyName, plan || 'trial', phone, callbackPhone || phone, email || null,
+       address || null, city || null, state || null, zipCodes || null, crmSystem || null,
+       bilingual || false, JSON.stringify(services || []), notes || null, dashboardCode]
     );
     res.json({ contractor: result.rows[0] });
   } catch (err) {
@@ -373,23 +476,21 @@ app.post('/api/contractors', requireAdminKey, async (req, res) => {
   }
 });
 
-// ─── PATCH /api/contractors/:clientId — full update from edit modal ───────────
+// ─── PATCH /api/contractors/:clientId ────────────────────────────────────────
 app.patch('/api/contractors/:clientId', requireAdminKey, async (req, res) => {
   const { clientId } = req.params;
-  const { active, plan, notes, phone, callback_phone, email, city, state, zip_codes, crm_system, bilingual } = req.body;
+  const allowed = ['active','plan','subscription_status','notes','phone','callback_phone','email','city','state','zip_codes','crm_system','bilingual'];
+  const sets: string[] = [];
+  const values: unknown[] = [];
+  let i = 1;
+  for (const col of allowed) {
+    if (req.body[col] !== undefined) { sets.push(`${col} = $${i++}`); values.push(req.body[col]); }
+  }
+  if (!sets.length) return res.status(400).json({ error: 'Nothing to update' });
+  values.push(clientId);
   try {
-    const sets: string[] = [];
-    const values: unknown[] = [];
-    let i = 1;
-    const fields: Record<string, unknown> = { active, plan, notes, phone, callback_phone, email, city, state, zip_codes, crm_system, bilingual };
-    for (const [col, val] of Object.entries(fields)) {
-      if (val !== undefined) { sets.push(`${col} = $${i++}`); values.push(val); }
-    }
-    if (!sets.length) return res.status(400).json({ error: 'Nothing to update' });
-    values.push(clientId);
     const result = await pool.query(
-      `UPDATE contractors SET ${sets.join(', ')} WHERE client_id = $${i} RETURNING *`,
-      values
+      `UPDATE contractors SET ${sets.join(', ')} WHERE client_id = $${i} RETURNING *`, values
     );
     if (!result.rows.length) return res.status(404).json({ error: 'Contractor not found' });
     res.json({ contractor: result.rows[0] });
@@ -399,21 +500,17 @@ app.patch('/api/contractors/:clientId', requireAdminKey, async (req, res) => {
   }
 });
 
-// ─── POST /api/contractors/:clientId/dashboard-code — rotate access code ─────
+// ─── POST /api/contractors/:clientId/dashboard-code ──────────────────────────
 app.post('/api/contractors/:clientId/dashboard-code', requireAdminKey, async (req, res) => {
   const { clientId } = req.params;
   const { code } = req.body;
   if (!code?.trim()) return res.status(400).json({ error: 'code is required' });
-
-  // Make sure the code isn't already taken by another contractor
   try {
     const existing = await pool.query(
       `SELECT client_id FROM contractors WHERE dashboard_code = $1 AND client_id != $2`,
       [code.trim(), clientId]
     );
-    if (existing.rows.length) {
-      return res.status(409).json({ error: 'That code is already in use by another contractor.' });
-    }
+    if (existing.rows.length) return res.status(409).json({ error: 'Code already in use by another contractor.' });
     const result = await pool.query(
       `UPDATE contractors SET dashboard_code = $1 WHERE client_id = $2 RETURNING dashboard_code`,
       [code.trim(), clientId]
@@ -421,16 +518,15 @@ app.post('/api/contractors/:clientId/dashboard-code', requireAdminKey, async (re
     if (!result.rows.length) return res.status(404).json({ error: 'Contractor not found' });
     res.json({ dashboard_code: result.rows[0].dashboard_code });
   } catch (err) {
-    console.error('Dashboard code update error:', err);
     res.status(500).json({ error: 'Failed to update dashboard code.' });
   }
 });
 
-// ─── POST /api/contractors/:clientId/disable ──────────────────────────────────
+// ─── POST /api/contractors/:clientId/disable|enable ──────────────────────────
 app.post('/api/contractors/:clientId/disable', requireAdminKey, async (req, res) => {
   const { clientId } = req.params;
   try {
-    await pool.query(`UPDATE contractors SET active = false WHERE client_id = $1`, [clientId]);
+    await pool.query(`UPDATE contractors SET active = false, subscription_status = 'cancelled' WHERE client_id = $1`, [clientId]);
     res.json({ message: `${clientId} disabled.` });
   } catch (err) { res.status(500).json({ error: 'Failed to disable contractor.' }); }
 });
@@ -438,7 +534,7 @@ app.post('/api/contractors/:clientId/disable', requireAdminKey, async (req, res)
 app.post('/api/contractors/:clientId/enable', requireAdminKey, async (req, res) => {
   const { clientId } = req.params;
   try {
-    await pool.query(`UPDATE contractors SET active = true WHERE client_id = $1`, [clientId]);
+    await pool.query(`UPDATE contractors SET active = true, subscription_status = 'active' WHERE client_id = $1`, [clientId]);
     res.json({ message: `${clientId} re-enabled.` });
   } catch (err) { res.status(500).json({ error: 'Failed to enable contractor.' }); }
 });
@@ -447,46 +543,17 @@ app.post('/api/contractors/:clientId/enable', requireAdminKey, async (req, res) 
 app.post('/api/scrape-contractor', requireAdminKey, async (req, res) => {
   const { url } = req.body;
   if (!url) return res.status(400).json({ error: 'url is required' });
-
   try {
-    const pageRes = await fetch(url, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; PlumbLeadBot/1.0)' },
-    });
+    const pageRes = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; PlumbLeadBot/1.0)' } });
     if (!pageRes.ok) throw new Error(`Failed to fetch URL: ${pageRes.status}`);
     const html = await pageRes.text();
-
-    const text = html
-      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-      .replace(/<[^>]+>/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim()
-      .slice(0, 12000);
-
-    const prompt = `You are extracting business information from a plumbing contractor's website.
-Return ONLY a valid JSON object with these exact fields (use null for anything not found):
-{
-  "companyName": "string or null",
-  "phone": "string or null",
-  "email": "string or null",
-  "address": "string or null",
-  "city": "string or null",
-  "state": "string or null",
-  "zipCodes": "comma-separated zip codes or service area description, or null",
-  "services": ["array of service keys from: emergency-leak, drain-cleaning, water-heater-tank, water-heater-tankless, toilet, faucet-fixture, garbage-disposal, sewer-line, slab-leak, gas-line, repipe, water-softener, filtration"],
-  "notes": "any other relevant business info (years in business, license number, service area, etc.) or null"
-}
-
-Website content:
-${text}`;
-
+    const text = html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi,'').replace(/<style[^>]*>[\s\S]*?<\/style>/gi,'').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim().slice(0,12000);
+    const prompt = `Extract plumbing contractor info. Return ONLY valid JSON:\n{"companyName":null,"phone":null,"email":null,"address":null,"city":null,"state":null,"zipCodes":null,"services":[],"notes":null}\n\nContent:\n${text}`;
     const geminiRes = await ai.models.generateContent({ model: 'gemini-2.0-flash', contents: prompt });
-    const raw = (geminiRes.text ?? '').trim().replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim();
-    const extracted = JSON.parse(raw);
-    res.json(extracted);
+    const raw = (geminiRes.text ?? '').trim().replace(/^```json\s*/i,'').replace(/^```\s*/i,'').replace(/\s*```$/i,'').trim();
+    res.json(JSON.parse(raw));
   } catch (err: any) {
-    console.error('Scrape error:', err);
-    res.status(500).json({ error: err.message || 'Failed to scrape contractor website.' });
+    res.status(500).json({ error: err.message || 'Scrape failed.' });
   }
 });
 
