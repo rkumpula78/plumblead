@@ -60,19 +60,13 @@ Priority order — fix these before showing to a real contractor:
 The n8n IF node reads `$json.body.type` but `server.ts` forwards the raw body — confirm the payload
 arrives with `type: 'trial_signup'` intact. Test by submitting the trial form and checking n8n executions.
 
-**B. Cloudflare deploy must be re-triggered after every GitHub push**
-Cloudflare Workers does NOT auto-deploy from GitHub. After every code change:
-1. Go to Cloudflare Dashboard → Workers → `plumblead-site`
-2. Settings → Build → click **Trigger Deploy**
-OR set up a GitHub Action (see Section 3).
-
 ### 🟡 Important
 
-**C. `QuoteTool` embeds `clientName: 'Your Local Plumber'` hardcoded**
+**B. `QuoteTool` embeds `clientName: 'Your Local Plumber'` hardcoded**
 This should be dynamic per contractor. Until multi-tenant is built, change this to your demo
 contractor name when doing sales demos. File: `src/components/QuoteTool.tsx`, search `clientName`.
 
-**D. No terms/privacy pages**
+**C. No terms/privacy pages**
 `SubmitTrial.tsx` links to `/terms` and `/privacy` — these 404. Add stub pages or link to a
 hosted Google Doc until real legal pages exist.
 
@@ -81,12 +75,20 @@ hosted Google Doc until real legal pages exist.
 - ~~Dashboard uses mock data~~ — Dashboard is now wired to real Postgres lead data
 - ~~Water Quality Report only covers Phoenix metro~~ — Expanded to full AZ + WA statewide coverage
 - ~~SMS uses wrong field name~~ — Updated to use `serviceLabel`
+- ~~Cloudflare requires manual deploy trigger~~ — **Auto-deploy confirmed working on both Railway and Cloudflare.** Every push to `main` deploys both automatically via GitHub Actions. No manual trigger needed.
 
 ---
 
 ## 3. Deployment Checklist
 
-### Railway (Backend)
+### Auto-Deploy (confirmed working)
+Every `git push origin main` automatically deploys to:
+- **Railway** — via GitHub integration (deploys in ~2 min, shows in Railway dashboard)
+- **Cloudflare Workers** — via GitHub Actions (deploys in ~2 min, shows in Cloudflare dashboard)
+
+No manual trigger needed for either platform.
+
+### Railway Environment Variables
 - [ ] `GEMINI_API_KEY` set in Variables tab
 - [ ] `N8N_WEBHOOK_URL` set to: `https://[your-n8n-domain]/webhook/plumblead-quote`
 - [ ] `PORT=3000` set
@@ -97,9 +99,8 @@ hosted Google Doc until real legal pages exist.
 - [ ] Redeploy after any env var change (Railway does not hot-reload vars)
 
 ### Cloudflare Workers (Frontend)
-- [ ] `wrangler.jsonc` exists in repo root (prevents auto-config injection)
+- [ ] `wrangler.jsonc` exists in repo root
 - [ ] Build command in Cloudflare UI set to: `bun run deploy`
-- [ ] Maps to: `vite build && wrangler deploy` in `package.json`
 - [ ] Vite version is 6.x (required for Wrangler 4 compatibility)
 - [ ] `package.json` does NOT have `"type": "module"` (breaks Railway Express build)
 
@@ -237,7 +238,7 @@ const ACCESS_CODES: Record<string, { clientId: string; label: string }> = {
 ```
 
 The access code can be anything — use a pattern like `[slug]-[year]` for easy rotation.
-After adding, redeploy Cloudflare (trigger deploy in dashboard).
+Push to main — auto-deploy handles the rest.
 
 ### What the Dashboard Shows
 
