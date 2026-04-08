@@ -13,6 +13,7 @@ import GPSPlumbingDemo from './components/demos/GPSPlumbingDemo';
 import Terms from './components/Terms';
 import Privacy from './components/Privacy';
 import AdminOnboard from './components/AdminOnboard';
+import AdminContractors from './components/AdminContractors';
 
 const ChatbotWithModal: React.FC = () => {
   const location = useLocation();
@@ -36,10 +37,7 @@ const ChatbotWithModal: React.FC = () => {
         clientName="Your Local Plumber"
         clientColor="#0ea5e9"
       />
-      <Chatbot
-        lang="en"
-        onOpenQuote={() => setQuoteModalOpen(true)}
-      />
+      <Chatbot lang="en" onOpenQuote={() => setQuoteModalOpen(true)} />
     </>
   );
 };
@@ -59,6 +57,7 @@ function App() {
         <Route path="/demo/promax" element={<ProMaxDemo />} />
         <Route path="/demo/gps" element={<GPSPlumbingDemo />} />
         <Route path="/admin/onboard" element={<AdminOnboard />} />
+        <Route path="/admin/contractors" element={<AdminContractors />} />
       </Routes>
       <ChatbotWithModal />
     </Router>
