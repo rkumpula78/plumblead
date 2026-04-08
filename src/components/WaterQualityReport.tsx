@@ -30,7 +30,7 @@ interface Recommendation {
   product: string;
   reason: string;
   priceRange: string;
-  tag?: string; // e.g. 'Safety', 'Taste & Odor', 'Scale Protection'
+  tag?: string;
 }
 
 interface WaterIssue {
@@ -85,20 +85,15 @@ function estimateAnnualCost(hardnessGPG: number) {
   };
 }
 
-// Detect if source is surface water (rivers, reservoirs, snowmelt)
 function isSurfaceWater(source: string): boolean {
   const keywords = ['river', 'reservoir', 'lake', 'creek', 'canal', 'snowmelt', 'surface', 'tolt', 'cedar', 'sultan', 'green river', 'colorado', 'naches', 'yakima', 'skagit', 'cowlitz', 'elwha', 'columbia', 'puyallup'];
   return keywords.some(k => source.toLowerCase().includes(k));
 }
 
-// PFAS risk based on region/state — surface water systems and areas near military/industrial sites
 function getPFASRiskLevel(city: CityData, state: string): 'elevated' | 'standard' {
-  // Areas with documented or elevated PFAS concern
-  // WA: areas near military installations (JBLM — Lakewood/Tacoma/Puyallup, Whidbey — Oak Harbor)
-  // AZ: areas near Luke AFB (Goodyear, Litchfield Park, Buckeye, Surprise)
   const elevatedCities = [
     'lakewood', 'puyallup', 'tacoma', 'oak harbor', 'goodyear', 'litchfield park',
-    'buckeye', 'surprise', 'yuma', 'sierra vista' // military installations nearby
+    'buckeye', 'surprise', 'yuma', 'sierra vista'
   ];
   return elevatedCities.some(c => city.name.toLowerCase().includes(c)) ? 'elevated' : 'standard';
 }
@@ -108,7 +103,6 @@ function getPFASRiskLevel(city: CityData, state: string): 'elevated' | 'standard
 function getWaterIssues(city: CityData, hardnessAvg: number, tds: number, state: string): WaterIssue[] {
   const issues: WaterIssue[] = [];
 
-  // Hardness
   if (hardnessAvg > 14.6) {
     issues.push({ icon: '🚨', title: 'Very Hard Water', severity: 'high', description: `At ${hardnessAvg} GPG, scale buildup is actively damaging your water heater, pipes, and appliances.` });
   } else if (hardnessAvg > 10.5) {
@@ -117,27 +111,22 @@ function getWaterIssues(city: CityData, hardnessAvg: number, tds: number, state:
     issues.push({ icon: '⚠️', title: 'Moderately Hard Water', severity: 'medium', description: `${hardnessAvg} GPG — enough to leave spots on dishes and gradually reduce water heater efficiency.` });
   }
 
-  // Chloramine
   if (city.disinfection === 'chloramine') {
     issues.push({ icon: '🧪', title: 'Chloramine Disinfection', severity: 'medium', description: `${city.name} uses chloramine (chlorine + ammonia). It doesn't evaporate like chlorine and a standard pitcher filter won't remove it. Common cause of unpleasant taste and odor.` });
   }
 
-  // Chlorine taste/odor (chlorine systems with higher dosing)
   if (city.disinfection === 'chlorine' && city.chlorine_ppm.avg > 1.2) {
     issues.push({ icon: '💨', title: 'Chlorine Taste & Odor', severity: 'info', description: `${city.name} uses standard chlorine disinfection at levels that can cause noticeable taste and odor in tap water, especially when cold.` });
   }
 
-  // Low pH / corrosivity (soft water is naturally more corrosive)
   if (hardnessAvg <= 5 && city.ph.avg < 7.5) {
     issues.push({ icon: '⚗️', title: 'Corrosive Water (Low pH)', severity: 'medium', description: `Soft, slightly acidic water (pH ${city.ph.avg}) can leach lead and copper from older pipes and fixtures. Common in ${state === 'WA' ? 'Western Washington' : 'mountain water systems'}.` });
   }
 
-  // High TDS
   if (tds > 500) {
     issues.push({ icon: '🌊', title: 'High Dissolved Solids (TDS)', severity: 'medium', description: `At ${tds} ppm TDS — above the EPA aesthetic guideline of 500 ppm. Drinking water may taste flat or mineral-heavy.` });
   }
 
-  // PFAS awareness (universal)
   const pfasRisk = getPFASRiskLevel(city, state);
   if (pfasRisk === 'elevated') {
     issues.push({ icon: '⚠️', title: 'Elevated PFAS Risk Area', severity: 'high', description: `${city.name} is near industrial or military sites with documented PFAS ("forever chemical") contamination history. Standard filtration does not remove PFAS — a certified reverse osmosis system does.` });
@@ -145,7 +134,6 @@ function getWaterIssues(city: CityData, hardnessAvg: number, tds: number, state:
     issues.push({ icon: 'ℹ️', title: 'PFAS ("Forever Chemicals")', severity: 'info', description: `PFAS are found in tap water systems nationwide, including municipal supplies. They don't break down naturally and accumulate in the body. An NSF-certified reverse osmosis system is the only reliably effective removal method.` });
   }
 
-  // Surface water sediment / seasonal variation
   if (isSurfaceWater(city.source)) {
     issues.push({ icon: '🌿', title: 'Surface Water Variability', severity: 'info', description: `${city.name} draws from surface water (${city.source}). Quality can vary seasonally — turbidity and organic compounds may increase after heavy rainfall or snowmelt events.` });
   }
@@ -160,7 +148,6 @@ function getRecommendations(city: CityData, hardnessAvg: number, tds: number, st
   const hardnessInfo = getHardnessLevel(hardnessAvg);
   const pfasRisk = getPFASRiskLevel(city, state);
 
-  // Water softener — hardness-driven
   if (hardnessAvg > 7) {
     recs.push({
       priority: hardnessAvg > 14 ? 'high' : 'medium',
@@ -171,7 +158,6 @@ function getRecommendations(city: CityData, hardnessAvg: number, tds: number, st
     });
   }
 
-  // RO system — PFAS elevated risk (highest priority)
   if (pfasRisk === 'elevated') {
     recs.push({
       priority: 'high',
@@ -181,7 +167,6 @@ function getRecommendations(city: CityData, hardnessAvg: number, tds: number, st
       priceRange: '$400 – $900 installed'
     });
   } else {
-    // Standard RO recommendation — driven by chloramine, TDS, or soft water drinking quality
     const roReason = city.disinfection === 'chloramine'
       ? `${city.name} uses chloramine disinfection. Standard pitcher filters (Brita, etc.) don't remove chloramine — an under-sink RO system does, giving you clean, great-tasting drinking water at the tap. Also removes PFAS, lead, and arsenic.`
       : tds > 400
@@ -197,7 +182,6 @@ function getRecommendations(city: CityData, hardnessAvg: number, tds: number, st
     });
   }
 
-  // Whole house carbon filter — chloramine or elevated chlorine
   if (city.disinfection === 'chloramine') {
     recs.push({
       priority: 'medium',
@@ -216,7 +200,6 @@ function getRecommendations(city: CityData, hardnessAvg: number, tds: number, st
     });
   }
 
-  // Low pH / corrosivity neutralizer
   if (hardnessAvg <= 5 && city.ph.avg < 7.5) {
     recs.push({
       priority: 'medium',
@@ -227,7 +210,6 @@ function getRecommendations(city: CityData, hardnessAvg: number, tds: number, st
     });
   }
 
-  // Sediment pre-filter for surface water
   if (isSurfaceWater(city.source)) {
     recs.push({
       priority: 'info',
@@ -257,7 +239,6 @@ function getFacts(city: CityData, hardnessAvg: number, tds: number, state: strin
 
   if (hardnessAvg <= 5 && city.ph.avg < 7.5) facts.push(`Soft water with a pH below 7.5 is mildly corrosive. In homes with copper pipes or older brass fixtures, this can slowly leach metal into drinking water.`);
 
-  // PFAS universal fact
   facts.push(`PFAS ("forever chemicals") have been detected in tap water systems nationwide. The EPA issued a maximum contaminant level of 4 parts per trillion (ppt) in 2024 — most utilities are still working toward compliance. An NSF 58-certified RO system removes >95% of PFAS.`);
 
   if (isSurfaceWater(city.source)) facts.push(`${city.name} sources water from ${city.source}. Surface water is treated but can vary seasonally — organic compounds and turbidity tend to increase after heavy rain.`);
@@ -309,6 +290,58 @@ const ISSUE_SEVERITY_COLOR: Record<string, string> = {
   medium: '#f97316',
   info:   '#64748b',
 };
+
+// ─── Water Test Kit Section ───────────────────────────────────────────────────
+
+const WaterTestKits: React.FC<{ isSoftWater: boolean }> = ({ isSoftWater }) => (
+  <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12, padding: '20px 24px', margin: '20px 0' }}>
+    <div style={{ fontSize: 15, fontWeight: 700, color: '#0f172a', marginBottom: 6 }}>🔬 Want to Test Your Own Water?</div>
+    <div style={{ fontSize: 13, color: '#64748b', marginBottom: 16, lineHeight: 1.6 }}>
+      The data above is based on municipal reports. For a precise picture of what's actually coming out of your tap — especially if you have well water or older pipes — testing your specific home is the most reliable approach.
+    </div>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+      <a
+        href="https://www.amazon.com/s?k=home+water+test+kit&tag=plumblead-20"
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{ display: 'block', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, padding: '14px 16px', textDecoration: 'none', transition: 'border-color 0.2s' }}
+        onMouseEnter={e => (e.currentTarget.style.borderColor = '#0ea5e9')}
+        onMouseLeave={e => (e.currentTarget.style.borderColor = '#e2e8f0')}
+      >
+        <div style={{ fontSize: 22, marginBottom: 6 }}>📦</div>
+        <div style={{ fontSize: 14, fontWeight: 600, color: '#0f172a', marginBottom: 4 }}>DIY Test Kit</div>
+        <div style={{ fontSize: 12, color: '#64748b', lineHeight: 1.5 }}>Quick at-home strips. Tests hardness, pH, chlorine, and common contaminants. Results in minutes.</div>
+        <div style={{ fontSize: 12, fontWeight: 600, color: '#0ea5e9', marginTop: 8 }}>Shop on Amazon →</div>
+      </a>
+      <a
+        href="https://www.homedepot.com/s/water%20test%20kit"
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{ display: 'block', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, padding: '14px 16px', textDecoration: 'none', transition: 'border-color 0.2s' }}
+        onMouseEnter={e => (e.currentTarget.style.borderColor = '#0ea5e9')}
+        onMouseLeave={e => (e.currentTarget.style.borderColor = '#e2e8f0')}
+      >
+        <div style={{ fontSize: 22, marginBottom: 6 }}>🏠</div>
+        <div style={{ fontSize: 14, fontWeight: 600, color: '#0f172a', marginBottom: 4 }}>Home Depot</div>
+        <div style={{ fontSize: 12, color: '#64748b', lineHeight: 1.5 }}>Pick up a test kit same-day at your local store. Good for basic hardness and chlorine checks.</div>
+        <div style={{ fontSize: 12, fontWeight: 600, color: '#0ea5e9', marginTop: 8 }}>Shop at Home Depot →</div>
+      </a>
+      <a
+        href="https://www.mytapscore.com/"
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{ display: 'block', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, padding: '14px 16px', textDecoration: 'none', transition: 'border-color 0.2s' }}
+        onMouseEnter={e => (e.currentTarget.style.borderColor = '#0ea5e9')}
+        onMouseLeave={e => (e.currentTarget.style.borderColor = '#e2e8f0')}
+      >
+        <div style={{ fontSize: 22, marginBottom: 6 }}>🧫</div>
+        <div style={{ fontSize: 14, fontWeight: 600, color: '#0f172a', marginBottom: 4 }}>Tap Score (Lab Testing)</div>
+        <div style={{ fontSize: 12, color: '#64748b', lineHeight: 1.5 }}>Mail-in lab test. Detects PFAS, lead, arsenic, and 100+ contaminants. Best for peace of mind{isSoftWater ? ' or if you have older pipes' : ''}.</div>
+        <div style={{ fontSize: 12, fontWeight: 600, color: '#0ea5e9', marginTop: 8 }}>Order a Lab Test →</div>
+      </a>
+    </div>
+  </div>
+);
 
 // ─── Lead Capture Form ────────────────────────────────────────────────────────
 
@@ -457,7 +490,7 @@ const WaterQualityReport: React.FC = () => {
             </div>
           </div>
 
-          {/* Issues Panel — replaces/supplements the hardness cost box */}
+          {/* Issues Panel */}
           <div style={{ margin: '20px 0' }}>
             <div style={{ fontSize: 15, fontWeight: 700, color: '#0f172a', marginBottom: 12 }}>⚠️ Water Quality Issues Detected</div>
             {report.issues.map((issue, i) => (
@@ -471,7 +504,7 @@ const WaterQualityReport: React.FC = () => {
             ))}
           </div>
 
-          {/* Hard water cost — only shown if hardness is meaningful */}
+          {/* Hard water cost */}
           {report.annualCost.avg > 0 && (
             <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 12, padding: 20, margin: '20px 0' }}>
               <div style={{ fontSize: 15, fontWeight: 700, color: '#991b1b', marginBottom: 8 }}>💸 What Hard Water Is Costing You</div>
@@ -516,6 +549,9 @@ const WaterQualityReport: React.FC = () => {
               );
             })}
           </div>
+
+          {/* Water Test Kits */}
+          <WaterTestKits isSoftWater={report.isSoftWater} />
 
           <WaterLeadCapture zipCode={zipCode} report={report} />
         </div>
