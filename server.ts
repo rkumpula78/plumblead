@@ -33,7 +33,6 @@ const pool = new Pool({
 
 async function initDb() {
   try {
-    // Create tables if they don't exist
     await pool.query(`
       CREATE TABLE IF NOT EXISTS leads (
         id           TEXT PRIMARY KEY,
@@ -57,23 +56,23 @@ async function initDb() {
       CREATE INDEX IF NOT EXISTS leads_status    ON leads (status);
     `);
 
-    // ── Migrations: add new columns to contractors if they don't exist yet ──
-    // This pattern is safe to run on every startup — ADD COLUMN IF NOT EXISTS is idempotent.
+    // Migrations — idempotent, safe to run every startup
     await pool.query(`
       ALTER TABLE contractors
-        ADD COLUMN IF NOT EXISTS phone          TEXT,
-        ADD COLUMN IF NOT EXISTS callback_phone TEXT,
-        ADD COLUMN IF NOT EXISTS email          TEXT,
-        ADD COLUMN IF NOT EXISTS address        TEXT,
-        ADD COLUMN IF NOT EXISTS city           TEXT,
-        ADD COLUMN IF NOT EXISTS state          TEXT,
-        ADD COLUMN IF NOT EXISTS zip_codes      TEXT,
-        ADD COLUMN IF NOT EXISTS crm_system     TEXT,
-        ADD COLUMN IF NOT EXISTS bilingual      BOOLEAN NOT NULL DEFAULT false,
-        ADD COLUMN IF NOT EXISTS services       JSONB;
+        ADD COLUMN IF NOT EXISTS phone           TEXT,
+        ADD COLUMN IF NOT EXISTS callback_phone  TEXT,
+        ADD COLUMN IF NOT EXISTS email           TEXT,
+        ADD COLUMN IF NOT EXISTS address         TEXT,
+        ADD COLUMN IF NOT EXISTS city            TEXT,
+        ADD COLUMN IF NOT EXISTS state           TEXT,
+        ADD COLUMN IF NOT EXISTS zip_codes       TEXT,
+        ADD COLUMN IF NOT EXISTS crm_system      TEXT,
+        ADD COLUMN IF NOT EXISTS bilingual       BOOLEAN NOT NULL DEFAULT false,
+        ADD COLUMN IF NOT EXISTS services        JSONB,
+        ADD COLUMN IF NOT EXISTS dashboard_code  TEXT;
     `);
 
-    // Seed known demo contractors if not present
+    // Seed demo contractors
     await pool.query(`
       INSERT INTO contractors (client_id, client_name, active, plan)
       VALUES
@@ -81,6 +80,13 @@ async function initDb() {
         ('promax-water-heaters', 'ProMax Water Heaters & Plumbing', true, 'trial'),
         ('gps-plumbing', 'GPS Plumbing Inc.', true, 'trial')
       ON CONFLICT (client_id) DO NOTHING;
+    `);
+
+    // Seed dashboard codes for existing contractors that don't have one
+    await pool.query(`
+      UPDATE contractors
+      SET dashboard_code = client_id || '-' || EXTRACT(YEAR FROM NOW())::TEXT
+      WHERE dashboard_code IS NULL;
     `);
 
     console.log('Database ready.');
@@ -171,6 +177,27 @@ function requireAdminKey(req: express.Request, res: express.Response, next: expr
 app.get('/api/health', async (_req, res) => {
   try { await pool.query('SELECT 1'); res.json({ status: 'ok', db: 'connected', timestamp: new Date().toISOString() }); }
   catch { res.json({ status: 'ok', db: 'not connected', timestamp: new Date().toISOString() }); }
+});
+
+// ─── Dashboard Auth — looks up contractor by dashboard_code ──────────────────
+// No admin key required — this is the public-facing login endpoint
+app.get('/api/auth/dashboard', async (req, res) => {
+  const code = (req.query.code as string || '').trim();
+  if (!code) return res.status(400).json({ error: 'code is required' });
+
+  try {
+    const result = await pool.query(
+      `SELECT client_id, client_name, active FROM contractors WHERE dashboard_code = $1`,
+      [code]
+    );
+    if (!result.rows.length) return res.status(401).json({ error: 'Invalid access code' });
+    const row = result.rows[0];
+    if (!row.active) return res.status(403).json({ error: 'Account paused. Contact PlumbLead support.' });
+    res.json({ clientId: row.client_id, label: row.client_name });
+  } catch (err) {
+    console.error('Dashboard auth error:', err);
+    res.status(500).json({ error: 'Auth failed' });
+  }
 });
 
 // ─── Chat ─────────────────────────────────────────────────────────────────────
@@ -307,12 +334,15 @@ app.post('/api/contractors', requireAdminKey, async (req, res) => {
     return res.status(400).json({ error: 'clientId, companyName, and phone are required.' });
   }
 
+  // Auto-generate dashboard code: clientId-year
+  const dashboardCode = `${clientId}-${new Date().getFullYear()}`;
+
   try {
     const result = await pool.query(
       `INSERT INTO contractors
         (client_id, client_name, active, plan, phone, callback_phone, email,
-         address, city, state, zip_codes, crm_system, bilingual, services, notes)
-       VALUES ($1,$2,true,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+         address, city, state, zip_codes, crm_system, bilingual, services, notes, dashboard_code)
+       VALUES ($1,$2,true,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
        ON CONFLICT (client_id) DO UPDATE SET
          client_name    = EXCLUDED.client_name,
          plan           = EXCLUDED.plan,
@@ -326,13 +356,14 @@ app.post('/api/contractors', requireAdminKey, async (req, res) => {
          crm_system     = EXCLUDED.crm_system,
          bilingual      = EXCLUDED.bilingual,
          services       = EXCLUDED.services,
-         notes          = EXCLUDED.notes
+         notes          = EXCLUDED.notes,
+         dashboard_code = COALESCE(contractors.dashboard_code, EXCLUDED.dashboard_code)
        RETURNING *`,
       [
         clientId, companyName, plan || 'trial', phone, callbackPhone || phone,
         email || null, address || null, city || null, state || null,
         zipCodes || null, crmSystem || null, bilingual || false,
-        JSON.stringify(services || []), notes || null,
+        JSON.stringify(services || []), notes || null, dashboardCode,
       ]
     );
     res.json({ contractor: result.rows[0] });
@@ -342,17 +373,18 @@ app.post('/api/contractors', requireAdminKey, async (req, res) => {
   }
 });
 
-// ─── PATCH /api/contractors/:clientId ────────────────────────────────────────
+// ─── PATCH /api/contractors/:clientId — full update from edit modal ───────────
 app.patch('/api/contractors/:clientId', requireAdminKey, async (req, res) => {
   const { clientId } = req.params;
-  const { active, plan, notes } = req.body as { active?: boolean; plan?: string; notes?: string };
+  const { active, plan, notes, phone, callback_phone, email, city, state, zip_codes, crm_system, bilingual } = req.body;
   try {
     const sets: string[] = [];
     const values: unknown[] = [];
     let i = 1;
-    if (active !== undefined) { sets.push(`active = $${i++}`); values.push(active); }
-    if (plan !== undefined)   { sets.push(`plan = $${i++}`);   values.push(plan); }
-    if (notes !== undefined)  { sets.push(`notes = $${i++}`);  values.push(notes); }
+    const fields: Record<string, unknown> = { active, plan, notes, phone, callback_phone, email, city, state, zip_codes, crm_system, bilingual };
+    for (const [col, val] of Object.entries(fields)) {
+      if (val !== undefined) { sets.push(`${col} = $${i++}`); values.push(val); }
+    }
     if (!sets.length) return res.status(400).json({ error: 'Nothing to update' });
     values.push(clientId);
     const result = await pool.query(
@@ -364,6 +396,33 @@ app.patch('/api/contractors/:clientId', requireAdminKey, async (req, res) => {
   } catch (err) {
     console.error('Contractor patch error:', err);
     res.status(500).json({ error: 'Failed to update contractor.' });
+  }
+});
+
+// ─── POST /api/contractors/:clientId/dashboard-code — rotate access code ─────
+app.post('/api/contractors/:clientId/dashboard-code', requireAdminKey, async (req, res) => {
+  const { clientId } = req.params;
+  const { code } = req.body;
+  if (!code?.trim()) return res.status(400).json({ error: 'code is required' });
+
+  // Make sure the code isn't already taken by another contractor
+  try {
+    const existing = await pool.query(
+      `SELECT client_id FROM contractors WHERE dashboard_code = $1 AND client_id != $2`,
+      [code.trim(), clientId]
+    );
+    if (existing.rows.length) {
+      return res.status(409).json({ error: 'That code is already in use by another contractor.' });
+    }
+    const result = await pool.query(
+      `UPDATE contractors SET dashboard_code = $1 WHERE client_id = $2 RETURNING dashboard_code`,
+      [code.trim(), clientId]
+    );
+    if (!result.rows.length) return res.status(404).json({ error: 'Contractor not found' });
+    res.json({ dashboard_code: result.rows[0].dashboard_code });
+  } catch (err) {
+    console.error('Dashboard code update error:', err);
+    res.status(500).json({ error: 'Failed to update dashboard code.' });
   }
 });
 
