@@ -27,12 +27,9 @@ const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
 const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || '';
 
 // ─── Stripe plan mapping ──────────────────────────────────────────────────────
-// Map Stripe price IDs to plan names. Add your actual price IDs from Stripe dashboard.
 const STRIPE_PRICE_TO_PLAN: Record<string, string> = {
-  // Fill these in from your Stripe dashboard → Products → Price ID
-  // e.g. 'price_1abc123': 'starter'
-  // e.g. 'price_1def456': 'pro'
-  // e.g. 'price_1ghi789': 'agency'
+  'price_1THvKdDATJBYD8CNUCHZNQ8B': 'starter',  // $97/mo
+  'price_1THvH7DATJBYD8CNVP8UjHVM': 'pro',       // $197/mo
 };
 
 // ─── Postgres ─────────────────────────────────────────────────────────────────
@@ -212,7 +209,6 @@ app.get('/api/health', async (_req, res) => {
 });
 
 // ─── Contractor status — public endpoint for widget ───────────────────────────
-// Used by QuoteTool to check if contractor is active before showing the widget
 app.get('/api/contractor-status', async (req, res) => {
   const clientId = (req.query.clientId as string || 'demo').trim();
   try {
@@ -220,7 +216,6 @@ app.get('/api/contractor-status', async (req, res) => {
     res.json({
       active: status.active,
       subscriptionStatus: status.subscriptionStatus,
-      // Only surface callbackPhone so widget can show it in fallback state
       callbackPhone: status.active ? null : status.callbackPhone,
     });
   } catch (err) {
@@ -248,18 +243,15 @@ app.get('/api/auth/dashboard', async (req, res) => {
 });
 
 // ─── Stripe Webhook ───────────────────────────────────────────────────────────
-// Handles subscription lifecycle events from Stripe
-// Setup: Stripe Dashboard → Webhooks → Add endpoint → https://plumblead-production.up.railway.app/api/stripe/webhook
-// Events to enable: customer.subscription.created, customer.subscription.updated,
-//                   customer.subscription.deleted, invoice.payment_failed
+// Endpoint: https://plumblead-production.up.railway.app/api/stripe/webhook
+// Events:   customer.subscription.created, customer.subscription.updated,
+//           customer.subscription.deleted, invoice.payment_failed
 app.post('/api/stripe/webhook', async (req, res) => {
   const sig = req.headers['stripe-signature'] as string;
 
-  // If no webhook secret configured, skip verification (useful for manual testing)
   let event: any;
   if (STRIPE_WEBHOOK_SECRET && sig) {
     try {
-      // Dynamic import so missing stripe package doesn't crash server
       const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
       event = stripe.webhooks.constructEvent(req.body, sig, STRIPE_WEBHOOK_SECRET);
     } catch (err: any) {
@@ -267,7 +259,6 @@ app.post('/api/stripe/webhook', async (req, res) => {
       return res.status(400).json({ error: 'Invalid signature' });
     }
   } else {
-    // No secret — parse raw body directly (dev/test mode)
     try { event = JSON.parse(req.body.toString()); }
     catch { return res.status(400).json({ error: 'Invalid JSON' }); }
   }
@@ -290,7 +281,7 @@ app.post('/api/stripe/webhook', async (req, res) => {
            WHERE stripe_customer_id = $3 OR stripe_subscription_id = $4`,
           [plan, subStatus, customerId, subId]
         );
-        console.log(`Stripe: subscription ${event.type} — plan=${plan}, status=${subStatus}`);
+        console.log(`Stripe: ${event.type} — plan=${plan}, status=${subStatus}`);
         break;
       }
       case 'customer.subscription.deleted': {
