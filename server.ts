@@ -33,6 +33,7 @@ const pool = new Pool({
 
 async function initDb() {
   try {
+    // Create tables if they don't exist
     await pool.query(`
       CREATE TABLE IF NOT EXISTS leads (
         id           TEXT PRIMARY KEY,
@@ -44,27 +45,34 @@ async function initDb() {
         payload      JSONB NOT NULL
       );
       CREATE TABLE IF NOT EXISTS contractors (
-        client_id     TEXT PRIMARY KEY,
-        client_name   TEXT NOT NULL,
-        active        BOOLEAN NOT NULL DEFAULT true,
-        plan          TEXT NOT NULL DEFAULT 'trial',
-        created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        notes         TEXT,
-        phone         TEXT,
-        callback_phone TEXT,
-        email         TEXT,
-        address       TEXT,
-        city          TEXT,
-        state         TEXT,
-        zip_codes     TEXT,
-        crm_system    TEXT,
-        bilingual     BOOLEAN NOT NULL DEFAULT false,
-        services      JSONB
+        client_id  TEXT PRIMARY KEY,
+        client_name TEXT NOT NULL,
+        active     BOOLEAN NOT NULL DEFAULT true,
+        plan       TEXT NOT NULL DEFAULT 'trial',
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        notes      TEXT
       );
       CREATE INDEX IF NOT EXISTS leads_client_id ON leads ((payload->>'clientId'));
       CREATE INDEX IF NOT EXISTS leads_source    ON leads ((payload->>'source'));
       CREATE INDEX IF NOT EXISTS leads_status    ON leads (status);
     `);
+
+    // ── Migrations: add new columns to contractors if they don't exist yet ──
+    // This pattern is safe to run on every startup — ADD COLUMN IF NOT EXISTS is idempotent.
+    await pool.query(`
+      ALTER TABLE contractors
+        ADD COLUMN IF NOT EXISTS phone          TEXT,
+        ADD COLUMN IF NOT EXISTS callback_phone TEXT,
+        ADD COLUMN IF NOT EXISTS email          TEXT,
+        ADD COLUMN IF NOT EXISTS address        TEXT,
+        ADD COLUMN IF NOT EXISTS city           TEXT,
+        ADD COLUMN IF NOT EXISTS state          TEXT,
+        ADD COLUMN IF NOT EXISTS zip_codes      TEXT,
+        ADD COLUMN IF NOT EXISTS crm_system     TEXT,
+        ADD COLUMN IF NOT EXISTS bilingual      BOOLEAN NOT NULL DEFAULT false,
+        ADD COLUMN IF NOT EXISTS services       JSONB;
+    `);
+
     // Seed known demo contractors if not present
     await pool.query(`
       INSERT INTO contractors (client_id, client_name, active, plan)
@@ -74,6 +82,7 @@ async function initDb() {
         ('gps-plumbing', 'GPS Plumbing Inc.', true, 'trial')
       ON CONFLICT (client_id) DO NOTHING;
     `);
+
     console.log('Database ready.');
   } catch (err) {
     console.error('Database init error:', err);
@@ -286,7 +295,7 @@ app.get('/api/contractors', requireAdminKey, async (_req, res) => {
   } catch (err) { res.status(500).json({ error: 'Failed to fetch contractors.' }); }
 });
 
-// ─── POST /api/contractors — create/upsert from onboarding panel ─────────────
+// ─── POST /api/contractors ────────────────────────────────────────────────────
 app.post('/api/contractors', requireAdminKey, async (req, res) => {
   const {
     clientId, companyName, phone, callbackPhone, email,
@@ -375,20 +384,18 @@ app.post('/api/contractors/:clientId/enable', requireAdminKey, async (req, res) 
   } catch (err) { res.status(500).json({ error: 'Failed to enable contractor.' }); }
 });
 
-// ─── POST /api/scrape-contractor — Gemini extracts info from contractor website
+// ─── POST /api/scrape-contractor ──────────────────────────────────────────────
 app.post('/api/scrape-contractor', requireAdminKey, async (req, res) => {
   const { url } = req.body;
   if (!url) return res.status(400).json({ error: 'url is required' });
 
   try {
-    // Fetch the website HTML
     const pageRes = await fetch(url, {
       headers: { 'User-Agent': 'Mozilla/5.0 (compatible; PlumbLeadBot/1.0)' },
     });
     if (!pageRes.ok) throw new Error(`Failed to fetch URL: ${pageRes.status}`);
     const html = await pageRes.text();
 
-    // Strip tags, collapse whitespace, cap at 12k chars for Gemini
     const text = html
       .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
       .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
@@ -414,18 +421,8 @@ Return ONLY a valid JSON object with these exact fields (use null for anything n
 Website content:
 ${text}`;
 
-    const geminiRes = await ai.models.generateContent({
-      model: 'gemini-2.0-flash',
-      contents: prompt,
-    });
-
-    const raw = (geminiRes.text ?? '')
-      .trim()
-      .replace(/^```json\s*/i, '')
-      .replace(/^```\s*/i, '')
-      .replace(/\s*```$/i, '')
-      .trim();
-
+    const geminiRes = await ai.models.generateContent({ model: 'gemini-2.0-flash', contents: prompt });
+    const raw = (geminiRes.text ?? '').trim().replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim();
     const extracted = JSON.parse(raw);
     res.json(extracted);
   } catch (err: any) {
