@@ -3,6 +3,21 @@ import React, { useState, useEffect, useCallback } from 'react';
 const API_BASE = 'https://plumblead-production.up.railway.app';
 const ADMIN_KEY = 'plumblead-admin-2026';
 
+// ─── Stripe payment links ──────────────────────────────────────────────────────
+const STRIPE_LINKS: Record<string, string> = {
+  starter: 'https://buy.stripe.com/3cI4gz5HvejVevLcfrc3m03',
+  pro:     'https://buy.stripe.com/eVqbJ16Lz4Jl73j5R3c3m02',
+  agency:  '', // TODO: create $497/mo product in Stripe and paste link here
+};
+
+const PLANS = [
+  { value: 'starter', label: 'Starter',  price: '$97/mo',  desc: '1–2 trucks · Quote tool + SMS + Dashboard' },
+  { value: 'pro',     label: 'Pro',      price: '$197/mo', desc: '3–10 trucks · CRM routing + priority support', popular: true },
+  { value: 'agency',  label: 'Agency',   price: '$497/mo', desc: '10+ trucks · Multi-location + white-label' },
+];
+
+const PLAN_PRICE: Record<string, number> = { trial: 0, starter: 97, pro: 197, agency: 497 };
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type LeadStatus = 'New' | 'Contacted' | 'Quoted' | 'Won' | 'Lost';
@@ -79,6 +94,104 @@ function calcStats(leads: Lead[]) {
   const avgTicket = won > 0 ? Math.round(revenue / won) : null;
   return { total, byStatus, won, decided, closeRate, revenue, avgTicket };
 }
+
+// ─── Upgrade Banner (contractor-facing) ───────────────────────────────────────────
+
+interface UpgradeBannerProps {
+  currentPlan: string;
+  revenue: number;
+  won: number;
+}
+
+const UpgradeBanner: React.FC<UpgradeBannerProps> = ({ currentPlan, revenue, won }) => {
+  const [open, setOpen] = useState(false);
+  const planCost = PLAN_PRICE[currentPlan] || 0;
+  const roi = planCost > 0 ? Math.round(revenue / planCost) : null;
+
+  // Don’t show upgrade option if already on agency
+  if (currentPlan === 'agency') return null;
+
+  return (
+    <>
+      {/* ROI + upgrade nudge bar */}
+      <div style={{ background: '#0D0D0D', borderRadius: 12, padding: '20px 24px', marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
+        <div>
+          <div style={{ fontSize: 13, color: '#9E9B91', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+            Your Plan — {currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1)}
+            {currentPlan === 'trial' && <span style={{ marginLeft: 8, background: '#854d0e', color: '#fef9c3', padding: '2px 8px', fontSize: 10, fontWeight: 800, letterSpacing: 0.5 }}>TRIAL</span>}
+          </div>
+          {revenue > 0 ? (
+            <>
+              <div style={{ fontSize: 28, fontWeight: 800, color: '#F5A623', marginTop: 4 }}>
+                {roi ? `${roi}× return` : 'Tracking ROI...'}
+              </div>
+              <div style={{ fontSize: 13, color: '#5C5A53', marginTop: 2 }}>
+                ${revenue.toLocaleString()} revenue captured · {won} job{won !== 1 ? 's' : ''} won
+                {planCost > 0 && ` · $${planCost}/mo plan cost`}
+              </div>
+            </>
+          ) : (
+            <div style={{ fontSize: 14, color: '#5C5A53', marginTop: 6 }}>
+              Log a won job to start tracking your ROI
+            </div>
+          )}
+        </div>
+        {currentPlan !== 'agency' && (
+          <button onClick={() => setOpen(true)}
+            style={{ background: '#F5A623', color: '#0D0D0D', border: 'none', padding: '10px 20px', fontWeight: 800, fontSize: 14, cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', whiteSpace: 'nowrap' }}>
+            ↑ Upgrade Plan
+          </button>
+        )}
+      </div>
+
+      {/* Upgrade modal */}
+      {open && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }} onClick={() => setOpen(false)}>
+          <div style={{ background: '#fff', width: '100%', maxWidth: 560, padding: 32, fontFamily: 'DM Sans, sans-serif' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+              <div>
+                <div style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 26, letterSpacing: 0.5 }}>Choose Your Plan</div>
+                <div style={{ fontSize: 13, color: '#64748b' }}>Current plan: <strong>{currentPlan}</strong> · One job covers any plan</div>
+              </div>
+              <button onClick={() => setOpen(false)} style={{ background: 'none', border: 'none', fontSize: 22, cursor: 'pointer', color: '#64748b' }}>✕</button>
+            </div>
+
+            {PLANS.map(plan => (
+              <div key={plan.value} style={{ position: 'relative', border: plan.popular ? '2px solid #F5A623' : '2px solid #e2e8f0', padding: '18px 20px', marginBottom: 12, background: plan.popular ? '#0D0D0D' : '#fff' }}>
+                {plan.popular && (
+                  <div style={{ position: 'absolute', top: -11, left: 16, background: '#F5A623', color: '#0D0D0D', fontSize: 10, fontWeight: 800, padding: '2px 10px', letterSpacing: 1, textTransform: 'uppercase' }}>Most Popular</div>
+                )}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+                  <div>
+                    <div style={{ fontWeight: 800, fontSize: 16, color: plan.popular ? '#F5A623' : '#0f172a' }}>{plan.label}</div>
+                    <div style={{ fontSize: 12, color: plan.popular ? '#9E9B91' : '#64748b', marginTop: 2 }}>{plan.desc}</div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ fontWeight: 800, fontSize: 20, color: plan.popular ? '#fff' : '#0f172a' }}>{plan.price}</div>
+                    {plan.value === currentPlan ? (
+                      <div style={{ padding: '8px 16px', fontSize: 12, fontWeight: 700, background: '#f1f5f9', color: '#94a3b8' }}>Current</div>
+                    ) : STRIPE_LINKS[plan.value] ? (
+                      <a href={STRIPE_LINKS[plan.value]} target="_blank" rel="noopener noreferrer"
+                        style={{ padding: '8px 18px', background: plan.popular ? '#F5A623' : '#0f172a', color: plan.popular ? '#0D0D0D' : '#facc15', fontWeight: 800, fontSize: 13, textDecoration: 'none', display: 'inline-block' }}>
+                        Select →
+                      </a>
+                    ) : (
+                      <div style={{ padding: '8px 16px', fontSize: 12, fontWeight: 700, background: '#f1f5f9', color: '#94a3b8' }}>Call us</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+
+            <p style={{ fontSize: 12, color: '#94a3b8', marginTop: 16, textAlign: 'center' }}>
+              After payment, your plan updates automatically. Questions? Call <strong>(833) 558-0877</strong>
+            </p>
+          </div>
+        </div>
+      )}
+    </>
+  );
+};
 
 // ─── Lead Detail Modal ────────────────────────────────────────────────────────
 
@@ -183,6 +296,7 @@ const Dashboard: React.FC = () => {
   const [authLoading, setAuthLoading] = useState(false);
   const [clientId, setClientId] = useState('__all__');
   const [clientLabel, setClientLabel] = useState('');
+  const [clientPlan, setClientPlan] = useState('trial');
   const [isAdmin, setIsAdmin] = useState(false);
 
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -193,28 +307,27 @@ const Dashboard: React.FC = () => {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
 
-  // Auth against DB — no more hardcoded ACCESS_CODES
   const handleAuth = async () => {
     const code = accessCode.trim();
     if (!code) return;
     setAuthLoading(true);
     setAuthError('');
     try {
-      // Admin key bypasses contractor lookup
       if (code === ADMIN_KEY) {
         setAuthenticated(true);
         setClientId('__all__');
         setClientLabel('Admin — All Leads');
+        setClientPlan('agency'); // admin sees no upgrade prompt
         setIsAdmin(true);
         return;
       }
-      // Look up contractor by dashboard_code
       const res = await fetch(`${API_BASE}/api/auth/dashboard?code=${encodeURIComponent(code)}`);
       if (!res.ok) { setAuthError('Invalid access code.'); return; }
       const data = await res.json();
       setAuthenticated(true);
       setClientId(data.clientId);
       setClientLabel(data.label);
+      setClientPlan(data.plan || 'trial');
       setIsAdmin(false);
     } catch {
       setAuthError('Connection error. Try again.');
@@ -264,7 +377,7 @@ const Dashboard: React.FC = () => {
   const stats = calcStats(leads);
   const sources = Array.from(new Set(leads.map(l => l.source).filter(Boolean))) as string[];
 
-  // ─── Login Screen ──────────────────────────────────────────────────────────
+  // ─── Login ──────────────────────────────────────────────────────────────────
   if (!authenticated) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: '#0D0D0D', fontFamily: 'DM Sans, -apple-system, sans-serif' }}>
@@ -282,15 +395,13 @@ const Dashboard: React.FC = () => {
     );
   }
 
-  // ─── Dashboard ─────────────────────────────────────────────────────────────
+  // ─── Main view ────────────────────────────────────────────────────────────────
   return (
     <div style={{ background: '#f1f5f9', minHeight: '100vh', fontFamily: 'DM Sans, -apple-system, sans-serif' }}>
       <div style={{ background: '#0D0D0D', borderBottom: '3px solid #F5A623', padding: '0 24px', height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 24, color: '#F5A623', letterSpacing: 1 }}>PlumbLead<span style={{ color: '#fff' }}>.ai</span></div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          {isAdmin && (
-            <a href="/admin/contractors" style={{ fontSize: 12, color: '#F5A623', fontWeight: 700, textDecoration: 'none' }}>⚙ Manage Contractors</a>
-          )}
+          {isAdmin && <a href="/admin/contractors" style={{ fontSize: 12, color: '#F5A623', fontWeight: 700, textDecoration: 'none' }}>⚙ Manage Contractors</a>}
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontSize: 13, color: '#9E9B91' }}>{clientLabel}</div>
             {lastRefresh && <div style={{ fontSize: 11, color: '#5C5A53' }}>Updated {fmt(lastRefresh.toISOString())}</div>}
@@ -300,8 +411,11 @@ const Dashboard: React.FC = () => {
           </button>
         </div>
       </div>
+
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: 24 }}>
         {error && <div style={{ background: '#fee2e2', border: '1px solid #fecaca', borderRadius: 10, padding: '12px 16px', marginBottom: 20, fontSize: 14, color: '#991b1b' }}>{error}</div>}
+
+        {/* Stats row */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 16, marginBottom: 24 }}>
           {[{ label: 'Total Leads', value: stats.total, color: '#0f172a' }, { label: 'New', value: stats.byStatus['New'] || 0, color: '#1d4ed8' }, { label: 'Won', value: stats.won, color: '#166534' }, { label: 'Close Rate', value: stats.closeRate !== null ? `${stats.closeRate}%` : '—', color: '#7c3aed' }, { label: 'Revenue Won', value: stats.revenue > 0 ? `$${stats.revenue.toLocaleString()}` : '—', color: '#166534' }, { label: 'Avg Ticket', value: stats.avgTicket ? `$${stats.avgTicket.toLocaleString()}` : '—', color: '#0f172a' }].map((stat, i) => (
             <div key={i} style={{ background: '#fff', borderRadius: 12, padding: '18px 20px', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
@@ -310,19 +424,13 @@ const Dashboard: React.FC = () => {
             </div>
           ))}
         </div>
-        {stats.revenue > 0 && (
-          <div style={{ background: '#0D0D0D', borderRadius: 12, padding: '20px 24px', marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
-            <div>
-              <div style={{ fontSize: 13, color: '#9E9B91', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>PlumbLead ROI</div>
-              <div style={{ fontSize: 28, fontWeight: 800, color: '#F5A623', marginTop: 4 }}>{Math.round(stats.revenue / 197)}× return</div>
-              <div style={{ fontSize: 13, color: '#5C5A53', marginTop: 2 }}>${stats.revenue.toLocaleString()} revenue / $197 plan cost</div>
-            </div>
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: 13, color: '#9E9B91' }}>Won jobs: {stats.won}</div>
-              <div style={{ fontSize: 13, color: '#9E9B91' }}>Avg ticket: {stats.avgTicket ? `$${stats.avgTicket.toLocaleString()}` : '—'}</div>
-            </div>
-          </div>
+
+        {/* ROI bar + upgrade prompt (contractors only) */}
+        {!isAdmin && (
+          <UpgradeBanner currentPlan={clientPlan} revenue={stats.revenue} won={stats.won} />
         )}
+
+        {/* Leads table */}
         <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
           <div style={{ padding: '16px 20px', borderBottom: '1px solid #e2e8f0', display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
             <span style={{ fontSize: 15, fontWeight: 700, color: '#0f172a', marginRight: 4 }}>Leads</span>
