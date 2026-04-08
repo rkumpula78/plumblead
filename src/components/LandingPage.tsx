@@ -5,12 +5,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import QuoteModal from './QuoteModal';
 
-// ─── API Base ─────────────────────────────────────────────────────────────────
+// ─── API Base ────────────────────────────────────────────────────────────────────
 const API_BASE = 'https://plumblead-production.up.railway.app';
 
 // ─── Stripe Payment Links ─────────────────────────────────────────────────────
-const STRIPE_PRO     = 'https://buy.stripe.com/4gM3cvf0A8oLemBeCm2ZO00';
-const STRIPE_STARTER = 'https://buy.stripe.com/3cI6oH6u4dJ57YdgKu2ZO01';
+const STRIPE_STARTER = 'https://buy.stripe.com/3cI4gz5HvejVevLcfrc3m03';  // $97/mo
+const STRIPE_PRO     = 'https://buy.stripe.com/eVqbJ16Lz4Jl73j5R3c3m02';  // $197/mo
+const STRIPE_AGENCY  = 'https://buy.stripe.com/eVq9AT5q0eN92DT1PA2ZO02';  // $497/mo
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -62,31 +63,24 @@ const T = {
     topbar: 'Contractors using PlumbLead.ai win 3× more jobs — Average response: 47 seconds',
     eyebrow: 'Built for Plumbers, Not Tech Bros',
     hero1: 'Stop', hero2: 'Losing', hero3: 'Every', hero4: 'Job',
-    heroSub: 'Your competitor just answered that lead in 58 seconds. You answered in 2 hours. That\'s a $3,200 water heater job gone.',
+    heroSub: "Your competitor just answered that lead in 58 seconds. You answered in 2 hours. That's a $3,200 water heater job gone.",
     heroCta: 'Get Instant Quote — Free',
     heroSecondary: 'See How It Works ↓',
     trust: ['No contracts', 'Cancel anytime', 'Pays for itself in one job'],
     quoteSection: 'Instant Quote Tool',
-    quoteSectionTitle: 'What\'s The Job Worth?',
+    quoteSectionTitle: "What's The Job Worth?",
     quoteSectionSub: 'Get a ballpark estimate in 30 seconds. Our AI is trained on real plumbing pricing across your market.',
-    step1: 'Select Service',
-    step2: 'Describe the Job',
-    step3: 'Your Info',
+    step1: 'Select Service', step2: 'Describe the Job', step3: 'Your Info',
     step1sub: 'What does the homeowner need?',
     step2sub: 'More detail = better estimate',
     step3sub: 'Where do we send the quote?',
     detailsPlaceholder: 'e.g. 40-gallon gas water heater, 10 years old, leaking from the bottom. House is in Phoenix, AZ.',
-    namePlaceholder: 'Your name',
-    phonePlaceholder: 'Phone number',
-    emailPlaceholder: 'Email address',
-    locationPlaceholder: 'City, State',
+    namePlaceholder: 'Your name', phonePlaceholder: 'Phone number',
+    emailPlaceholder: 'Email address', locationPlaceholder: 'City, State',
     generating: 'Generating your estimate...',
-    estimateTitle: 'Your Estimate',
-    nextSteps: 'Suggested Next Steps',
-    getQuote: 'Get My Estimate →',
-    startOver: 'Start Over',
-    leadScoreLabel: 'Lead Score',
-    crossSellLabel: 'Cross-Sell Opportunities',
+    estimateTitle: 'Your Estimate', nextSteps: 'Suggested Next Steps',
+    getQuote: 'Get My Estimate →', startOver: 'Start Over',
+    leadScoreLabel: 'Lead Score', crossSellLabel: 'Cross-Sell Opportunities',
   },
   es: {
     nav: { howIt: 'Cómo Funciona', compare: 'Comparar', pricing: 'Precios', faq: 'FAQ', cta: 'Prueba Gratis' },
@@ -100,28 +94,21 @@ const T = {
     quoteSection: 'Cotización Instantánea',
     quoteSectionTitle: '¿Cuánto Vale el Trabajo?',
     quoteSectionSub: 'Obtén un estimado en 30 segundos. Nuestra IA está entrenada en precios reales de plomería en tu mercado.',
-    step1: 'Seleccionar Servicio',
-    step2: 'Describir el Trabajo',
-    step3: 'Tu Información',
+    step1: 'Seleccionar Servicio', step2: 'Describir el Trabajo', step3: 'Tu Información',
     step1sub: '¿Qué necesita el propietario?',
     step2sub: 'Más detalle = mejor estimado',
     step3sub: '¿Dónde enviamos la cotización?',
     detailsPlaceholder: 'ej. Calentador de gas 40 galones, 10 años, gotea por abajo. Casa en Phoenix, AZ.',
-    namePlaceholder: 'Tu nombre',
-    phonePlaceholder: 'Número de teléfono',
-    emailPlaceholder: 'Correo electrónico',
-    locationPlaceholder: 'Ciudad, Estado',
+    namePlaceholder: 'Tu nombre', phonePlaceholder: 'Número de teléfono',
+    emailPlaceholder: 'Correo electrónico', locationPlaceholder: 'Ciudad, Estado',
     generating: 'Generando tu estimado...',
-    estimateTitle: 'Tu Estimado',
-    nextSteps: 'Próximos Pasos Sugeridos',
-    getQuote: 'Obtener Mi Estimado →',
-    startOver: 'Empezar de Nuevo',
-    leadScoreLabel: 'Puntuación del Lead',
-    crossSellLabel: 'Oportunidades de Venta',
+    estimateTitle: 'Tu Estimado', nextSteps: 'Próximos Pasos Sugeridos',
+    getQuote: 'Obtener Mi Estimado →', startOver: 'Empezar de Nuevo',
+    leadScoreLabel: 'Puntuación del Lead', crossSellLabel: 'Oportunidades de Venta',
   },
 };
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
+// ─── Sub-components ───────────────────────────────────────────────────────────────────
 
 const PhoneMockup: React.FC = () => {
   const [phase, setPhase] = useState(0);
@@ -174,7 +161,7 @@ const PhoneMockup: React.FC = () => {
   );
 };
 
-// ─── Quote Tool ───────────────────────────────────────────────────────────────
+// ─── Quote Tool ───────────────────────────────────────────────────────────────────
 
 const QuoteTool: React.FC<{ lang: 'en' | 'es' }> = ({ lang }) => {
   const t = T[lang];
@@ -189,18 +176,15 @@ const QuoteTool: React.FC<{ lang: 'en' | 'es' }> = ({ lang }) => {
   const updateForm = (field: keyof QuoteFormData, value: string) => setForm(prev => ({ ...prev, [field]: value }));
 
   const handleSubmit = async () => {
-    setLoading(true);
-    setError(null);
+    setLoading(true); setError(null);
     try {
       const res = await fetch(`${API_BASE}/api/quote`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ ...form, language: lang, smsConsent }) });
       if (!res.ok) throw new Error('Server error');
       const data: QuoteResult = await res.json();
-      setResult(data);
-      setStep(4);
+      setResult(data); setStep(4);
       fetch(`${API_BASE}/api/leads`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ ...form, ...data, smsConsent, timestamp: new Date().toISOString() }) }).catch(console.error);
-    } catch {
-      setError('Unable to generate quote right now. Please try again.');
-    } finally { setLoading(false); }
+    } catch { setError('Unable to generate quote right now. Please try again.'); }
+    finally { setLoading(false); }
   };
 
   const reset = () => { setStep(1); setResult(null); setError(null); setSmsConsent(false); setForm({ serviceType:'',details:'',location:'',name:'',phone:'',email:'',language:lang }); };
@@ -284,7 +268,7 @@ const QuoteTool: React.FC<{ lang: 'en' | 'es' }> = ({ lang }) => {
   );
 };
 
-// ─── FAQ Item ─────────────────────────────────────────────────────────────────
+// ─── FAQ Item ───────────────────────────────────────────────────────────────────
 
 const FaqItem: React.FC<{ question: string; answer: string; index: number }> = ({ question, answer, index }) => {
   const [open, setOpen] = useState(false);
@@ -302,7 +286,7 @@ const FaqItem: React.FC<{ question: string; answer: string; index: number }> = (
   );
 };
 
-// ─── Main Landing Page ────────────────────────────────────────────────────────
+// ─── Main Landing Page ────────────────────────────────────────────────────────────────
 
 const LandingPage: React.FC = () => {
   const [lang, setLang] = useState<'en'|'es'>('en');
@@ -322,7 +306,6 @@ const LandingPage: React.FC = () => {
         input:focus, textarea:focus { border-color: #F5A623 !important; outline: none; }
       `}</style>
 
-      {/* QuoteModal — opened by chatbot CTA or any button */}
       <QuoteModal isOpen={quoteModalOpen} onClose={() => setQuoteModalOpen(false)} clientId="demo" clientName="Your Local Plumber" clientColor="#0ea5e9" lang={lang} />
 
       <div style={{ background:'#F5A623',padding:'10px 40px',display:'flex',alignItems:'center',justifyContent:'center',gap:12,fontSize:14,fontWeight:700,color:'#0D0D0D' }}>
@@ -355,7 +338,6 @@ const LandingPage: React.FC = () => {
             {t.heroSub.split('$3,200').map((part,i)=>i===0?part:<React.Fragment key={i}><strong style={{ color:'#FFF' }}>$3,200</strong>{part}</React.Fragment>)}
           </p>
           <div style={{ display:'flex',gap:16,alignItems:'center',flexWrap:'wrap' }}>
-            {/* Hero CTA now opens the modal */}
             <button onClick={()=>setQuoteModalOpen(true)} style={{ background:'#F5A623',color:'#0D0D0D',fontWeight:700,fontSize:16,padding:'16px 32px',border:'none',cursor:'pointer',letterSpacing:0.5,fontFamily:'DM Sans, sans-serif' }}>{t.heroCta}</button>
             <a href="#how" style={{ background:'transparent',color:'#9E9B91',fontWeight:500,fontSize:15,padding:'16px 24px',border:'1px solid #333',textDecoration:'none' }}>{t.heroSecondary}</a>
           </div>
@@ -431,11 +413,16 @@ const LandingPage: React.FC = () => {
         <QuoteTool lang={lang}/>
       </section>
 
+      {/* Pricing — 3 tiers with Agency at $497 as anchor */}
       <section id="pricing" style={{ background:'#F5F4F0',padding:'80px' }}>
         <div style={{ fontSize:11,textTransform:'uppercase',letterSpacing:2,fontWeight:700,color:'#C4841A',marginBottom:16,display:'flex',alignItems:'center',gap:8 }}><span style={{ display:'block',width:24,height:2,background:'#F5A623' }}/> Pricing</div>
         <h2 style={{ fontFamily:'Bebas Neue, sans-serif',fontSize:56,lineHeight:1,textTransform:'uppercase',marginBottom:40 }}>One Job Pays For <span style={{ color:'#C4841A' }}>Six Months</span></h2>
         <div style={{ display:'grid',gridTemplateColumns:'repeat(3,1fr)' }}>
-          {[{tier:'Starter',price:'$97',features:['AI chat widget (200 leads/mo)','Instant quote estimates','Email lead delivery','English only','Standard response templates'],featured:false,trialUrl:'/submit-trial',stripeUrl:STRIPE_STARTER},{tier:'Pro',price:'$197',features:['Unlimited leads','AI quote + lead scoring','CRM / n8n webhook routing','English + Spanish (auto)','Custom AI branding','Priority support'],featured:true,trialUrl:'/submit-trial',stripeUrl:STRIPE_PRO},{tier:'Agency',price:'$497',features:['Up to 5 contractor accounts','White-label dashboard','Everything in Pro ×5','Reseller margin included','Dedicated onboarding call'],featured:false,trialUrl:'mailto:ryan@plumblead.ai?subject=Agency Plan Inquiry',stripeUrl:'mailto:ryan@plumblead.ai?subject=Agency Plan Inquiry'}].map((plan,i)=>(
+          {[
+            { tier:'Starter', price:'$97',  features:['AI chat widget (200 leads/mo)','Instant quote estimates','Email lead delivery','English only','Standard response templates'],        featured:false, stripeUrl: STRIPE_STARTER },
+            { tier:'Pro',     price:'$197', features:['Unlimited leads','AI quote + lead scoring','CRM / n8n webhook routing','English + Spanish (auto)','Custom AI branding','Priority support'], featured:true,  stripeUrl: STRIPE_PRO },
+            { tier:'Agency',  price:'$497', features:['Up to 5 contractor accounts','White-label dashboard','Everything in Pro ×5','Reseller margin included','Dedicated onboarding call'],    featured:false, stripeUrl: STRIPE_AGENCY },
+          ].map((plan,i)=>(
             <div key={i} style={{ padding:'40px 36px',border:plan.featured?'3px solid #F5A623':'2px solid #E8E6DF',background:plan.featured?'#0D0D0D':'#FFF',position:'relative',transform:plan.featured?'scaleY(1.02)':'none',zIndex:plan.featured?2:1,borderRight:!plan.featured&&i===0?'none':undefined,borderLeft:!plan.featured&&i===2?'none':undefined }}>
               {plan.featured&&<div style={{ position:'absolute',top:-14,left:'50%',transform:'translateX(-50%)',background:'#F5A623',color:'#000',fontWeight:700,fontSize:11,padding:'4px 16px',letterSpacing:1.5,textTransform:'uppercase',whiteSpace:'nowrap' }}>Most Popular</div>}
               <div style={{ fontSize:12,textTransform:'uppercase',letterSpacing:2,fontWeight:700,color:plan.featured?'#F5A623':'#9E9B91',marginBottom:12 }}>{plan.tier}</div>
@@ -444,8 +431,8 @@ const LandingPage: React.FC = () => {
               <ul style={{ listStyle:'none',marginBottom:32 }}>
                 {plan.features.map((f,j)=>(<li key={j} style={{ padding:'8px 0',fontSize:14,borderBottom:`1px solid ${plan.featured?'#333':'#E8E6DF'}`,display:'flex',gap:10,alignItems:'flex-start',color:plan.featured?'#9E9B91':'#0D0D0D' }}><span style={{ color:'#F5A623',fontWeight:700,flexShrink:0 }}>✓</span>{f}</li>))}
               </ul>
-              <a href={plan.trialUrl} style={{ display:'block',width:'100%',padding:'14px',background:plan.featured?'#F5A623':'transparent',border:plan.featured?'none':'2px solid #0D0D0D',fontWeight:700,fontSize:15,cursor:'pointer',fontFamily:'DM Sans, sans-serif',color:plan.featured?'#000':'#0D0D0D',textDecoration:'none',textAlign:'center',marginBottom:10 }}>{plan.tier==='Agency'?'Contact Us →':'Start Free Trial →'}</a>
-              {plan.tier!=='Agency'&&(<a href={plan.stripeUrl} target="_blank" rel="noopener noreferrer" style={{ display:'block',width:'100%',padding:'10px',background:'transparent',border:`1px solid ${plan.featured?'#444':'#E8E6DF'}`,fontWeight:600,fontSize:13,cursor:'pointer',fontFamily:'DM Sans, sans-serif',color:'#9E9B91',textDecoration:'none',textAlign:'center' }}>Subscribe — {plan.price}/mo →</a>)}
+              <a href="/submit-trial" style={{ display:'block',width:'100%',padding:'14px',background:plan.featured?'#F5A623':'transparent',border:plan.featured?'none':'2px solid #0D0D0D',fontWeight:700,fontSize:15,cursor:'pointer',fontFamily:'DM Sans, sans-serif',color:plan.featured?'#000':'#0D0D0D',textDecoration:'none',textAlign:'center',marginBottom:10 }}>Start Free Trial →</a>
+              <a href={plan.stripeUrl} target="_blank" rel="noopener noreferrer" style={{ display:'block',width:'100%',padding:'10px',background:'transparent',border:`1px solid ${plan.featured?'#444':'#E8E6DF'}`,fontWeight:600,fontSize:13,cursor:'pointer',fontFamily:'DM Sans, sans-serif',color:'#9E9B91',textDecoration:'none',textAlign:'center' }}>Subscribe — {plan.price}/mo →</a>
             </div>
           ))}
         </div>
