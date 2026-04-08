@@ -11,7 +11,6 @@ dotenv.config();
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Raw body needed for Stripe webhook signature verification
 app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }));
 app.use(cors({
   origin: (origin, callback) => { callback(null, true); },
@@ -30,6 +29,7 @@ const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || '';
 const STRIPE_PRICE_TO_PLAN: Record<string, string> = {
   'price_1THvKdDATJBYD8CNUCHZNQ8B': 'starter',  // $97/mo
   'price_1THvH7DATJBYD8CNVP8UjHVM': 'pro',       // $197/mo
+  // Add Agency price ID here when created in Stripe
 };
 
 // ─── Postgres ─────────────────────────────────────────────────────────────────
@@ -64,7 +64,6 @@ async function initDb() {
       CREATE INDEX IF NOT EXISTS leads_status    ON leads (status);
     `);
 
-    // Migrations — idempotent, safe to run every startup
     await pool.query(`
       ALTER TABLE contractors
         ADD COLUMN IF NOT EXISTS phone                TEXT,
@@ -83,7 +82,6 @@ async function initDb() {
         ADD COLUMN IF NOT EXISTS stripe_subscription_id TEXT;
     `);
 
-    // Seed demo contractors
     await pool.query(`
       INSERT INTO contractors (client_id, client_name, active, plan)
       VALUES
@@ -93,14 +91,12 @@ async function initDb() {
       ON CONFLICT (client_id) DO NOTHING;
     `);
 
-    // Auto-assign dashboard codes to any contractor missing one
     await pool.query(`
       UPDATE contractors
       SET dashboard_code = client_id || '-' || EXTRACT(YEAR FROM NOW())::TEXT
       WHERE dashboard_code IS NULL;
     `);
 
-    // Backfill subscription_status from active flag for existing records
     await pool.query(`
       UPDATE contractors
       SET subscription_status = CASE
@@ -175,7 +171,6 @@ async function patchLead(id: string, update: { status?: string; jobValue?: numbe
   return rowToLead(res.rows[0]);
 }
 
-// ─── Contractor status check ───────────────────────────────────────────────────
 async function getContractorStatus(clientId: string): Promise<{ active: boolean; subscriptionStatus: string; callbackPhone: string | null }> {
   if (!clientId || clientId === 'demo') return { active: true, subscriptionStatus: 'active', callbackPhone: null };
   try {
@@ -208,7 +203,7 @@ app.get('/api/health', async (_req, res) => {
   catch { res.json({ status: 'ok', db: 'not connected', timestamp: new Date().toISOString() }); }
 });
 
-// ─── Contractor status — public endpoint for widget ───────────────────────────
+// ─── Contractor status (widget) ───────────────────────────────────────────────
 app.get('/api/contractor-status', async (req, res) => {
   const clientId = (req.query.clientId as string || 'demo').trim();
   try {
@@ -223,19 +218,24 @@ app.get('/api/contractor-status', async (req, res) => {
   }
 });
 
-// ─── Dashboard Auth ────────────────────────────────────────────────────────────
+// ─── Dashboard Auth — now returns plan so contractor sees upgrade options ─────
 app.get('/api/auth/dashboard', async (req, res) => {
   const code = (req.query.code as string || '').trim();
   if (!code) return res.status(400).json({ error: 'code is required' });
   try {
     const result = await pool.query(
-      `SELECT client_id, client_name, active FROM contractors WHERE dashboard_code = $1`,
+      `SELECT client_id, client_name, active, plan, subscription_status FROM contractors WHERE dashboard_code = $1`,
       [code]
     );
     if (!result.rows.length) return res.status(401).json({ error: 'Invalid access code' });
     const row = result.rows[0];
     if (!row.active) return res.status(403).json({ error: 'Account paused. Contact PlumbLead support.' });
-    res.json({ clientId: row.client_id, label: row.client_name });
+    res.json({
+      clientId: row.client_id,
+      label: row.client_name,
+      plan: row.plan || 'trial',
+      subscriptionStatus: row.subscription_status || 'trial',
+    });
   } catch (err) {
     console.error('Dashboard auth error:', err);
     res.status(500).json({ error: 'Auth failed' });
@@ -243,12 +243,8 @@ app.get('/api/auth/dashboard', async (req, res) => {
 });
 
 // ─── Stripe Webhook ───────────────────────────────────────────────────────────
-// Endpoint: https://plumblead-production.up.railway.app/api/stripe/webhook
-// Events:   customer.subscription.created, customer.subscription.updated,
-//           customer.subscription.deleted, invoice.payment_failed
 app.post('/api/stripe/webhook', async (req, res) => {
   const sig = req.headers['stripe-signature'] as string;
-
   let event: any;
   if (STRIPE_WEBHOOK_SECRET && sig) {
     try {
@@ -281,33 +277,27 @@ app.post('/api/stripe/webhook', async (req, res) => {
            WHERE stripe_customer_id = $3 OR stripe_subscription_id = $4`,
           [plan, subStatus, customerId, subId]
         );
-        console.log(`Stripe: ${event.type} — plan=${plan}, status=${subStatus}`);
         break;
       }
       case 'customer.subscription.deleted': {
         await pool.query(
-          `UPDATE contractors
-           SET subscription_status = 'cancelled', active = false
+          `UPDATE contractors SET subscription_status = 'cancelled', active = false
            WHERE stripe_customer_id = $1 OR stripe_subscription_id = $2`,
           [customerId, subId]
         );
-        console.log(`Stripe: subscription cancelled for customer ${customerId}`);
         break;
       }
       case 'invoice.payment_failed': {
         await pool.query(
-          `UPDATE contractors SET subscription_status = 'past_due'
-           WHERE stripe_customer_id = $1`,
+          `UPDATE contractors SET subscription_status = 'past_due' WHERE stripe_customer_id = $1`,
           [customerId]
         );
-        console.log(`Stripe: payment failed for customer ${customerId}`);
         break;
       }
     }
   } catch (err) {
     console.error('Stripe webhook DB error:', err);
   }
-
   res.json({ received: true });
 });
 
@@ -390,22 +380,15 @@ app.post('/api/leads', async (req, res) => {
   const clientId = req.body.clientId || 'demo';
   const status = await getContractorStatus(clientId);
   if (!status.active || status.subscriptionStatus === 'cancelled') {
-    return res.status(403).json({
-      error: 'Service unavailable',
-      message: 'This service is currently paused.',
-      callbackPhone: status.callbackPhone,
-    });
+    return res.status(403).json({ error: 'Service unavailable', message: 'This service is currently paused.', callbackPhone: status.callbackPhone });
   }
-
   let stored: StoredLead;
   try { stored = await saveLead(req.body); }
   catch (err) { console.error('Failed to save lead:', err); return res.json({ message: 'Lead received.' }); }
-
   const n8nWebhookUrl = process.env.N8N_WEBHOOK_URL;
   if (n8nWebhookUrl) {
     fetch(n8nWebhookUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...req.body, leadId: stored.id }) }).catch(err => console.error('n8n forward error:', err));
   }
-
   res.json({ message: 'Lead received.', leadId: stored.id });
 });
 
@@ -480,13 +463,10 @@ app.patch('/api/contractors/:clientId', requireAdminKey, async (req, res) => {
   if (!sets.length) return res.status(400).json({ error: 'Nothing to update' });
   values.push(clientId);
   try {
-    const result = await pool.query(
-      `UPDATE contractors SET ${sets.join(', ')} WHERE client_id = $${i} RETURNING *`, values
-    );
+    const result = await pool.query(`UPDATE contractors SET ${sets.join(', ')} WHERE client_id = $${i} RETURNING *`, values);
     if (!result.rows.length) return res.status(404).json({ error: 'Contractor not found' });
     res.json({ contractor: result.rows[0] });
   } catch (err) {
-    console.error('Contractor patch error:', err);
     res.status(500).json({ error: 'Failed to update contractor.' });
   }
 });
@@ -497,15 +477,9 @@ app.post('/api/contractors/:clientId/dashboard-code', requireAdminKey, async (re
   const { code } = req.body;
   if (!code?.trim()) return res.status(400).json({ error: 'code is required' });
   try {
-    const existing = await pool.query(
-      `SELECT client_id FROM contractors WHERE dashboard_code = $1 AND client_id != $2`,
-      [code.trim(), clientId]
-    );
+    const existing = await pool.query(`SELECT client_id FROM contractors WHERE dashboard_code = $1 AND client_id != $2`, [code.trim(), clientId]);
     if (existing.rows.length) return res.status(409).json({ error: 'Code already in use by another contractor.' });
-    const result = await pool.query(
-      `UPDATE contractors SET dashboard_code = $1 WHERE client_id = $2 RETURNING dashboard_code`,
-      [code.trim(), clientId]
-    );
+    const result = await pool.query(`UPDATE contractors SET dashboard_code = $1 WHERE client_id = $2 RETURNING dashboard_code`, [code.trim(), clientId]);
     if (!result.rows.length) return res.status(404).json({ error: 'Contractor not found' });
     res.json({ dashboard_code: result.rows[0].dashboard_code });
   } catch (err) {
