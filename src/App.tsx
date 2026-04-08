@@ -12,6 +12,7 @@ import ProMaxDemo from './components/demos/ProMaxDemo';
 import GPSPlumbingDemo from './components/demos/GPSPlumbingDemo';
 import Terms from './components/Terms';
 import Privacy from './components/Privacy';
+import AdminOnboard from './components/AdminOnboard';
 
 const ChatbotWithModal: React.FC = () => {
   const location = useLocation();
@@ -21,6 +22,7 @@ const ChatbotWithModal: React.FC = () => {
     ['/widget-demo', '/terms', '/privacy', '/'].includes(location.pathname) ||
     location.pathname.startsWith('/demo/') ||
     location.pathname.startsWith('/dashboard') ||
+    location.pathname.startsWith('/admin') ||
     (location.pathname === '/quote' && new URLSearchParams(location.search).get('widget') === '1');
 
   if (hide) return null;
@@ -56,6 +58,7 @@ function App() {
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/demo/promax" element={<ProMaxDemo />} />
         <Route path="/demo/gps" element={<GPSPlumbingDemo />} />
+        <Route path="/admin/onboard" element={<AdminOnboard />} />
       </Routes>
       <ChatbotWithModal />
     </Router>
