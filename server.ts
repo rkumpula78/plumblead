@@ -14,7 +14,7 @@ const port = process.env.PORT || 3000;
 app.use(cors({
   origin: (origin, callback) => { callback(null, true); },
   methods: ['GET', 'POST', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Admin-Key'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Admin-Key', 'x-admin-key'],
   credentials: true,
 }));
 
@@ -44,12 +44,22 @@ async function initDb() {
         payload      JSONB NOT NULL
       );
       CREATE TABLE IF NOT EXISTS contractors (
-        client_id    TEXT PRIMARY KEY,
-        client_name  TEXT NOT NULL,
-        active       BOOLEAN NOT NULL DEFAULT true,
-        plan         TEXT NOT NULL DEFAULT 'trial',
-        created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-        notes        TEXT
+        client_id     TEXT PRIMARY KEY,
+        client_name   TEXT NOT NULL,
+        active        BOOLEAN NOT NULL DEFAULT true,
+        plan          TEXT NOT NULL DEFAULT 'trial',
+        created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        notes         TEXT,
+        phone         TEXT,
+        callback_phone TEXT,
+        email         TEXT,
+        address       TEXT,
+        city          TEXT,
+        state         TEXT,
+        zip_codes     TEXT,
+        crm_system    TEXT,
+        bilingual     BOOLEAN NOT NULL DEFAULT false,
+        services      JSONB
       );
       CREATE INDEX IF NOT EXISTS leads_client_id ON leads ((payload->>'clientId'));
       CREATE INDEX IF NOT EXISTS leads_source    ON leads ((payload->>'source'));
@@ -128,15 +138,15 @@ async function patchLead(id: string, update: { status?: string; jobValue?: numbe
   return rowToLead(res.rows[0]);
 }
 
-// ─── Contractor enable/disable ──────────────────────────────────────────────────
+// ─── Contractor helpers ────────────────────────────────────────────────────────
 async function isContractorActive(clientId: string): Promise<boolean> {
-  if (!clientId || clientId === 'demo') return true; // always allow demo
+  if (!clientId || clientId === 'demo') return true;
   try {
     const res = await pool.query(`SELECT active FROM contractors WHERE client_id = $1`, [clientId]);
-    if (!res.rows.length) return true; // not in DB yet = allow
+    if (!res.rows.length) return true;
     return res.rows[0].active === true;
   } catch {
-    return true; // fail open — don't break the lead flow on DB error
+    return true;
   }
 }
 
@@ -231,14 +241,9 @@ app.post('/api/quote', async (req, res) => {
 // ─── POST /api/leads ──────────────────────────────────────────────────────────
 app.post('/api/leads', async (req, res) => {
   const clientId = req.body.clientId || 'demo';
-
-  // Check if contractor is active before accepting the lead
   const active = await isContractorActive(clientId);
   if (!active) {
-    return res.status(403).json({
-      error: 'Service unavailable',
-      message: 'This service is currently paused. Please contact the contractor directly.'
-    });
+    return res.status(403).json({ error: 'Service unavailable', message: 'This service is currently paused.' });
   }
 
   let stored: StoredLead;
@@ -281,7 +286,54 @@ app.get('/api/contractors', requireAdminKey, async (_req, res) => {
   } catch (err) { res.status(500).json({ error: 'Failed to fetch contractors.' }); }
 });
 
-// ─── PATCH /api/contractors/:clientId — enable/disable ──────────────────────
+// ─── POST /api/contractors — create/upsert from onboarding panel ─────────────
+app.post('/api/contractors', requireAdminKey, async (req, res) => {
+  const {
+    clientId, companyName, phone, callbackPhone, email,
+    address, city, state, zipCodes, crmSystem,
+    bilingual, plan, services, notes,
+  } = req.body;
+
+  if (!clientId || !companyName || !phone) {
+    return res.status(400).json({ error: 'clientId, companyName, and phone are required.' });
+  }
+
+  try {
+    const result = await pool.query(
+      `INSERT INTO contractors
+        (client_id, client_name, active, plan, phone, callback_phone, email,
+         address, city, state, zip_codes, crm_system, bilingual, services, notes)
+       VALUES ($1,$2,true,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+       ON CONFLICT (client_id) DO UPDATE SET
+         client_name    = EXCLUDED.client_name,
+         plan           = EXCLUDED.plan,
+         phone          = EXCLUDED.phone,
+         callback_phone = EXCLUDED.callback_phone,
+         email          = EXCLUDED.email,
+         address        = EXCLUDED.address,
+         city           = EXCLUDED.city,
+         state          = EXCLUDED.state,
+         zip_codes      = EXCLUDED.zip_codes,
+         crm_system     = EXCLUDED.crm_system,
+         bilingual      = EXCLUDED.bilingual,
+         services       = EXCLUDED.services,
+         notes          = EXCLUDED.notes
+       RETURNING *`,
+      [
+        clientId, companyName, plan || 'trial', phone, callbackPhone || phone,
+        email || null, address || null, city || null, state || null,
+        zipCodes || null, crmSystem || null, bilingual || false,
+        JSON.stringify(services || []), notes || null,
+      ]
+    );
+    res.json({ contractor: result.rows[0] });
+  } catch (err) {
+    console.error('Contractor create error:', err);
+    res.status(500).json({ error: 'Failed to save contractor.' });
+  }
+});
+
+// ─── PATCH /api/contractors/:clientId ────────────────────────────────────────
 app.patch('/api/contractors/:clientId', requireAdminKey, async (req, res) => {
   const { clientId } = req.params;
   const { active, plan, notes } = req.body as { active?: boolean; plan?: string; notes?: string };
@@ -295,12 +347,10 @@ app.patch('/api/contractors/:clientId', requireAdminKey, async (req, res) => {
     if (!sets.length) return res.status(400).json({ error: 'Nothing to update' });
     values.push(clientId);
     const result = await pool.query(
-      `INSERT INTO contractors (client_id, client_name, active, plan)
-       VALUES ($${i}, $${i}, COALESCE($1, true), COALESCE($2, 'trial'))
-       ON CONFLICT (client_id) DO UPDATE SET ${sets.join(', ')}
-       RETURNING *`,
+      `UPDATE contractors SET ${sets.join(', ')} WHERE client_id = $${i} RETURNING *`,
       values
     );
+    if (!result.rows.length) return res.status(404).json({ error: 'Contractor not found' });
     res.json({ contractor: result.rows[0] });
   } catch (err) {
     console.error('Contractor patch error:', err);
@@ -308,12 +358,12 @@ app.patch('/api/contractors/:clientId', requireAdminKey, async (req, res) => {
   }
 });
 
-// ─── POST /api/contractors/:clientId/disable — quick disable shortcut ────────
+// ─── POST /api/contractors/:clientId/disable ──────────────────────────────────
 app.post('/api/contractors/:clientId/disable', requireAdminKey, async (req, res) => {
   const { clientId } = req.params;
   try {
     await pool.query(`UPDATE contractors SET active = false WHERE client_id = $1`, [clientId]);
-    res.json({ message: `${clientId} disabled. Their demo page will now show a service unavailable message.` });
+    res.json({ message: `${clientId} disabled.` });
   } catch (err) { res.status(500).json({ error: 'Failed to disable contractor.' }); }
 });
 
@@ -323,6 +373,65 @@ app.post('/api/contractors/:clientId/enable', requireAdminKey, async (req, res) 
     await pool.query(`UPDATE contractors SET active = true WHERE client_id = $1`, [clientId]);
     res.json({ message: `${clientId} re-enabled.` });
   } catch (err) { res.status(500).json({ error: 'Failed to enable contractor.' }); }
+});
+
+// ─── POST /api/scrape-contractor — Gemini extracts info from contractor website
+app.post('/api/scrape-contractor', requireAdminKey, async (req, res) => {
+  const { url } = req.body;
+  if (!url) return res.status(400).json({ error: 'url is required' });
+
+  try {
+    // Fetch the website HTML
+    const pageRes = await fetch(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; PlumbLeadBot/1.0)' },
+    });
+    if (!pageRes.ok) throw new Error(`Failed to fetch URL: ${pageRes.status}`);
+    const html = await pageRes.text();
+
+    // Strip tags, collapse whitespace, cap at 12k chars for Gemini
+    const text = html
+      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 12000);
+
+    const prompt = `You are extracting business information from a plumbing contractor's website.
+Return ONLY a valid JSON object with these exact fields (use null for anything not found):
+{
+  "companyName": "string or null",
+  "phone": "string or null",
+  "email": "string or null",
+  "address": "string or null",
+  "city": "string or null",
+  "state": "string or null",
+  "zipCodes": "comma-separated zip codes or service area description, or null",
+  "services": ["array of service keys from: emergency-leak, drain-cleaning, water-heater-tank, water-heater-tankless, toilet, faucet-fixture, garbage-disposal, sewer-line, slab-leak, gas-line, repipe, water-softener, filtration"],
+  "notes": "any other relevant business info (years in business, license number, service area, etc.) or null"
+}
+
+Website content:
+${text}`;
+
+    const geminiRes = await ai.models.generateContent({
+      model: 'gemini-2.0-flash',
+      contents: prompt,
+    });
+
+    const raw = (geminiRes.text ?? '')
+      .trim()
+      .replace(/^```json\s*/i, '')
+      .replace(/^```\s*/i, '')
+      .replace(/\s*```$/i, '')
+      .trim();
+
+    const extracted = JSON.parse(raw);
+    res.json(extracted);
+  } catch (err: any) {
+    console.error('Scrape error:', err);
+    res.status(500).json({ error: err.message || 'Failed to scrape contractor website.' });
+  }
 });
 
 // ─── Start ────────────────────────────────────────────────────────────────────
