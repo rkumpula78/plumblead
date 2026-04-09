@@ -25,14 +25,10 @@ const openClawApiKey = process.env.OPENCLAW_API_KEY;
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
 const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || '';
 
-// ─── Stripe plan mapping ──────────────────────────────────────────────────────
 const STRIPE_PRICE_TO_PLAN: Record<string, string> = {
-  'price_1THvKdDATJBYD8CNUCHZNQ8B': 'starter',  // $97/mo
-  'price_1THvH7DATJBYD8CNVP8UjHVM': 'pro',       // $197/mo
-  // Add Agency price ID here when created in Stripe
+  'price_1THvKdDATJBYD8CNUCHZNQ8B': 'starter',
+  'price_1THvH7DATJBYD8CNVP8UjHVM': 'pro',
 };
-
-// ─── Postgres ─────────────────────────────────────────────────────────────────
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -63,7 +59,6 @@ async function initDb() {
       CREATE INDEX IF NOT EXISTS leads_source    ON leads ((payload->>'source'));
       CREATE INDEX IF NOT EXISTS leads_status    ON leads (status);
     `);
-
     await pool.query(`
       ALTER TABLE contractors
         ADD COLUMN IF NOT EXISTS phone                TEXT,
@@ -81,7 +76,6 @@ async function initDb() {
         ADD COLUMN IF NOT EXISTS stripe_customer_id   TEXT,
         ADD COLUMN IF NOT EXISTS stripe_subscription_id TEXT;
     `);
-
     await pool.query(`
       INSERT INTO contractors (client_id, client_name, active, plan)
       VALUES
@@ -90,23 +84,11 @@ async function initDb() {
         ('gps-plumbing', 'GPS Plumbing Inc.', true, 'trial')
       ON CONFLICT (client_id) DO NOTHING;
     `);
-
     await pool.query(`
       UPDATE contractors
       SET dashboard_code = client_id || '-' || EXTRACT(YEAR FROM NOW())::TEXT
       WHERE dashboard_code IS NULL;
     `);
-
-    await pool.query(`
-      UPDATE contractors
-      SET subscription_status = CASE
-        WHEN active = true AND plan != 'trial' THEN 'active'
-        WHEN plan = 'trial' THEN 'trial'
-        ELSE 'cancelled'
-      END
-      WHERE subscription_status = 'trial' AND plan != 'trial';
-    `);
-
     console.log('Database ready.');
   } catch (err) {
     console.error('Database init error:', err);
@@ -197,28 +179,21 @@ function requireAdminKey(req: express.Request, res: express.Response, next: expr
   next();
 }
 
-// ─── Health Check ─────────────────────────────────────────────────────────────
 app.get('/api/health', async (_req, res) => {
   try { await pool.query('SELECT 1'); res.json({ status: 'ok', db: 'connected', timestamp: new Date().toISOString() }); }
   catch { res.json({ status: 'ok', db: 'not connected', timestamp: new Date().toISOString() }); }
 });
 
-// ─── Contractor status (widget) ───────────────────────────────────────────────
 app.get('/api/contractor-status', async (req, res) => {
   const clientId = (req.query.clientId as string || 'demo').trim();
   try {
     const status = await getContractorStatus(clientId);
-    res.json({
-      active: status.active,
-      subscriptionStatus: status.subscriptionStatus,
-      callbackPhone: status.active ? null : status.callbackPhone,
-    });
+    res.json({ active: status.active, subscriptionStatus: status.subscriptionStatus, callbackPhone: status.active ? null : status.callbackPhone });
   } catch (err) {
     res.json({ active: true, subscriptionStatus: 'active', callbackPhone: null });
   }
 });
 
-// ─── Dashboard Auth — now returns plan so contractor sees upgrade options ─────
 app.get('/api/auth/dashboard', async (req, res) => {
   const code = (req.query.code as string || '').trim();
   if (!code) return res.status(400).json({ error: 'code is required' });
@@ -230,19 +205,13 @@ app.get('/api/auth/dashboard', async (req, res) => {
     if (!result.rows.length) return res.status(401).json({ error: 'Invalid access code' });
     const row = result.rows[0];
     if (!row.active) return res.status(403).json({ error: 'Account paused. Contact PlumbLead support.' });
-    res.json({
-      clientId: row.client_id,
-      label: row.client_name,
-      plan: row.plan || 'trial',
-      subscriptionStatus: row.subscription_status || 'trial',
-    });
+    res.json({ clientId: row.client_id, label: row.client_name, plan: row.plan || 'trial', subscriptionStatus: row.subscription_status || 'trial' });
   } catch (err) {
     console.error('Dashboard auth error:', err);
     res.status(500).json({ error: 'Auth failed' });
   }
 });
 
-// ─── Stripe Webhook ───────────────────────────────────────────────────────────
 app.post('/api/stripe/webhook', async (req, res) => {
   const sig = req.headers['stripe-signature'] as string;
   let event: any;
@@ -258,12 +227,10 @@ app.post('/api/stripe/webhook', async (req, res) => {
     try { event = JSON.parse(req.body.toString()); }
     catch { return res.status(400).json({ error: 'Invalid JSON' }); }
   }
-
   const obj = event.data?.object;
   const customerId = obj?.customer;
   const priceId = obj?.items?.data?.[0]?.price?.id || obj?.plan?.id;
   const subId = obj?.id;
-
   try {
     switch (event.type) {
       case 'customer.subscription.created':
@@ -271,60 +238,95 @@ app.post('/api/stripe/webhook', async (req, res) => {
         const plan = STRIPE_PRICE_TO_PLAN[priceId] || 'starter';
         const subStatus = obj.status === 'active' ? 'active' : 'past_due';
         await pool.query(
-          `UPDATE contractors
-           SET plan = $1, subscription_status = $2, active = true,
-               stripe_customer_id = $3, stripe_subscription_id = $4
-           WHERE stripe_customer_id = $3 OR stripe_subscription_id = $4`,
+          `UPDATE contractors SET plan = $1, subscription_status = $2, active = true, stripe_customer_id = $3, stripe_subscription_id = $4 WHERE stripe_customer_id = $3 OR stripe_subscription_id = $4`,
           [plan, subStatus, customerId, subId]
         );
+        console.log(`Stripe: ${event.type} — plan=${plan}, status=${subStatus}, customer=${customerId}`);
         break;
       }
       case 'customer.subscription.deleted': {
-        await pool.query(
-          `UPDATE contractors SET subscription_status = 'cancelled', active = false
-           WHERE stripe_customer_id = $1 OR stripe_subscription_id = $2`,
-          [customerId, subId]
-        );
+        await pool.query(`UPDATE contractors SET subscription_status = 'cancelled', active = false WHERE stripe_customer_id = $1 OR stripe_subscription_id = $2`, [customerId, subId]);
+        console.log(`Stripe: subscription deleted — customer=${customerId}`);
         break;
       }
       case 'invoice.payment_failed': {
-        await pool.query(
-          `UPDATE contractors SET subscription_status = 'past_due' WHERE stripe_customer_id = $1`,
-          [customerId]
-        );
+        await pool.query(`UPDATE contractors SET subscription_status = 'past_due' WHERE stripe_customer_id = $1`, [customerId]);
+        console.log(`Stripe: payment failed — customer=${customerId}`);
         break;
       }
     }
-  } catch (err) {
-    console.error('Stripe webhook DB error:', err);
-  }
+  } catch (err) { console.error('Stripe webhook DB error:', err); }
   res.json({ received: true });
 });
 
-// ─── Chat ─────────────────────────────────────────────────────────────────────
+// ─── Chat (with conversation history) ────────────────────────────────────────
 app.post('/api/chat', async (req, res) => {
-  const { message, lang = 'en', sessionId = 'plumblead-user' } = req.body;
+  const { message, history = [], lang = 'en', sessionId = 'plumblead-user' } = req.body;
   const isSpanish = lang === 'es';
-  const systemInstruction = `You are a friendly plumbing assistant for PlumbLead.ai. Your job is to quickly qualify the homeowner's issue and guide them to get a free quote.\n\nSTRICT RULES:\n- Keep responses SHORT — 2-4 sentences maximum. Never use headers, bullet points, or long lists.\n- Ask ONE clarifying question per response to narrow down the problem.\n- After 1-2 exchanges, encourage them to use the Instant Quote tool for a free estimate.\n- Be warm and helpful, not clinical or encyclopedic.\n- IMPORTANT: Respond entirely in ${isSpanish ? 'Spanish' : 'English'}.`;
 
+  const systemInstruction = `You are a friendly plumbing assistant for PlumbLead.ai. Your job is to quickly qualify the homeowner's issue and guide them to get a free quote.
+
+STRICT RULES:
+- Keep responses SHORT — 2-4 sentences maximum. Never use headers, bullet points, or long lists.
+- Ask ONE clarifying question per response to narrow down the problem.
+- After 1-2 exchanges, encourage them to use the Instant Quote tool for a free estimate.
+- Be warm and helpful, not clinical or encyclopedic.
+- Never break character or mention other AI systems.
+- IMPORTANT: Respond entirely in ${isSpanish ? 'Spanish' : 'English'}.`;
+
+  // ── Try OpenClaw if configured ────────────────────────────────────────────
   if (openClawApiEndpoint && openClawApiKey) {
     try {
-      const response = await fetch(openClawApiEndpoint, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${openClawApiKey}` }, body: JSON.stringify({ model: 'openclaw:plumblead', messages: [{ role: 'user', content: systemInstruction + '\n\n' + message }], user: sessionId }) });
-      const result = await response.json() as any;
-      const chatbotResponse = result.choices?.[0]?.message?.content || result.output;
-      if (chatbotResponse) return res.json({ response: chatbotResponse });
+      const openClawMessages = [
+        { role: 'system', content: systemInstruction },
+        ...history.map((m: { role: string; content: string }) => ({ role: m.role, content: m.content })),
+        { role: 'user', content: message },
+      ];
+      const response = await fetch(openClawApiEndpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${openClawApiKey}` },
+        body: JSON.stringify({ model: 'openclaw:plumblead', messages: openClawMessages, user: sessionId }),
+      });
+      if (response.ok) {
+        const result = await response.json() as any;
+        const chatbotResponse = result.choices?.[0]?.message?.content || result.output;
+        if (chatbotResponse) return res.json({ response: chatbotResponse });
+      }
     } catch (err) { console.error('OpenClaw error:', err); }
   }
 
+  // ── Gemini fallback — build multi-turn contents array ────────────────────
   try {
-    const geminiResponse = await ai.models.generateContent({ model: process.env.PLUMBLEAD_QUOTE_AI_MODEL || 'gemini-2.0-flash', contents: `${systemInstruction}\n\nHomeowner: ${message}` });
+    // Gemini requires alternating user/model roles — map history accordingly
+    const historyContents = (history as { role: string; content: string }[]).map(m => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: m.content }],
+    }));
+
+    // Prepend system instruction to first user turn
+    const firstUserText = historyContents.length === 0
+      ? `${systemInstruction}\n\nHomeowner: ${message}`
+      : `${systemInstruction}\n\nHomeowner: ${historyContents[0]?.parts[0]?.text}`;
+
+    const contents = historyContents.length === 0
+      ? [{ role: 'user', parts: [{ text: firstUserText }] }]
+      : [
+          { role: 'user', parts: [{ text: firstUserText }] },
+          ...historyContents.slice(1),
+          { role: 'user', parts: [{ text: message }] },
+        ];
+
+    const geminiResponse = await ai.models.generateContent({
+      model: process.env.PLUMBLEAD_QUOTE_AI_MODEL || 'gemini-2.0-flash',
+      contents,
+    });
     return res.json({ response: geminiResponse.text ?? "I'm sorry, I couldn't process that right now." });
   } catch (error) {
+    console.error('Gemini chat error:', error);
     return res.status(500).json({ error: 'Failed to get chatbot response.' });
   }
 });
 
-// ─── Lead Qualification ───────────────────────────────────────────────────────
 async function qualifyLeadWithGemini(serviceType: string, details: string, location: string): Promise<{ leadScore: string; crossSellOpportunities: string[] }> {
   const prompt = `You are a plumbing lead qualifier. Return ONLY a JSON object with no markdown:\n{ "leadScore": "Emergency|High Urgency|Routine", "crossSellOpportunities": ["array", "of", "strings"] }\nService: ${serviceType}\nDetails: ${details}\nLocation: ${location}`;
   try {
@@ -337,7 +339,6 @@ async function qualifyLeadWithGemini(serviceType: string, details: string, locat
   }
 }
 
-// ─── Quote ────────────────────────────────────────────────────────────────────
 app.post('/api/quote', async (req, res) => {
   const { serviceType, details, location, language = 'en', sessionId = 'plumblead-quote-user' } = req.body;
   const quoteRequest: QuoteRequest = { serviceType, details, location, language };
@@ -348,7 +349,11 @@ app.post('/api/quote', async (req, res) => {
   if (openClawApiEndpoint && openClawApiKey) {
     try {
       const qualificationPrompt = `You are a PlumbLead.ai Lead Qualifier. Return ONLY valid JSON:\n{ "leadScore": "Emergency|High Urgency|Routine", "crossSellOpportunities": ["string"], "geminiPromptRefinement": "optional" }\nService: ${serviceType}\nDetails: ${details}\nLocation: ${location}`;
-      const openClawResponse = await fetch(openClawApiEndpoint, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${openClawApiKey}` }, body: JSON.stringify({ model: 'openclaw:plumblead', messages: [{ role: 'user', content: qualificationPrompt }], user: sessionId }) });
+      const openClawResponse = await fetch(openClawApiEndpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${openClawApiKey}` },
+        body: JSON.stringify({ model: 'openclaw:plumblead', messages: [{ role: 'system', content: 'You are a plumbing lead qualifier. Return only valid JSON.' }, { role: 'user', content: qualificationPrompt }], user: sessionId }),
+      });
       if (openClawResponse.ok) {
         const openClawResult = await openClawResponse.json() as any;
         const raw = (openClawResult.choices?.[0]?.message?.content || openClawResult.output || '').trim().replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim();
@@ -375,7 +380,6 @@ app.post('/api/quote', async (req, res) => {
   }
 });
 
-// ─── POST /api/leads ──────────────────────────────────────────────────────────
 app.post('/api/leads', async (req, res) => {
   const clientId = req.body.clientId || 'demo';
   const status = await getContractorStatus(clientId);
@@ -392,7 +396,6 @@ app.post('/api/leads', async (req, res) => {
   res.json({ message: 'Lead received.', leadId: stored.id });
 });
 
-// ─── GET /api/leads ───────────────────────────────────────────────────────────
 app.get('/api/leads', requireAdminKey, async (req, res) => {
   const { clientId, status, source, limit = '200', offset = '0' } = req.query as Record<string, string>;
   try {
@@ -401,7 +404,6 @@ app.get('/api/leads', requireAdminKey, async (req, res) => {
   } catch (err) { res.status(500).json({ error: 'Failed to fetch leads.' }); }
 });
 
-// ─── PATCH /api/leads/:id ─────────────────────────────────────────────────────
 app.patch('/api/leads/:id', requireAdminKey, async (req, res) => {
   const { id } = req.params;
   const { status, jobValue, statusNote } = req.body;
@@ -412,7 +414,6 @@ app.patch('/api/leads/:id', requireAdminKey, async (req, res) => {
   } catch (err) { res.status(500).json({ error: 'Failed to update lead.' }); }
 });
 
-// ─── GET /api/contractors ─────────────────────────────────────────────────────
 app.get('/api/contractors', requireAdminKey, async (_req, res) => {
   try {
     const result = await pool.query(`SELECT * FROM contractors ORDER BY created_at DESC`);
@@ -420,23 +421,19 @@ app.get('/api/contractors', requireAdminKey, async (_req, res) => {
   } catch (err) { res.status(500).json({ error: 'Failed to fetch contractors.' }); }
 });
 
-// ─── POST /api/contractors ────────────────────────────────────────────────────
 app.post('/api/contractors', requireAdminKey, async (req, res) => {
   const { clientId, companyName, phone, callbackPhone, email, address, city, state, zipCodes, crmSystem, bilingual, plan, services, notes } = req.body;
   if (!clientId || !companyName || !phone) return res.status(400).json({ error: 'clientId, companyName, and phone are required.' });
   const dashboardCode = `${clientId}-${new Date().getFullYear()}`;
   try {
     const result = await pool.query(
-      `INSERT INTO contractors
-        (client_id, client_name, active, plan, subscription_status, phone, callback_phone, email,
-         address, city, state, zip_codes, crm_system, bilingual, services, notes, dashboard_code)
+      `INSERT INTO contractors (client_id, client_name, active, plan, subscription_status, phone, callback_phone, email, address, city, state, zip_codes, crm_system, bilingual, services, notes, dashboard_code)
        VALUES ($1,$2,true,$3,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
        ON CONFLICT (client_id) DO UPDATE SET
-         client_name = EXCLUDED.client_name, plan = EXCLUDED.plan,
-         phone = EXCLUDED.phone, callback_phone = EXCLUDED.callback_phone,
-         email = EXCLUDED.email, address = EXCLUDED.address, city = EXCLUDED.city,
-         state = EXCLUDED.state, zip_codes = EXCLUDED.zip_codes, crm_system = EXCLUDED.crm_system,
-         bilingual = EXCLUDED.bilingual, services = EXCLUDED.services, notes = EXCLUDED.notes,
+         client_name = EXCLUDED.client_name, plan = EXCLUDED.plan, phone = EXCLUDED.phone, callback_phone = EXCLUDED.callback_phone,
+         email = EXCLUDED.email, address = EXCLUDED.address, city = EXCLUDED.city, state = EXCLUDED.state,
+         zip_codes = EXCLUDED.zip_codes, crm_system = EXCLUDED.crm_system, bilingual = EXCLUDED.bilingual,
+         services = EXCLUDED.services, notes = EXCLUDED.notes,
          dashboard_code = COALESCE(contractors.dashboard_code, EXCLUDED.dashboard_code)
        RETURNING *`,
       [clientId, companyName, plan || 'trial', phone, callbackPhone || phone, email || null,
@@ -450,7 +447,6 @@ app.post('/api/contractors', requireAdminKey, async (req, res) => {
   }
 });
 
-// ─── PATCH /api/contractors/:clientId ────────────────────────────────────────
 app.patch('/api/contractors/:clientId', requireAdminKey, async (req, res) => {
   const { clientId } = req.params;
   const allowed = ['active','plan','subscription_status','notes','phone','callback_phone','email','city','state','zip_codes','crm_system','bilingual'];
@@ -466,12 +462,9 @@ app.patch('/api/contractors/:clientId', requireAdminKey, async (req, res) => {
     const result = await pool.query(`UPDATE contractors SET ${sets.join(', ')} WHERE client_id = $${i} RETURNING *`, values);
     if (!result.rows.length) return res.status(404).json({ error: 'Contractor not found' });
     res.json({ contractor: result.rows[0] });
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to update contractor.' });
-  }
+  } catch (err) { res.status(500).json({ error: 'Failed to update contractor.' }); }
 });
 
-// ─── POST /api/contractors/:clientId/dashboard-code ──────────────────────────
 app.post('/api/contractors/:clientId/dashboard-code', requireAdminKey, async (req, res) => {
   const { clientId } = req.params;
   const { code } = req.body;
@@ -482,12 +475,9 @@ app.post('/api/contractors/:clientId/dashboard-code', requireAdminKey, async (re
     const result = await pool.query(`UPDATE contractors SET dashboard_code = $1 WHERE client_id = $2 RETURNING dashboard_code`, [code.trim(), clientId]);
     if (!result.rows.length) return res.status(404).json({ error: 'Contractor not found' });
     res.json({ dashboard_code: result.rows[0].dashboard_code });
-  } catch (err) {
-    res.status(500).json({ error: 'Failed to update dashboard code.' });
-  }
+  } catch (err) { res.status(500).json({ error: 'Failed to update dashboard code.' }); }
 });
 
-// ─── POST /api/contractors/:clientId/disable|enable ──────────────────────────
 app.post('/api/contractors/:clientId/disable', requireAdminKey, async (req, res) => {
   const { clientId } = req.params;
   try {
@@ -504,7 +494,6 @@ app.post('/api/contractors/:clientId/enable', requireAdminKey, async (req, res) 
   } catch (err) { res.status(500).json({ error: 'Failed to enable contractor.' }); }
 });
 
-// ─── POST /api/scrape-contractor ──────────────────────────────────────────────
 app.post('/api/scrape-contractor', requireAdminKey, async (req, res) => {
   const { url } = req.body;
   if (!url) return res.status(400).json({ error: 'url is required' });
@@ -522,7 +511,6 @@ app.post('/api/scrape-contractor', requireAdminKey, async (req, res) => {
   }
 });
 
-// ─── Start ────────────────────────────────────────────────────────────────────
 initDb().then(() => {
   app.listen(port, () => console.log(`PlumbLead.ai server running on port ${port}`));
 });
