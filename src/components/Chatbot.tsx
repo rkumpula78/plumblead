@@ -1,6 +1,5 @@
 // src/components/Chatbot.tsx
 // PlumbLead.ai — Floating AI chat widget with quote handoff
-// After 2 AI responses, offers a CTA to open the quote modal
 
 import React, { useState, useRef, useEffect } from 'react';
 
@@ -9,12 +8,12 @@ interface Message {
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
-  showQuoteCta?: boolean; // triggers the handoff card
+  showQuoteCta?: boolean;
 }
 
 interface ChatbotProps {
   lang?: 'en' | 'es';
-  onOpenQuote?: () => void; // callback to open the modal
+  onOpenQuote?: () => void;
 }
 
 const API_BASE = 'https://plumblead-production.up.railway.app';
@@ -71,20 +70,27 @@ const Chatbot: React.FC<ChatbotProps> = ({ lang = 'en', onOpenQuote }) => {
   const sendMessage = async (text: string) => {
     if (!text.trim() || loading) return;
     const userMsg: Message = { id: Date.now().toString(), role: 'user', content: text.trim(), timestamp: new Date() };
-    setMessages(prev => [...prev, userMsg]);
+    const updatedMessages = [...messages, userMsg];
+    setMessages(updatedMessages);
     setInput('');
     setLoading(true);
+
+    // Build history for the API — exclude greeting, send last 10 turns max to keep payload small
+    const history = updatedMessages
+      .filter(m => m.id !== 'greeting')
+      .slice(-10)
+      .map(m => ({ role: m.role, content: m.content }));
+
     try {
       const res = await fetch(`${API_BASE}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text.trim(), lang, sessionId }),
+        body: JSON.stringify({ message: text.trim(), history, lang, sessionId }),
       });
       if (!res.ok) throw new Error('Server error');
       const data = await res.json();
       const newCount = aiResponseCount + 1;
       setAiResponseCount(newCount);
-      // Show quote CTA after 2nd AI response
       const showCta = newCount >= 2;
       setMessages(prev => [...prev, {
         id: (Date.now() + 1).toString(),
@@ -103,12 +109,7 @@ const Chatbot: React.FC<ChatbotProps> = ({ lang = 'en', onOpenQuote }) => {
 
   const handleGetQuote = () => {
     setOpen(false);
-    if (onOpenQuote) {
-      onOpenQuote();
-    } else {
-      // Fallback: navigate to quote page
-      window.location.href = '/quote';
-    }
+    if (onOpenQuote) { onOpenQuote(); } else { window.location.href = '/quote'; }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(input); } };
@@ -166,7 +167,6 @@ const Chatbot: React.FC<ChatbotProps> = ({ lang = 'en', onOpenQuote }) => {
                   </div>
                 </div>
 
-                {/* Quote handoff CTA — appears after 2nd AI response */}
                 {msg.showQuoteCta && (
                   <div className="plc-cta" style={{margin:'12px 0 0 36px',background:'#0D0D0D',borderRadius:12,padding:'14px 16px',border:'2px solid #F5A623'}}>
                     <div style={{fontSize:13,fontWeight:700,color:'#F5A623',marginBottom:4}}>{t.quoteCtaTitle}</div>
@@ -191,7 +191,7 @@ const Chatbot: React.FC<ChatbotProps> = ({ lang = 'en', onOpenQuote }) => {
             <div ref={messagesEndRef}/>
           </div>
 
-          {/* Quick suggestions — shown before first user message */}
+          {/* Quick suggestions */}
           {messages.filter(m=>m.role==='user').length===0 && (
             <div style={{padding:'10px 16px',background:'#FFF',borderTop:'1px solid #E8E6DF'}}>
               <div style={{fontSize:11,color:'#9E9B91',fontWeight:700,textTransform:'uppercase',letterSpacing:1,marginBottom:8}}>{t.suggestionLabel}</div>
