@@ -19,8 +19,9 @@ const ChatbotWithModal: React.FC = () => {
   const location = useLocation();
   const [quoteModalOpen, setQuoteModalOpen] = React.useState(false);
 
+  // Hide on pages that have their own widget or where chatbot adds no value
   const hide =
-    ['/widget-demo', '/terms', '/privacy', '/'].includes(location.pathname) ||
+    ['/widget-demo', '/terms', '/privacy'].includes(location.pathname) ||
     location.pathname.startsWith('/demo/') ||
     location.pathname.startsWith('/dashboard') ||
     location.pathname.startsWith('/admin') ||
@@ -34,7 +35,7 @@ const ChatbotWithModal: React.FC = () => {
         isOpen={quoteModalOpen}
         onClose={() => setQuoteModalOpen(false)}
         clientId="demo"
-        clientName="Your Local Plumber"
+        clientName="Demo Contractor"
         clientColor="#0ea5e9"
       />
       <Chatbot lang="en" onOpenQuote={() => setQuoteModalOpen(true)} />
