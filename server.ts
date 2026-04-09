@@ -31,16 +31,17 @@ const TWILIO_FROM_NUMBER  = process.env.TWILIO_FROM_NUMBER  || '+18335580877';
 const BACKEND_URL         = process.env.BACKEND_URL         || 'https://plumblead-production.up.railway.app';
 const FRONTEND_URL        = process.env.FRONTEND_URL        || 'https://plumblead.ai';
 
-// Price IDs mapped to plan names
+// Price IDs → plan names (used by webhook to set plan on payment)
 const STRIPE_PRICE_TO_PLAN: Record<string, string> = {
   'price_1THvKdDATJBYD8CNUCHZNQ8B': 'starter',
   'price_1THvH7DATJBYD8CNVP8UjHVM': 'pro',
+  'price_1TJoOyDATJBYD8CNQiijLaxf': 'agency',
 };
-// Plan names mapped to price IDs (for checkout session creation)
+// Plan names → price IDs (used by checkout session creation)
 const PLAN_TO_PRICE_ID: Record<string, string> = {
   starter: 'price_1THvKdDATJBYD8CNUCHZNQ8B',
   pro:     'price_1THvH7DATJBYD8CNVP8UjHVM',
-  agency:  'price_agency_placeholder', // update with real agency price ID
+  agency:  'price_1TJoOyDATJBYD8CNQiijLaxf',
 };
 
 const pool = new Pool({
@@ -213,7 +214,7 @@ app.get('/api/health', async (_req, res) => {
   catch { res.json({ status: 'ok', db: 'not connected', timestamp: new Date().toISOString() }); }
 });
 
-// ─── Contractor status ──────────────────────────────────────────────────────
+// ─── Contractor status ────────────────────────────────────────────────────────
 app.get('/api/contractor-status', async (req, res) => {
   const clientId = (req.query.clientId as string || 'demo').trim();
   try {
@@ -259,26 +260,19 @@ app.patch('/api/contractors/:clientId/call-settings', requireAdminKey, async (re
   } catch (err) { console.error('Call settings error:', err); res.status(500).json({ error: 'Failed to update.' }); }
 });
 
-// ─── Stripe: Create checkout session ───────────────────────────────────────────
-// POST /api/stripe/checkout
-// Body: { clientId, plan, email? }
-// Returns: { url } — redirect the browser to this Stripe-hosted checkout URL
+// ─── Stripe: Create checkout session ─────────────────────────────────────────
 app.post('/api/stripe/checkout', async (req, res) => {
   const { clientId, plan, email } = req.body;
   if (!clientId || !plan) return res.status(400).json({ error: 'clientId and plan are required.' });
 
   const priceId = PLAN_TO_PRICE_ID[plan];
-  if (!priceId || priceId.includes('placeholder')) {
-    return res.status(400).json({ error: `Plan '${plan}' is not configured. Contact support.` });
-  }
+  if (!priceId) return res.status(400).json({ error: `Plan '${plan}' is not configured. Contact support.` });
 
   const stripeKey = process.env.STRIPE_SECRET_KEY;
   if (!stripeKey) return res.status(500).json({ error: 'Stripe not configured.' });
 
   try {
     const stripe = require('stripe')(stripeKey);
-
-    // Look up the contractor to get their name and any existing stripe_customer_id
     const contractorRes = await pool.query(
       `SELECT client_name, email AS contractor_email, stripe_customer_id FROM contractors WHERE client_id = $1`,
       [clientId]
@@ -286,7 +280,6 @@ app.post('/api/stripe/checkout', async (req, res) => {
     const contractor = contractorRes.rows[0];
     if (!contractor) return res.status(404).json({ error: 'Contractor not found. Complete onboarding first.' });
 
-    // Reuse existing Stripe customer if available, create new one if not
     let customerId: string | undefined = contractor.stripe_customer_id || undefined;
     if (!customerId) {
       const customer = await stripe.customers.create({
@@ -295,7 +288,6 @@ app.post('/api/stripe/checkout', async (req, res) => {
         metadata: { clientId },
       });
       customerId = customer.id;
-      // Pre-save the customer ID so the webhook can match on it
       await pool.query(`UPDATE contractors SET stripe_customer_id=$1 WHERE client_id=$2`, [customerId, clientId]);
       console.log(`Stripe: created customer ${customerId} for ${clientId}`);
     }
@@ -304,10 +296,8 @@ app.post('/api/stripe/checkout', async (req, res) => {
       customer: customerId,
       mode: 'subscription',
       line_items: [{ price: priceId, quantity: 1 }],
-      metadata: { clientId, plan },  // Also stored on session for webhook fallback
-      subscription_data: {
-        metadata: { clientId, plan },  // Propagated to the subscription object
-      },
+      metadata: { clientId, plan },
+      subscription_data: { metadata: { clientId, plan } },
       success_url: `${FRONTEND_URL}/checkout/success?clientId=${encodeURIComponent(clientId)}&plan=${plan}&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${FRONTEND_URL}/checkout?clientId=${encodeURIComponent(clientId)}&cancelled=true`,
       allow_promotion_codes: true,
@@ -321,7 +311,7 @@ app.post('/api/stripe/checkout', async (req, res) => {
   }
 });
 
-// ─── Stripe: Webhook ─────────────────────────────────────────────────────────────
+// ─── Stripe: Webhook ──────────────────────────────────────────────────────────
 app.post('/api/stripe/webhook', async (req, res) => {
   const sig = req.headers['stripe-signature'] as string;
   let event: any;
@@ -337,7 +327,6 @@ app.post('/api/stripe/webhook', async (req, res) => {
   const customerId = obj?.customer;
   const priceId = obj?.items?.data?.[0]?.price?.id || obj?.plan?.id;
   const subId = obj?.id;
-  // clientId can be in subscription metadata (set at checkout) or on the customer object
   const metaClientId = obj?.metadata?.clientId || obj?.subscription_data?.metadata?.clientId;
 
   try {
@@ -346,7 +335,6 @@ app.post('/api/stripe/webhook', async (req, res) => {
       case 'customer.subscription.updated': {
         const plan = STRIPE_PRICE_TO_PLAN[priceId] || 'starter';
         const subStatus = obj.status === 'active' ? 'active' : 'past_due';
-        // Try to match on: stripe_customer_id OR stripe_subscription_id OR metadata clientId
         if (metaClientId) {
           await pool.query(
             `UPDATE contractors SET plan=$1, subscription_status=$2, active=true, stripe_customer_id=$3, stripe_subscription_id=$4
@@ -371,8 +359,6 @@ app.post('/api/stripe/webhook', async (req, res) => {
         await pool.query(`UPDATE contractors SET subscription_status='past_due' WHERE stripe_customer_id=$1`, [customerId]);
         console.log(`Stripe: payment failed — customer=${customerId}`);
         break;
-      // checkout.session.completed fires when the user finishes Stripe checkout
-      // Use this as a reliable secondary hook to link customer to contractor
       case 'checkout.session.completed': {
         const sessionClientId = obj?.metadata?.clientId;
         const sessionCustomerId = obj?.customer;
