@@ -27,7 +27,9 @@ const ai                  = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY
 const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || '';
 const TWILIO_ACCOUNT_SID  = process.env.TWILIO_ACCOUNT_SID  || '';
 const TWILIO_AUTH_TOKEN   = process.env.TWILIO_AUTH_TOKEN   || '';
-const TWILIO_FROM_NUMBER  = process.env.TWILIO_FROM_NUMBER  || '+18335580877';
+// (623) 263-2823 — verified local number connected to PlumbLead messaging service
+// (833) 558-0877 is toll-free support line only (verification rejected — do not use for SMS)
+const TWILIO_FROM_NUMBER  = process.env.TWILIO_FROM_NUMBER  || '+16232632823';
 const BACKEND_URL         = process.env.BACKEND_URL         || 'https://plumblead-production.up.railway.app';
 const FRONTEND_URL        = process.env.FRONTEND_URL        || 'https://plumblead.ai';
 
@@ -198,7 +200,7 @@ async function sendTwilioSms(to: string, body: string, from: string = TWILIO_FRO
     body: params.toString(),
   });
   if (!response.ok) { const err = await response.text(); console.error('Twilio SMS error:', err); }
-  else { console.log(`SMS sent to ${e164To}`); }
+  else { console.log(`SMS sent to ${e164To} from ${from}`); }
 }
 
 const ADMIN_KEY = process.env.DASHBOARD_ADMIN_KEY || 'plumblead-admin-2026';
@@ -210,7 +212,7 @@ function requireAdminKey(req: express.Request, res: express.Response, next: expr
 
 // ─── Health ───────────────────────────────────────────────────────────────────
 app.get('/api/health', async (_req, res) => {
-  try { await pool.query('SELECT 1'); res.json({ status: 'ok', db: 'connected', timestamp: new Date().toISOString() }); }
+  try { await pool.query('SELECT 1'); res.json({ status: 'ok', db: 'connected', timestamp: new Date().toISOString(), smsFrom: TWILIO_FROM_NUMBER }); }
   catch { res.json({ status: 'ok', db: 'not connected', timestamp: new Date().toISOString() }); }
 });
 
@@ -468,7 +470,7 @@ app.post('/api/contractors/:clientId/provision-number', requireAdminKey, async (
   if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN) return res.status(500).json({ error: 'Twilio not configured.' });
   try {
     const authHeader = 'Basic ' + Buffer.from(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`).toString('base64');
-    const searchParams = new URLSearchParams({ AreaCode: areaCode||'833', SmsEnabled:'true', VoiceEnabled:'true' });
+    const searchParams = new URLSearchParams({ AreaCode: areaCode||'623', SmsEnabled:'true', VoiceEnabled:'true' });
     const searchRes = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/AvailablePhoneNumbers/US/Local.json?${searchParams}`, { headers:{'Authorization':authHeader} });
     const searchData = await searchRes.json() as any;
     if (!searchData.available_phone_numbers?.length) return res.status(404).json({ error:`No numbers for area code ${areaCode}.` });
@@ -623,5 +625,5 @@ app.post('/api/scrape-contractor', requireAdminKey, async (req, res) => {
 });
 
 initDb().then(() => {
-  app.listen(port, () => console.log(`PlumbLead.ai server running on port ${port}`));
+  app.listen(port, () => console.log(`PlumbLead.ai server running on port ${port} | SMS from: ${TWILIO_FROM_NUMBER}`));
 });
