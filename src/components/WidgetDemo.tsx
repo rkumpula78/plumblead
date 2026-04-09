@@ -1,17 +1,18 @@
 // src/components/WidgetDemo.tsx
 // PlumbLead.ai — Widget demo page at /widget-demo
-// Shows a fake plumber site with a working embedded quote tool
+// Opens with the quote panel visible by default so contractors immediately see the product
 
 import React, { useState } from 'react';
 
 const WidgetDemo: React.FC = () => {
-  const [panelOpen, setPanelOpen] = useState(false);
-  const [tooltipVisible, setTooltipVisible] = useState(true);
+  // Open by default so contractors land and immediately see the widget in action
+  const [panelOpen, setPanelOpen] = useState(true);
+  const [tooltipVisible, setTooltipVisible] = useState(false);
 
   const color = '#F5A623';
 
   const open = () => { setPanelOpen(true); setTooltipVisible(false); };
-  const close = () => setPanelOpen(false);
+  const close = () => { setPanelOpen(false); setTooltipVisible(true); };
 
   const s: Record<string, React.CSSProperties> = {
     page: { fontFamily: "'Inter', -apple-system, sans-serif", background: '#fff', color: '#111', minHeight: '100vh' },
@@ -57,7 +58,7 @@ const WidgetDemo: React.FC = () => {
 
         {/* Demo banner */}
         <div style={s.banner}>
-          👀 This is a <span style={{ color: '#fff' }}>PlumbLead.ai widget demo</span> — click the 💛 bubble in the bottom-right corner
+          👀 This is a <span style={{ color: '#fff' }}>PlumbLead.ai widget demo</span> — the quote tool is already open in the bottom-right corner
         </div>
 
         {/* Fake nav */}
@@ -149,7 +150,7 @@ const WidgetDemo: React.FC = () => {
 
         {/* ── Widget ── */}
 
-        {/* Tooltip */}
+        {/* Tooltip — shown after panel is closed */}
         <div style={{
           position: 'fixed', bottom: 96, right: 24,
           background: '#0D0D0D', color: '#fff',
@@ -169,7 +170,7 @@ const WidgetDemo: React.FC = () => {
           onClick={close}
           style={{
             position: 'fixed', inset: 0,
-            background: 'rgba(0,0,0,0.5)',
+            background: 'rgba(0,0,0,0.4)',
             zIndex: 999997,
             opacity: panelOpen ? 1 : 0,
             pointerEvents: panelOpen ? 'all' : 'none',
@@ -177,7 +178,7 @@ const WidgetDemo: React.FC = () => {
           }}
         />
 
-        {/* Panel — fixed height, scrollable, always visible on screen */}
+        {/* Panel */}
         <div
           className="pl-demo-panel"
           style={{
@@ -200,27 +201,15 @@ const WidgetDemo: React.FC = () => {
           }}
         >
           {/* Header */}
-          <div style={{
-            background: '#0D0D0D', padding: '14px 20px',
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            flexShrink: 0,
-          }}>
+          <div style={{ background: '#0D0D0D', padding: '14px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{
-                width: 32, height: 32, borderRadius: '50%', background: color,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 11, fontWeight: 700, color: '#000', fontFamily: 'sans-serif',
-              }}>PL</div>
+              <div style={{ width: 32, height: 32, borderRadius: '50%', background: color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: '#000', fontFamily: 'sans-serif' }}>PL</div>
               <div>
                 <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', fontFamily: 'sans-serif' }}>PlumbLead.ai</div>
                 <div style={{ fontSize: 11, color: '#4CAF50', fontFamily: 'sans-serif' }}>● Online Now</div>
               </div>
             </div>
-            <button onClick={close} style={{
-              background: 'none', border: 'none', cursor: 'pointer',
-              color: '#9E9B91', fontSize: 20, lineHeight: 1, padding: 4,
-              transition: 'color 0.15s',
-            }}>✕</button>
+            <button onClick={close} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9E9B91', fontSize: 20, lineHeight: 1, padding: 4 }}>✕</button>
           </div>
 
           {/* iFrame */}
@@ -231,15 +220,9 @@ const WidgetDemo: React.FC = () => {
           />
 
           {/* Footer */}
-          <div style={{
-            background: '#0D0D0D', padding: '8px 16px',
-            textAlign: 'center', fontSize: 10, color: '#5C5A53',
-            fontFamily: 'sans-serif', flexShrink: 0,
-          }}>
+          <div style={{ background: '#0D0D0D', padding: '8px 16px', textAlign: 'center', fontSize: 10, color: '#5C5A53', fontFamily: 'sans-serif', flexShrink: 0 }}>
             Powered by{' '}
-            <a href="https://plumblead.ai" target="_blank" rel="noopener" style={{ color, textDecoration: 'none' }}>
-              PlumbLead.ai
-            </a>
+            <a href="https://plumblead.ai" target="_blank" rel="noopener" style={{ color, textDecoration: 'none' }}>PlumbLead.ai</a>
           </div>
         </div>
 
@@ -267,28 +250,11 @@ const WidgetDemo: React.FC = () => {
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                 </svg>
-                <div style={{
-                  position: 'absolute', top: 4, right: 4,
-                  width: 14, height: 14, background: '#D83030',
-                  borderRadius: '50%', border: '2px solid #fff',
-                }} />
+                <div style={{ position: 'absolute', top: 4, right: 4, width: 14, height: 14, background: '#D83030', borderRadius: '50%', border: '2px solid #fff' }} />
               </>
             )
           }
         </button>
-
-        {/* Arrow label */}
-        <div style={{
-          position: 'fixed', bottom: 106, right: 92,
-          background: '#0D0D0D', color,
-          padding: '8px 14px', fontSize: 12, fontWeight: 700,
-          fontFamily: 'sans-serif', zIndex: 500,
-          pointerEvents: 'none', whiteSpace: 'nowrap',
-          opacity: tooltipVisible && !panelOpen ? 1 : 0,
-          transition: 'opacity 0.3s ease',
-        }}>
-          👇 Try the AI Quote Widget
-        </div>
 
       </div>
     </>

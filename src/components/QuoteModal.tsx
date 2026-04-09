@@ -1,8 +1,4 @@
 // src/components/QuoteModal.tsx
-// Popup modal that wraps the QuoteTool for embedding on contractor sites
-// Opens when a button with data-plumblead-quote is clicked
-// Also used by the chatbot handoff CTA
-
 import React, { useState, useEffect } from 'react';
 
 const API_BASE = 'https://plumblead-production.up.railway.app';
@@ -25,24 +21,24 @@ interface QuoteResult {
 }
 
 const SERVICES = [
-  { key: 'water-heater-tank',     label: 'Water Heater (Tank)',     icon: '🔥', hint: '$1,200 – $2,800' },
-  { key: 'water-heater-tankless', label: 'Tankless Water Heater',   icon: '⚡', hint: '$2,500 – $5,500' },
-  { key: 'water-heater-repair',   label: 'Water Heater Repair',     icon: '🔧', hint: '$150 – $600' },
-  { key: 'emergency-leak',        label: '🚨 Emergency / Leak',     icon: '🚨', hint: 'Call us now' },
-  { key: 'drain-cleaning',        label: 'Drain Cleaning',          icon: '🚿', hint: '$150 – $400' },
-  { key: 'toilet-repair',         label: 'Toilet Repair / Install', icon: '🚽', hint: '$150 – $500' },
-  { key: 'leak-detection',        label: 'Leak Detection',          icon: '💧', hint: '$200 – $500' },
-  { key: 'sewer-line',            label: 'Sewer Line',              icon: '🔩', hint: '$2,000 – $8,000' },
-  { key: 'repiping',              label: 'Repiping',                icon: '🏠', hint: '$4,000 – $12,000' },
-  { key: 'faucet-fixture',        label: 'Faucets & Fixtures',      icon: '🚰', hint: '$150 – $400' },
-  { key: 'sump-pump',             label: 'Sump Pump',               icon: '⛽', hint: '$500 – $1,500' },
-  { key: 'other',                 label: 'Other Plumbing',          icon: '🛠️', hint: 'Varies' },
+  { key: 'water-heater-tank',     label: 'Water Heater (Tank)',     icon: '\uD83D\uDD25', hint: '$1,200 \u2013 $2,800' },
+  { key: 'water-heater-tankless', label: 'Tankless Water Heater',   icon: '\u26A1', hint: '$2,500 \u2013 $5,500' },
+  { key: 'water-heater-repair',   label: 'Water Heater Repair',     icon: '\uD83D\uDD27', hint: '$150 \u2013 $600' },
+  { key: 'emergency-leak',        label: 'Emergency / Leak',        icon: '\uD83D\uDEA8', hint: 'Call us now' },
+  { key: 'drain-cleaning',        label: 'Drain Cleaning',          icon: '\uD83D\uDEBF', hint: '$150 \u2013 $400' },
+  { key: 'toilet-repair',         label: 'Toilet Repair / Install', icon: '\uD83D\uDEBD', hint: '$150 \u2013 $500' },
+  { key: 'leak-detection',        label: 'Leak Detection',          icon: '\uD83D\uDCA7', hint: '$200 \u2013 $500' },
+  { key: 'sewer-line',            label: 'Sewer Line',              icon: '\uD83D\uDD29', hint: '$2,000 \u2013 $8,000' },
+  { key: 'repiping',              label: 'Repiping',                icon: '\uD83C\uDFE0', hint: '$4,000 \u2013 $12,000' },
+  { key: 'faucet-fixture',        label: 'Faucets & Fixtures',      icon: '\uD83D\uDEB0', hint: '$150 \u2013 $400' },
+  { key: 'sump-pump',             label: 'Sump Pump',               icon: '\u26BD', hint: '$500 \u2013 $1,500' },
+  { key: 'other',                 label: 'Other Plumbing',          icon: '\uD83D\uDEE0\uFE0F', hint: 'Varies' },
 ];
 
 const QuoteModal: React.FC<QuoteModalProps> = ({
   isOpen, onClose,
   clientId = 'demo',
-  clientName = 'Your Local Plumber',
+  clientName = 'Demo Contractor',
   clientColor = '#0ea5e9',
   lang = 'en',
 }) => {
@@ -60,14 +56,12 @@ const QuoteModal: React.FC<QuoteModalProps> = ({
   const [result, setResult] = useState<QuoteResult | null>(null);
   const [submitted, setSubmitted] = useState(false);
 
-  // Lock body scroll when open
   useEffect(() => {
     if (isOpen) { document.body.style.overflow = 'hidden'; }
     else { document.body.style.overflow = ''; }
     return () => { document.body.style.overflow = ''; };
   }, [isOpen]);
 
-  // Reset when closed
   useEffect(() => {
     if (!isOpen) {
       setTimeout(() => {
@@ -90,7 +84,7 @@ const QuoteModal: React.FC<QuoteModalProps> = ({
       setResult(data);
       setStep(3);
     } catch {
-      setResult({ estimateRange: '$150 – $5,500', personalizedMessage: `Our team will provide an exact quote. Get in touch with ${clientName} directly for a fast response.`, suggestedNextSteps: ['Contact us for a same-day assessment', 'We confirm pricing before any work begins'] });
+      setResult({ estimateRange: '$150 \u2013 $5,500', personalizedMessage: `Our team will provide an exact quote. Get in touch with ${clientName} directly for a fast response.`, suggestedNextSteps: ['Contact us for a same-day assessment', 'We confirm pricing before any work begins'] });
       setStep(3);
     } finally { setLoading(false); }
   };
@@ -120,25 +114,58 @@ const QuoteModal: React.FC<QuoteModalProps> = ({
 
   if (!isOpen) return null;
 
-  const inp: React.CSSProperties = { padding: '12px 14px', border: '2px solid #e2e8f0', borderRadius: 8, fontSize: 14, outline: 'none', fontFamily: 'inherit', width: '100%', boxSizing: 'border-box' };
+  const inp: React.CSSProperties = {
+    padding: '12px 14px', border: '2px solid #e2e8f0', borderRadius: 8,
+    fontSize: 14, outline: 'none', fontFamily: 'inherit',
+    width: '100%', boxSizing: 'border-box',
+  };
 
   return (
     <>
-      <style>{`@keyframes qm-fadein{from{opacity:0}to{opacity:1}}@keyframes qm-slidein{from{opacity:0;transform:translateY(40px)}to{opacity:1;transform:translateY(0)}}.qm-overlay{animation:qm-fadein 0.2s ease}.qm-panel{animation:qm-slidein 0.25s ease}`}</style>
+      <style>{`
+        @keyframes qm-fadein{from{opacity:0}to{opacity:1}}
+        @keyframes qm-slidein{from{opacity:0;transform:translateY(24px) scale(0.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+        .qm-overlay{animation:qm-fadein 0.2s ease}
+        .qm-panel{animation:qm-slidein 0.25s ease}
+      `}</style>
 
-      {/* Overlay */}
-      <div className="qm-overlay" onClick={onClose}
-        style={{ position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',zIndex:10000,display:'flex',alignItems:'flex-end',justifyContent:'center',padding:'0 0 0 0' }}
+      {/* Overlay — centered, padded so panel never touches screen edges */}
+      <div
+        className="qm-overlay"
+        onClick={onClose}
+        style={{
+          position: 'fixed', inset: 0,
+          background: 'rgba(0,0,0,0.6)',
+          zIndex: 10000,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '16px',
+          overflowY: 'auto',
+        }}
       >
-        {/* Panel */}
-        <div className="qm-panel" onClick={e=>e.stopPropagation()}
-          style={{ background:'#fff',width:'100%',maxWidth:560,maxHeight:'92vh',overflowY:'auto',borderRadius:'20px 20px 0 0',display:'flex',flexDirection:'column',fontFamily:'system-ui,-apple-system,sans-serif' }}
+        {/* Panel — max height with internal scroll */}
+        <div
+          className="qm-panel"
+          onClick={e => e.stopPropagation()}
+          style={{
+            background: '#fff',
+            width: '100%',
+            maxWidth: 520,
+            maxHeight: 'calc(100vh - 32px)',
+            overflowY: 'auto',
+            borderRadius: 16,
+            display: 'flex',
+            flexDirection: 'column',
+            fontFamily: 'system-ui,-apple-system,sans-serif',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+          }}
         >
           {/* Modal header */}
-          <div style={{ background: clientColor, padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderRadius: '18px 18px 0 0', flexShrink: 0 }}>
+          <div style={{ background: clientColor, padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderRadius: '16px 16px 0 0', flexShrink: 0 }}>
             <div>
               <div style={{ fontSize: 16, fontWeight: 800, color: '#fff' }}>{clientName}</div>
-              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)' }}>Instant Quote — Free, No Commitment</div>
+              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)' }}>Instant Quote \u2014 Free, No Commitment</div>
             </div>
             <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '50%', width: 32, height: 32, cursor: 'pointer', fontSize: 16, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
           </div>
@@ -158,7 +185,7 @@ const QuoteModal: React.FC<QuoteModalProps> = ({
           {/* Content */}
           <div style={{ padding: '20px', flex: 1 }}>
 
-            {/* Step 1 — Service */}
+            {/* Step 1 */}
             {step === 1 && (
               <div>
                 <p style={{ fontSize: 14, color: '#64748b', marginBottom: 16 }}>What can we help you with?</p>
@@ -175,14 +202,15 @@ const QuoteModal: React.FC<QuoteModalProps> = ({
               </div>
             )}
 
-            {/* Step 2 — Details */}
+            {/* Step 2 */}
             {step === 2 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 <button onClick={() => setStep(1)} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: 13, padding: 0, textAlign: 'left' }}>← Back</button>
                 <div style={{ background: '#eff6ff', borderRadius: 8, padding: '8px 12px', fontSize: 13, fontWeight: 600, color: clientColor }}>Selected: {service}</div>
                 <div>
                   <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Describe the issue</label>
-                  <textarea value={details} onChange={e => setDetails(e.target.value)} rows={3} placeholder="e.g. Water heater leaking, 12 years old. Located in Monroe, WA."
+                  <textarea value={details} onChange={e => setDetails(e.target.value)} rows={3}
+                    placeholder="e.g. Water heater leaking, 12 years old. Located in Monroe, WA."
                     style={{ ...inp, resize: 'vertical' }} />
                 </div>
                 <div>
@@ -192,20 +220,20 @@ const QuoteModal: React.FC<QuoteModalProps> = ({
                 <div>
                   <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>Urgency</label>
                   <div style={{ display: 'flex', gap: 8 }}>
-                    {[['emergency','🚨 Emergency','#fee2e2','#dc2626'],['soon','⏰ This Week','#fef3c7','#d97706'],['routine','📅 No Rush','#f0fdf4','#16a34a']].map(([val,label,bg,color]) => (
+                    {[['emergency','\uD83D\uDEA8 Emergency','#fee2e2','#dc2626'],['soon','\u23F0 This Week','#fef3c7','#d97706'],['routine','\uD83D\uDCC5 No Rush','#f0fdf4','#16a34a']].map(([val,label,bg,col]) => (
                       <button key={val} onClick={() => setUrgency(val)}
-                        style={{ flex: 1, padding: '9px 6px', borderRadius: 8, border: `2px solid ${urgency === val ? color : '#e2e8f0'}`, background: urgency === val ? bg : '#fff', color: urgency === val ? color : '#64748b', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>{label}</button>
+                        style={{ flex: 1, padding: '9px 6px', borderRadius: 8, border: `2px solid ${urgency === val ? col : '#e2e8f0'}`, background: urgency === val ? bg : '#fff', color: urgency === val ? col : '#64748b', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>{label}</button>
                     ))}
                   </div>
                 </div>
                 <button onClick={handleGetQuote} disabled={!details.trim() || loading}
                   style={{ padding: '14px', background: details.trim() && !loading ? clientColor : '#e2e8f0', color: details.trim() && !loading ? '#fff' : '#94a3b8', border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: details.trim() && !loading ? 'pointer' : 'not-allowed' }}>
-                  {loading ? 'Generating estimate...' : 'Get My Instant Estimate →'}
+                  {loading ? 'Generating estimate...' : 'Get My Instant Estimate \u2192'}
                 </button>
               </div>
             )}
 
-            {/* Step 3 — Estimate + contact */}
+            {/* Step 3 */}
             {step === 3 && result && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 <div style={{ background: clientColor, borderRadius: 12, padding: 20, color: '#fff' }}>
@@ -232,13 +260,13 @@ const QuoteModal: React.FC<QuoteModalProps> = ({
                   </div>
                   <button onClick={handleSubmit} disabled={!name.trim() || !phone.trim() || !consent || loading}
                     style={{ padding: '14px', background: name.trim() && phone.trim() && consent && !loading ? clientColor : '#e2e8f0', color: name.trim() && phone.trim() && consent && !loading ? '#fff' : '#94a3b8', border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: name.trim() && phone.trim() && consent && !loading ? 'pointer' : 'not-allowed' }}>
-                    {loading ? 'Sending...' : 'Send My Request →'}
+                    {loading ? 'Sending...' : 'Send My Request \u2192'}
                   </button>
                 </div>
               </div>
             )}
 
-            {/* Step 4 — Success */}
+            {/* Step 4 */}
             {step === 4 && (
               <div style={{ textAlign: 'center', padding: '20px 0' }}>
                 <div style={{ width: 64, height: 64, background: '#10b981', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, margin: '0 auto 16px' }}>✓</div>
