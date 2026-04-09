@@ -41,7 +41,7 @@ const Terms: React.FC = () => (
 
     <h2 style={{ fontSize: 20, fontWeight: 700, marginTop: 40, marginBottom: 12 }}>10. Contact</h2>
     <p>K48 Ventures LLC · PlumbLead.ai<br />
-    7010 E Acoma Dr Suite 101E, Scottsdale, AZ 85254<br />
+    7010 E Acoma Dr Suite 101, Scottsdale, AZ 85254<br />
     Email: <a href="mailto:ryan@plumblead.ai" style={{ color: '#0ea5e9' }}>ryan@plumblead.ai</a><br />
     Phone: <a href="tel:+18335580877" style={{ color: '#0ea5e9' }}>(833) 558-0877</a></p>
 
