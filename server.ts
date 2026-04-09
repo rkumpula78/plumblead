@@ -11,6 +11,8 @@ dotenv.config();
 const app = express();
 const port = process.env.PORT || 3000;
 
+// Twilio needs raw body for voice webhooks
+app.use('/api/voice', express.urlencoded({ extended: false }));
 app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }));
 app.use(cors({
   origin: (origin, callback) => { callback(null, true); },
@@ -24,6 +26,11 @@ const openClawApiEndpoint = process.env.OPENCLAW_API_ENDPOINT;
 const openClawApiKey = process.env.OPENCLAW_API_KEY;
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
 const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || '';
+
+const TWILIO_ACCOUNT_SID  = process.env.TWILIO_ACCOUNT_SID  || '';
+const TWILIO_AUTH_TOKEN   = process.env.TWILIO_AUTH_TOKEN   || '';
+const TWILIO_FROM_NUMBER  = process.env.TWILIO_FROM_NUMBER  || '+18335580877';
+const BACKEND_URL         = process.env.BACKEND_URL         || 'https://plumblead-production.up.railway.app';
 
 const STRIPE_PRICE_TO_PLAN: Record<string, string> = {
   'price_1THvKdDATJBYD8CNUCHZNQ8B': 'starter',
@@ -74,7 +81,9 @@ async function initDb() {
         ADD COLUMN IF NOT EXISTS dashboard_code       TEXT,
         ADD COLUMN IF NOT EXISTS subscription_status  TEXT NOT NULL DEFAULT 'trial',
         ADD COLUMN IF NOT EXISTS stripe_customer_id   TEXT,
-        ADD COLUMN IF NOT EXISTS stripe_subscription_id TEXT;
+        ADD COLUMN IF NOT EXISTS stripe_subscription_id TEXT,
+        ADD COLUMN IF NOT EXISTS twilio_number        TEXT,
+        ADD COLUMN IF NOT EXISTS missed_call_sms      BOOLEAN NOT NULL DEFAULT false;
     `);
     await pool.query(`
       INSERT INTO contractors (client_id, client_name, active, plan)
@@ -171,6 +180,34 @@ async function getContractorStatus(clientId: string): Promise<{ active: boolean;
   }
 }
 
+// Send SMS via Twilio REST API (no SDK needed)
+async function sendTwilioSms(to: string, body: string, from: string = TWILIO_FROM_NUMBER): Promise<void> {
+  if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN) {
+    console.error('Twilio credentials not configured — SMS not sent');
+    return;
+  }
+  const cleanTo = to.replace(/\D/g, '');
+  const e164To = cleanTo.startsWith('1') ? `+${cleanTo}` : `+1${cleanTo}`;
+  const params = new URLSearchParams({ To: e164To, From: from, Body: body });
+  const response = await fetch(
+    `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization': 'Basic ' + Buffer.from(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`).toString('base64'),
+      },
+      body: params.toString(),
+    }
+  );
+  if (!response.ok) {
+    const err = await response.text();
+    console.error('Twilio SMS error:', err);
+  } else {
+    console.log(`SMS sent to ${e164To}`);
+  }
+}
+
 const ADMIN_KEY = process.env.DASHBOARD_ADMIN_KEY || 'plumblead-admin-2026';
 
 function requireAdminKey(req: express.Request, res: express.Response, next: express.NextFunction) {
@@ -246,17 +283,194 @@ app.post('/api/stripe/webhook', async (req, res) => {
       }
       case 'customer.subscription.deleted': {
         await pool.query(`UPDATE contractors SET subscription_status = 'cancelled', active = false WHERE stripe_customer_id = $1 OR stripe_subscription_id = $2`, [customerId, subId]);
-        console.log(`Stripe: subscription deleted — customer=${customerId}`);
         break;
       }
       case 'invoice.payment_failed': {
         await pool.query(`UPDATE contractors SET subscription_status = 'past_due' WHERE stripe_customer_id = $1`, [customerId]);
-        console.log(`Stripe: payment failed — customer=${customerId}`);
         break;
       }
     }
   } catch (err) { console.error('Stripe webhook DB error:', err); }
   res.json({ received: true });
+});
+
+// ─── Voice: Incoming call handler (TwiML) ─────────────────────────────────────
+// Twilio calls this URL when a homeowner calls the contractor's PlumbLead number.
+// We ring the contractor's real phone. If no answer, dial action fires /api/voice/missed.
+app.post('/api/voice/incoming', async (req, res) => {
+  const calledNumber = (req.body.To || '').replace(/\D/g, '');
+
+  // Look up contractor by their Twilio number
+  let contractor: any = null;
+  try {
+    const result = await pool.query(
+      `SELECT client_id, client_name, callback_phone, missed_call_sms FROM contractors
+       WHERE REGEXP_REPLACE(twilio_number, '\\D', '', 'g') = $1 AND active = true`,
+      [calledNumber]
+    );
+    if (result.rows.length) contractor = result.rows[0];
+  } catch (err) {
+    console.error('Voice lookup error:', err);
+  }
+
+  const forwardTo = contractor?.callback_phone
+    ? contractor.callback_phone.replace(/\D/g, '')
+    : null;
+
+  const missedUrl = `${BACKEND_URL}/api/voice/missed?clientId=${encodeURIComponent(contractor?.client_id || '')}&callerNumber=${encodeURIComponent(req.body.From || '')}`;
+
+  res.set('Content-Type', 'text/xml');
+
+  if (!forwardTo) {
+    // No contractor found — play a generic message
+    res.send(`<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Say>Thank you for calling. Please hold while we connect you.</Say>
+  <Pause length="1"/>
+  <Say>We were unable to connect your call. Please try again shortly.</Say>
+</Response>`);
+    return;
+  }
+
+  // Ring contractor's real phone for 20 seconds. If no answer, fire missedUrl.
+  res.send(`<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Dial timeout="20" action="${missedUrl}" method="POST">
+    <Number>${forwardTo}</Number>
+  </Dial>
+</Response>`);
+});
+
+// ─── Voice: Missed call handler ───────────────────────────────────────────────
+// Fires when the contractor doesn't answer. Sends homeowner an SMS with quote link.
+app.post('/api/voice/missed', async (req, res) => {
+  const { clientId, callerNumber } = req.query as Record<string, string>;
+  const dialStatus = req.body.DialCallStatus || '';
+
+  // Only fire SMS if the call was not answered
+  if (['completed', 'in-progress'].includes(dialStatus)) {
+    res.set('Content-Type', 'text/xml');
+    res.send(`<?xml version="1.0" encoding="UTF-8"?><Response></Response>`);
+    return;
+  }
+
+  // Look up contractor details for personalized SMS
+  let contractorName = 'Your plumber';
+  let quoteUrl = 'https://plumblead.ai/quote';
+
+  try {
+    if (clientId) {
+      const result = await pool.query(
+        `SELECT client_name, client_id, missed_call_sms FROM contractors WHERE client_id = $1`,
+        [clientId]
+      );
+      if (result.rows.length && result.rows[0].missed_call_sms) {
+        contractorName = result.rows[0].client_name;
+        quoteUrl = `https://plumblead.ai/quote?client=${encodeURIComponent(result.rows[0].client_id)}`;
+      } else if (result.rows.length && !result.rows[0].missed_call_sms) {
+        // Missed call SMS disabled for this contractor
+        res.set('Content-Type', 'text/xml');
+        res.send(`<?xml version="1.0" encoding="UTF-8"?><Response></Response>`);
+        return;
+      }
+    }
+  } catch (err) {
+    console.error('Missed call contractor lookup error:', err);
+  }
+
+  const callerDigits = (callerNumber || '').replace(/\D/g, '');
+  if (callerDigits.length >= 10) {
+    const smsBody = `Hi! We missed your call at ${contractorName}. Get an instant quote online in under 60 seconds — no wait, no hold music: ${quoteUrl}`;
+    try {
+      await sendTwilioSms(callerDigits, smsBody);
+      // Save as a lead in Postgres
+      await saveLead({
+        phone: callerDigits,
+        source: 'missed-call',
+        clientId: clientId || 'unknown',
+        submittedAt: new Date().toISOString(),
+        dialStatus,
+      });
+      // Forward to n8n
+      const n8nUrl = process.env.N8N_WEBHOOK_URL;
+      if (n8nUrl) {
+        fetch(n8nUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone: callerDigits, source: 'missed-call', clientId: clientId || 'unknown', submittedAt: new Date().toISOString() }),
+        }).catch(err => console.error('n8n missed call forward error:', err));
+      }
+      console.log(`Missed call SMS sent to ${callerDigits} for clientId=${clientId}`);
+    } catch (err) {
+      console.error('Missed call SMS error:', err);
+    }
+  }
+
+  res.set('Content-Type', 'text/xml');
+  res.send(`<?xml version="1.0" encoding="UTF-8"?><Response></Response>`);
+});
+
+// ─── Provision a Twilio number for a contractor ───────────────────────────────
+// POST /api/contractors/:clientId/provision-number
+// Searches Twilio for a local number matching the contractor's area code,
+// buys it, configures the voice webhook, saves to Postgres.
+app.post('/api/contractors/:clientId/provision-number', requireAdminKey, async (req, res) => {
+  const { clientId } = req.params;
+  const { areaCode } = req.body; // e.g. "425" for Monroe WA
+
+  if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN) {
+    return res.status(500).json({ error: 'Twilio credentials not configured in Railway env vars.' });
+  }
+
+  try {
+    const authHeader = 'Basic ' + Buffer.from(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`).toString('base64');
+
+    // Step 1: Search for an available local number
+    const searchParams = new URLSearchParams({ AreaCode: areaCode || '833', SmsEnabled: 'true', VoiceEnabled: 'true' });
+    const searchRes = await fetch(
+      `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/AvailablePhoneNumbers/US/Local.json?${searchParams}`,
+      { headers: { 'Authorization': authHeader } }
+    );
+    const searchData = await searchRes.json() as any;
+    if (!searchData.available_phone_numbers?.length) {
+      return res.status(404).json({ error: `No numbers available for area code ${areaCode}. Try a different area code.` });
+    }
+    const numberToBuy = searchData.available_phone_numbers[0].phone_number;
+
+    // Step 2: Purchase the number and configure voice webhook
+    const buyParams = new URLSearchParams({
+      PhoneNumber: numberToBuy,
+      VoiceUrl: `${BACKEND_URL}/api/voice/incoming`,
+      VoiceMethod: 'POST',
+      FriendlyName: `PlumbLead - ${clientId}`,
+    });
+    const buyRes = await fetch(
+      `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/IncomingPhoneNumbers.json`,
+      { method: 'POST', headers: { 'Authorization': authHeader, 'Content-Type': 'application/x-www-form-urlencoded' }, body: buyParams.toString() }
+    );
+    const buyData = await buyRes.json() as any;
+    if (!buyData.phone_number) {
+      console.error('Twilio purchase error:', buyData);
+      return res.status(500).json({ error: 'Failed to purchase Twilio number.', detail: buyData });
+    }
+
+    // Step 3: Save to Postgres + enable missed call SMS
+    await pool.query(
+      `UPDATE contractors SET twilio_number = $1, missed_call_sms = true WHERE client_id = $2`,
+      [buyData.phone_number, clientId]
+    );
+
+    console.log(`Provisioned ${buyData.phone_number} for ${clientId}`);
+    res.json({
+      message: 'Number provisioned successfully.',
+      twilioNumber: buyData.phone_number,
+      clientId,
+      nextStep: `Give ${buyData.phone_number} to the contractor to use on their website and Google Business profile.`,
+    });
+  } catch (err: any) {
+    console.error('Provision number error:', err);
+    res.status(500).json({ error: err.message || 'Failed to provision number.' });
+  }
 });
 
 // ─── Chat (with conversation history) ────────────────────────────────────────
@@ -274,7 +488,6 @@ STRICT RULES:
 - Never break character or mention other AI systems.
 - IMPORTANT: Respond entirely in ${isSpanish ? 'Spanish' : 'English'}.`;
 
-  // ── Try OpenClaw if configured ────────────────────────────────────────────
   if (openClawApiEndpoint && openClawApiKey) {
     try {
       const openClawMessages = [
@@ -295,19 +508,14 @@ STRICT RULES:
     } catch (err) { console.error('OpenClaw error:', err); }
   }
 
-  // ── Gemini fallback — build multi-turn contents array ────────────────────
   try {
-    // Gemini requires alternating user/model roles — map history accordingly
     const historyContents = (history as { role: string; content: string }[]).map(m => ({
       role: m.role === 'assistant' ? 'model' : 'user',
       parts: [{ text: m.content }],
     }));
-
-    // Prepend system instruction to first user turn
     const firstUserText = historyContents.length === 0
       ? `${systemInstruction}\n\nHomeowner: ${message}`
       : `${systemInstruction}\n\nHomeowner: ${historyContents[0]?.parts[0]?.text}`;
-
     const contents = historyContents.length === 0
       ? [{ role: 'user', parts: [{ text: firstUserText }] }]
       : [
@@ -315,7 +523,6 @@ STRICT RULES:
           ...historyContents.slice(1),
           { role: 'user', parts: [{ text: message }] },
         ];
-
     const geminiResponse = await ai.models.generateContent({
       model: process.env.PLUMBLEAD_QUOTE_AI_MODEL || 'gemini-2.0-flash',
       contents,
@@ -449,7 +656,7 @@ app.post('/api/contractors', requireAdminKey, async (req, res) => {
 
 app.patch('/api/contractors/:clientId', requireAdminKey, async (req, res) => {
   const { clientId } = req.params;
-  const allowed = ['active','plan','subscription_status','notes','phone','callback_phone','email','city','state','zip_codes','crm_system','bilingual'];
+  const allowed = ['active','plan','subscription_status','notes','phone','callback_phone','email','city','state','zip_codes','crm_system','bilingual','missed_call_sms'];
   const sets: string[] = [];
   const values: unknown[] = [];
   let i = 1;
