@@ -14,17 +14,19 @@ import Terms from './components/Terms';
 import Privacy from './components/Privacy';
 import AdminOnboard from './components/AdminOnboard';
 import AdminContractors from './components/AdminContractors';
+import CheckoutPage from './components/CheckoutPage';
+import CheckoutSuccess from './components/CheckoutSuccess';
 
 const ChatbotWithModal: React.FC = () => {
   const location = useLocation();
   const [quoteModalOpen, setQuoteModalOpen] = React.useState(false);
 
-  // Hide on pages that have their own widget or where chatbot adds no value
   const hide =
     ['/widget-demo', '/terms', '/privacy'].includes(location.pathname) ||
     location.pathname.startsWith('/demo/') ||
     location.pathname.startsWith('/dashboard') ||
     location.pathname.startsWith('/admin') ||
+    location.pathname.startsWith('/checkout') ||
     (location.pathname === '/quote' && new URLSearchParams(location.search).get('widget') === '1');
 
   if (hide) return null;
@@ -59,6 +61,8 @@ function App() {
         <Route path="/demo/gps" element={<GPSPlumbingDemo />} />
         <Route path="/admin/onboard" element={<AdminOnboard />} />
         <Route path="/admin/contractors" element={<AdminContractors />} />
+        <Route path="/checkout" element={<CheckoutPage />} />
+        <Route path="/checkout/success" element={<CheckoutSuccess />} />
       </Routes>
       <ChatbotWithModal />
     </Router>
