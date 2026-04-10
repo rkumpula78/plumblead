@@ -1,9 +1,11 @@
 // src/components/LandingPage.tsx
-// PlumbLead.ai — Full landing page with QuoteTool + QuoteModal
+// PlumbLead.ai — Full landing page with QuoteTool + QuoteModal + Chatbot handoff
 // Trades aesthetic: Bebas Neue + DM Sans, black/yellow/white
 
 import React, { useState, useEffect, useRef } from 'react';
 import QuoteModal from './QuoteModal';
+import Chatbot from './Chatbot';
+import type { ChatContext } from './Chatbot';
 
 // ─── API Base ────────────────────────────────────────────────────────────────────
 const API_BASE = 'https://plumblead-production.up.railway.app';
@@ -287,7 +289,6 @@ const FaqItem: React.FC<{ question: string; answer: string; index: number }> = (
 };
 
 // ─── Water Revenue Section ─────────────────────────────────────────────────────
-// Contractor-facing pitch: water report as a revenue tool
 
 const WaterRevenueSection: React.FC = () => (
   <section style={{ background: '#0c4a6e', padding: '80px', borderTop: '4px solid #0ea5e9', borderBottom: '4px solid #0D0D0D' }}>
@@ -297,7 +298,6 @@ const WaterRevenueSection: React.FC = () => (
         <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: 2, fontWeight: 700, color: '#7dd3fc' }}>Revenue Multiplier</div>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 60, alignItems: 'center' }}>
-        {/* Left: headline + explanation */}
         <div>
           <h2 style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 56, lineHeight: 1, textTransform: 'uppercase', color: '#fff', marginBottom: 20 }}>
             Turn Water Quality<br/>
@@ -320,16 +320,10 @@ const WaterRevenueSection: React.FC = () => (
             ))}
           </div>
           <div style={{ marginTop: 32, display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-            <a href="/water-quality" style={{ background: '#facc15', color: '#0c4a6e', fontWeight: 800, fontSize: 15, padding: '14px 28px', textDecoration: 'none', letterSpacing: 0.3 }}>
-              See the Report →
-            </a>
-            <a href="/submit-trial" style={{ background: 'transparent', color: '#7dd3fc', fontWeight: 600, fontSize: 15, padding: '14px 24px', textDecoration: 'none', border: '1px solid #1e6a9a' }}>
-              Start Free Trial
-            </a>
+            <a href="/water-quality" style={{ background: '#facc15', color: '#0c4a6e', fontWeight: 800, fontSize: 15, padding: '14px 28px', textDecoration: 'none', letterSpacing: 0.3 }}>See the Report →</a>
+            <a href="/submit-trial" style={{ background: 'transparent', color: '#7dd3fc', fontWeight: 600, fontSize: 15, padding: '14px 24px', textDecoration: 'none', border: '1px solid #1e6a9a' }}>Start Free Trial</a>
           </div>
         </div>
-
-        {/* Right: revenue breakdown cards */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
           {[
             { icon: '🧂', title: 'Water Softener', range: '$800 – $3,000', detail: 'Install + annual salt service', tag: 'Most Common' },
@@ -345,7 +339,6 @@ const WaterRevenueSection: React.FC = () => (
               <div style={{ fontSize: 12, color: '#64b5d6' }}>{card.detail}</div>
             </div>
           ))}
-          {/* Bottom stat bar */}
           <div style={{ gridColumn: '1 / -1', background: 'rgba(250,204,21,0.1)', border: '1px solid rgba(250,204,21,0.3)', borderRadius: 10, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 16 }}>
             <span style={{ fontSize: 28 }}>📊</span>
             <div>
@@ -364,10 +357,21 @@ const WaterRevenueSection: React.FC = () => (
 const LandingPage: React.FC = () => {
   const [lang, setLang] = useState<'en'|'es'>('en');
   const [quoteModalOpen, setQuoteModalOpen] = useState(false);
+  const [chatContext, setChatContext] = useState<ChatContext | undefined>(undefined);
   const t = T[lang];
   const quoteRef = useRef<HTMLElement>(null);
 
-  const scrollToQuote = (e: React.MouseEvent) => { e.preventDefault(); quoteRef.current?.scrollIntoView({ behavior: 'smooth' }); };
+  // Chatbot hands off context when user clicks "Get My Estimate"
+  const handleOpenQuote = (context?: ChatContext) => {
+    setChatContext(context);
+    setQuoteModalOpen(true);
+  };
+
+  // Clear context after modal closes so a fresh open doesn't inherit old chat
+  const handleCloseModal = () => {
+    setQuoteModalOpen(false);
+    setTimeout(() => setChatContext(undefined), 400);
+  };
 
   return (
     <>
@@ -379,7 +383,19 @@ const LandingPage: React.FC = () => {
         input:focus, textarea:focus { border-color: #F5A623 !important; outline: none; }
       `}</style>
 
-      <QuoteModal isOpen={quoteModalOpen} onClose={() => setQuoteModalOpen(false)} clientId="demo" clientName="Your Local Plumber" clientColor="#0ea5e9" lang={lang} />
+      {/* QuoteModal receives chat context as prefill */}
+      <QuoteModal
+        isOpen={quoteModalOpen}
+        onClose={handleCloseModal}
+        clientId="demo"
+        clientName="Your Local Plumber"
+        clientColor="#0ea5e9"
+        lang={lang}
+        prefill={chatContext}
+      />
+
+      {/* Chatbot wired to open QuoteModal with context on handoff */}
+      <Chatbot lang={lang} onOpenQuote={handleOpenQuote} />
 
       <div style={{ background:'#F5A623',padding:'10px 40px',display:'flex',alignItems:'center',justifyContent:'center',gap:12,fontSize:14,fontWeight:700,color:'#0D0D0D' }}>
         <span style={{ width:8,height:8,background:'#0D0D0D',borderRadius:'50%',display:'inline-block' }}/>
@@ -411,7 +427,7 @@ const LandingPage: React.FC = () => {
             {t.heroSub.split('$3,200').map((part,i)=>i===0?part:<React.Fragment key={i}><strong style={{ color:'#FFF' }}>$3,200</strong>{part}</React.Fragment>)}
           </p>
           <div style={{ display:'flex',gap:16,alignItems:'center',flexWrap:'wrap' }}>
-            <button onClick={()=>setQuoteModalOpen(true)} style={{ background:'#F5A623',color:'#0D0D0D',fontWeight:700,fontSize:16,padding:'16px 32px',border:'none',cursor:'pointer',letterSpacing:0.5,fontFamily:'DM Sans, sans-serif' }}>{t.heroCta}</button>
+            <button onClick={()=>handleOpenQuote()} style={{ background:'#F5A623',color:'#0D0D0D',fontWeight:700,fontSize:16,padding:'16px 32px',border:'none',cursor:'pointer',letterSpacing:0.5,fontFamily:'DM Sans, sans-serif' }}>{t.heroCta}</button>
             <a href="#how" style={{ background:'transparent',color:'#9E9B91',fontWeight:500,fontSize:15,padding:'16px 24px',border:'1px solid #333',textDecoration:'none' }}>{t.heroSecondary}</a>
           </div>
           <div style={{ marginTop:40,display:'flex',gap:24,flexWrap:'wrap' }}>
@@ -467,7 +483,6 @@ const LandingPage: React.FC = () => {
         </div>
       </section>
 
-      {/* ── Water Revenue Section ── */}
       <WaterRevenueSection />
 
       <div style={{ background:'#0D0D0D',padding:'80px' }}>
@@ -489,15 +504,14 @@ const LandingPage: React.FC = () => {
         <QuoteTool lang={lang}/>
       </section>
 
-      {/* Pricing */}
       <section id="pricing" style={{ background:'#F5F4F0',padding:'80px' }}>
         <div style={{ fontSize:11,textTransform:'uppercase',letterSpacing:2,fontWeight:700,color:'#C4841A',marginBottom:16,display:'flex',alignItems:'center',gap:8 }}><span style={{ display:'block',width:24,height:2,background:'#F5A623' }}/> Pricing</div>
         <h2 style={{ fontFamily:'Bebas Neue, sans-serif',fontSize:56,lineHeight:1,textTransform:'uppercase',marginBottom:40 }}>One Job Pays For <span style={{ color:'#C4841A' }}>Six Months</span></h2>
         <div style={{ display:'grid',gridTemplateColumns:'repeat(3,1fr)' }}>
           {[
-            { tier:'Starter', price:'$97',  features:['AI chat widget (200 leads/mo)','Instant quote estimates','Water quality reports included','Email lead delivery','English only','Standard response templates'],        featured:false, stripeUrl: STRIPE_STARTER },
+            { tier:'Starter', price:'$97',  features:['AI chat widget (200 leads/mo)','Instant quote estimates','Water quality reports included','Email lead delivery','English only','Standard response templates'], featured:false, stripeUrl: STRIPE_STARTER },
             { tier:'Pro',     price:'$197', features:['Unlimited leads','AI quote + lead scoring','Water quality reports included','CRM / n8n webhook routing','English + Spanish (auto)','Missed call recovery','Priority support'], featured:true,  stripeUrl: STRIPE_PRO },
-            { tier:'Agency',  price:'$497', features:['Up to 5 contractor accounts','White-label dashboard','Everything in Pro ×5','Water quality for all locations','Reseller margin included','Dedicated onboarding call'],    featured:false, stripeUrl: STRIPE_AGENCY },
+            { tier:'Agency',  price:'$497', features:['Up to 5 contractor accounts','White-label dashboard','Everything in Pro ×5','Water quality for all locations','Reseller margin included','Dedicated onboarding call'], featured:false, stripeUrl: STRIPE_AGENCY },
           ].map((plan,i)=>(
             <div key={i} style={{ padding:'40px 36px',border:plan.featured?'3px solid #F5A623':'2px solid #E8E6DF',background:plan.featured?'#0D0D0D':'#FFF',position:'relative',transform:plan.featured?'scaleY(1.02)':'none',zIndex:plan.featured?2:1,borderRight:!plan.featured&&i===0?'none':undefined,borderLeft:!plan.featured&&i===2?'none':undefined }}>
               {plan.featured&&<div style={{ position:'absolute',top:-14,left:'50%',transform:'translateX(-50%)',background:'#F5A623',color:'#000',fontWeight:700,fontSize:11,padding:'4px 16px',letterSpacing:1.5,textTransform:'uppercase',whiteSpace:'nowrap' }}>Most Popular</div>}
