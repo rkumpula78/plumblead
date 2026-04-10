@@ -21,18 +21,18 @@ interface QuoteResult {
 }
 
 const SERVICES = [
-  { key: 'water-heater-tank',     label: 'Water Heater (Tank)',     icon: '\uD83D\uDD25', hint: '$1,200 \u2013 $2,800' },
-  { key: 'water-heater-tankless', label: 'Tankless Water Heater',   icon: '\u26A1', hint: '$2,500 \u2013 $5,500' },
-  { key: 'water-heater-repair',   label: 'Water Heater Repair',     icon: '\uD83D\uDD27', hint: '$150 \u2013 $600' },
-  { key: 'emergency-leak',        label: 'Emergency / Leak',        icon: '\uD83D\uDEA8', hint: 'Call us now' },
-  { key: 'drain-cleaning',        label: 'Drain Cleaning',          icon: '\uD83D\uDEBF', hint: '$150 \u2013 $400' },
-  { key: 'toilet-repair',         label: 'Toilet Repair / Install', icon: '\uD83D\uDEBD', hint: '$150 \u2013 $500' },
-  { key: 'leak-detection',        label: 'Leak Detection',          icon: '\uD83D\uDCA7', hint: '$200 \u2013 $500' },
-  { key: 'sewer-line',            label: 'Sewer Line',              icon: '\uD83D\uDD29', hint: '$2,000 \u2013 $8,000' },
-  { key: 'repiping',              label: 'Repiping',                icon: '\uD83C\uDFE0', hint: '$4,000 \u2013 $12,000' },
-  { key: 'faucet-fixture',        label: 'Faucets & Fixtures',      icon: '\uD83D\uDEB0', hint: '$150 \u2013 $400' },
-  { key: 'sump-pump',             label: 'Sump Pump',               icon: '\u26BD', hint: '$500 \u2013 $1,500' },
-  { key: 'other',                 label: 'Other Plumbing',          icon: '\uD83D\uDEE0\uFE0F', hint: 'Varies' },
+  { key: 'water-heater-tank',     label: 'Water Heater (Tank)',     icon: '🔥', hint: '$1,200 – $2,800' },
+  { key: 'water-heater-tankless', label: 'Tankless Water Heater',   icon: '⚡', hint: '$2,500 – $5,500' },
+  { key: 'water-heater-repair',   label: 'Water Heater Repair',     icon: '🔧', hint: '$150 – $600' },
+  { key: 'emergency-leak',        label: 'Emergency / Leak',        icon: '🚨', hint: 'Call us now' },
+  { key: 'drain-cleaning',        label: 'Drain Cleaning',          icon: '🚿', hint: '$150 – $400' },
+  { key: 'toilet-repair',         label: 'Toilet Repair / Install', icon: '🚽', hint: '$150 – $500' },
+  { key: 'leak-detection',        label: 'Leak Detection',          icon: '💧', hint: '$200 – $500' },
+  { key: 'sewer-line',            label: 'Sewer Line',              icon: '🔩', hint: '$2,000 – $8,000' },
+  { key: 'repiping',              label: 'Repiping',                icon: '🏠', hint: '$4,000 – $12,000' },
+  { key: 'faucet-fixture',        label: 'Faucets & Fixtures',      icon: '🚰', hint: '$150 – $400' },
+  { key: 'sump-pump',             label: 'Sump Pump',               icon: '⚽', hint: '$500 – $1,500' },
+  { key: 'other',                 label: 'Other Plumbing',          icon: '🛠️', hint: 'Varies' },
 ];
 
 const QuoteModal: React.FC<QuoteModalProps> = ({
@@ -84,7 +84,7 @@ const QuoteModal: React.FC<QuoteModalProps> = ({
       setResult(data);
       setStep(3);
     } catch {
-      setResult({ estimateRange: '$150 \u2013 $5,500', personalizedMessage: `Our team will provide an exact quote. Get in touch with ${clientName} directly for a fast response.`, suggestedNextSteps: ['Contact us for a same-day assessment', 'We confirm pricing before any work begins'] });
+      setResult({ estimateRange: '$150 – $5,500', personalizedMessage: `Our team will provide an exact quote. Get in touch with ${clientName} directly for a fast response.`, suggestedNextSteps: ['Contact us for a same-day assessment', 'We confirm pricing before any work begins'] });
       setStep(3);
     } finally { setLoading(false); }
   };
@@ -114,6 +114,10 @@ const QuoteModal: React.FC<QuoteModalProps> = ({
 
   if (!isOpen) return null;
 
+  // Extract zip from location if homeowner typed one (e.g. "Monroe, WA 98272" or just "98272")
+  const zipMatch = location.match(/\b\d{5}\b/);
+  const waterReportUrl = `https://plumblead.ai/water-quality${zipMatch ? `?zip=${zipMatch[0]}` : ''}`;
+
   const inp: React.CSSProperties = {
     padding: '12px 14px', border: '2px solid #e2e8f0', borderRadius: 8,
     fontSize: 14, outline: 'none', fontFamily: 'inherit',
@@ -129,7 +133,6 @@ const QuoteModal: React.FC<QuoteModalProps> = ({
         .qm-panel{animation:qm-slidein 0.25s ease}
       `}</style>
 
-      {/* Overlay — centered, padded so panel never touches screen edges */}
       <div
         className="qm-overlay"
         onClick={onClose}
@@ -144,7 +147,6 @@ const QuoteModal: React.FC<QuoteModalProps> = ({
           overflowY: 'auto',
         }}
       >
-        {/* Panel — max height with internal scroll */}
         <div
           className="qm-panel"
           onClick={e => e.stopPropagation()}
@@ -165,7 +167,7 @@ const QuoteModal: React.FC<QuoteModalProps> = ({
           <div style={{ background: clientColor, padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderRadius: '16px 16px 0 0', flexShrink: 0 }}>
             <div>
               <div style={{ fontSize: 16, fontWeight: 800, color: '#fff' }}>{clientName}</div>
-              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)' }}>Instant Quote \u2014 Free, No Commitment</div>
+              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)' }}>Instant Quote — Free, No Commitment</div>
             </div>
             <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '50%', width: 32, height: 32, cursor: 'pointer', fontSize: 16, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
           </div>
@@ -215,12 +217,12 @@ const QuoteModal: React.FC<QuoteModalProps> = ({
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Your city / zip</label>
-                  <input value={location} onChange={e => setLocation(e.target.value)} placeholder="e.g. Monroe, WA" style={inp} />
+                  <input value={location} onChange={e => setLocation(e.target.value)} placeholder="e.g. Monroe, WA or 98272" style={inp} />
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>Urgency</label>
                   <div style={{ display: 'flex', gap: 8 }}>
-                    {[['emergency','\uD83D\uDEA8 Emergency','#fee2e2','#dc2626'],['soon','\u23F0 This Week','#fef3c7','#d97706'],['routine','\uD83D\uDCC5 No Rush','#f0fdf4','#16a34a']].map(([val,label,bg,col]) => (
+                    {[['emergency','🚨 Emergency','#fee2e2','#dc2626'],['soon','⏰ This Week','#fef3c7','#d97706'],['routine','📅 No Rush','#f0fdf4','#16a34a']].map(([val,label,bg,col]) => (
                       <button key={val} onClick={() => setUrgency(val)}
                         style={{ flex: 1, padding: '9px 6px', borderRadius: 8, border: `2px solid ${urgency === val ? col : '#e2e8f0'}`, background: urgency === val ? bg : '#fff', color: urgency === val ? col : '#64748b', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>{label}</button>
                     ))}
@@ -228,7 +230,7 @@ const QuoteModal: React.FC<QuoteModalProps> = ({
                 </div>
                 <button onClick={handleGetQuote} disabled={!details.trim() || loading}
                   style={{ padding: '14px', background: details.trim() && !loading ? clientColor : '#e2e8f0', color: details.trim() && !loading ? '#fff' : '#94a3b8', border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: details.trim() && !loading ? 'pointer' : 'not-allowed' }}>
-                  {loading ? 'Generating estimate...' : 'Get My Instant Estimate \u2192'}
+                  {loading ? 'Generating estimate...' : 'Get My Instant Estimate →'}
                 </button>
               </div>
             )}
@@ -260,24 +262,73 @@ const QuoteModal: React.FC<QuoteModalProps> = ({
                   </div>
                   <button onClick={handleSubmit} disabled={!name.trim() || !phone.trim() || !consent || loading}
                     style={{ padding: '14px', background: name.trim() && phone.trim() && consent && !loading ? clientColor : '#e2e8f0', color: name.trim() && phone.trim() && consent && !loading ? '#fff' : '#94a3b8', border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: name.trim() && phone.trim() && consent && !loading ? 'pointer' : 'not-allowed' }}>
-                    {loading ? 'Sending...' : 'Send My Request \u2192'}
+                    {loading ? 'Sending...' : 'Send My Request →'}
                   </button>
                 </div>
               </div>
             )}
 
-            {/* Step 4 */}
+            {/* Step 4 — Success + Water Report CTA */}
             {step === 4 && (
-              <div style={{ textAlign: 'center', padding: '20px 0' }}>
-                <div style={{ width: 64, height: 64, background: '#10b981', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, margin: '0 auto 16px' }}>✓</div>
-                <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 8 }}>Request Received!</h2>
-                <p style={{ fontSize: 14, color: '#64748b', lineHeight: 1.6, marginBottom: 20 }}>Thanks {name.split(' ')[0]}! {clientName} will reach out within 60 seconds.</p>
-                <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: '14px 16px', marginBottom: 20, textAlign: 'left' }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: '#166534', marginBottom: 4 }}>Your Estimate</div>
-                  <div style={{ fontSize: 26, fontWeight: 800, color: '#166534' }}>{result?.estimateRange}</div>
-                  <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>Final price confirmed before work begins</div>
+              <div style={{ textAlign: 'center', padding: '8px 0' }}>
+                {/* Confirmation */}
+                <div style={{ width: 56, height: 56, background: '#10b981', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, margin: '0 auto 12px' }}>✓</div>
+                <h2 style={{ fontSize: 20, fontWeight: 800, marginBottom: 6 }}>Request Received!</h2>
+                <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.6, marginBottom: 12 }}>
+                  Thanks {name.split(' ')[0]}! {clientName} will reach out within 60 seconds.
+                </p>
+
+                {/* Estimate recap */}
+                <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: '12px 14px', marginBottom: 14, textAlign: 'left' }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#166534', marginBottom: 2 }}>Your Estimate</div>
+                  <div style={{ fontSize: 24, fontWeight: 800, color: '#166534' }}>{result?.estimateRange}</div>
+                  <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>Final price confirmed before work begins</div>
                 </div>
-                <button onClick={onClose} style={{ width: '100%', padding: '13px', background: clientColor, color: '#fff', border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>Close</button>
+
+                {/* Water Report CTA */}
+                <div style={{
+                  background: 'linear-gradient(135deg, #0c4a6e 0%, #0369a1 100%)',
+                  borderRadius: 12,
+                  padding: '16px',
+                  textAlign: 'left',
+                  marginBottom: 12,
+                  position: 'relative',
+                  overflow: 'hidden',
+                }}>
+                  <div style={{ position: 'absolute', top: -10, right: -10, width: 70, height: 70, borderRadius: '50%', background: 'rgba(255,255,255,0.05)' }} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                    <span style={{ fontSize: 18 }}>💧</span>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: '#7dd3fc', textTransform: 'uppercase', letterSpacing: 1 }}>Free Bonus — 10 Seconds</div>
+                  </div>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: '#fff', lineHeight: 1.3, marginBottom: 6 }}>
+                    What's in your water?
+                  </div>
+                  <p style={{ fontSize: 12, color: '#bae6fd', lineHeight: 1.5, marginBottom: 10 }}>
+                    Get your free zip-code water quality report — hardness, contaminant risks, and what could save you money on appliances and plumbing.
+                  </p>
+                  <a
+                    href={waterReportUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: 'block',
+                      padding: '10px 14px',
+                      background: '#facc15',
+                      color: '#0c4a6e',
+                      fontWeight: 800,
+                      fontSize: 13,
+                      textDecoration: 'none',
+                      borderRadius: 8,
+                      textAlign: 'center',
+                    }}
+                  >
+                    Get My Free Water Report →
+                  </a>
+                </div>
+
+                <button onClick={onClose} style={{ width: '100%', padding: '12px', background: clientColor, color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
+                  Close
+                </button>
               </div>
             )}
           </div>
