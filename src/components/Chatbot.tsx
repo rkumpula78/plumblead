@@ -1,5 +1,5 @@
 // src/components/Chatbot.tsx
-// PlumbLead.ai — Floating AI chat widget with quote handoff
+// PlumbLead.ai — Floating AI chat widget with quote handoff + context extraction
 
 import React, { useState, useRef, useEffect } from 'react';
 
@@ -11,9 +11,17 @@ interface Message {
   showQuoteCta?: boolean;
 }
 
+export interface ChatContext {
+  serviceKey: string;   // matched QuoteModal service key, or ''
+  serviceLabel: string; // human-readable matched service label
+  details: string;      // summary of user messages
+  location: string;     // extracted location if mentioned
+  urgency: string;      // 'emergency' | 'soon' | 'routine'
+}
+
 interface ChatbotProps {
   lang?: 'en' | 'es';
-  onOpenQuote?: () => void;
+  onOpenQuote?: (context?: ChatContext) => void;
 }
 
 const API_BASE = 'https://plumblead-production.up.railway.app';
@@ -47,6 +55,74 @@ const COPY = {
   },
 };
 
+// ─── Service detection ────────────────────────────────────────────────────────
+// Maps conversation keywords to QuoteModal service keys
+
+const SERVICE_PATTERNS: Array<{ key: string; label: string; pattern: RegExp }> = [
+  { key: 'water-heater-tank',     label: 'Water Heater (Tank)',     pattern: /water\s*heater|hot\s*water\s*tank|tank\s*water\s*heater/i },
+  { key: 'water-heater-tankless', label: 'Tankless Water Heater',   pattern: /tankless/i },
+  { key: 'water-heater-repair',   label: 'Water Heater Repair',     pattern: /water\s*heater.*repair|repair.*water\s*heater/i },
+  { key: 'emergency-leak',        label: 'Emergency / Leak',        pattern: /leak|burst|flood|emergency|water\s*damage|gushing/i },
+  { key: 'drain-cleaning',        label: 'Drain Cleaning',          pattern: /drain|clog|slow\s*drain|backed\s*up|blockage/i },
+  { key: 'toilet-repair',         label: 'Toilet Repair / Install', pattern: /toilet|commode|running\s*water|flush/i },
+  { key: 'leak-detection',        label: 'Leak Detection',          pattern: /detect.*leak|leak.*detect|hidden\s*leak|water\s*bill/i },
+  { key: 'sewer-line',            label: 'Sewer Line',              pattern: /sewer|sewage|mainline|main\s*line|septic/i },
+  { key: 'repiping',              label: 'Repiping',                pattern: /repipe|re-pipe|whole\s*house.*pipe|galvanized|corroded\s*pipe/i },
+  { key: 'faucet-fixture',        label: 'Faucets & Fixtures',      pattern: /faucet|fixture|tap|dripping|sink/i },
+  { key: 'sump-pump',             label: 'Sump Pump',               pattern: /sump\s*pump/i },
+];
+
+const URGENCY_PATTERNS = {
+  emergency: /emergency|urgent|right now|immediately|flooding|burst|no\s*hot\s*water|asap/i,
+  soon:      /this\s*week|few\s*days|soon|not\s*working|stopped\s*working/i,
+};
+
+const LOCATION_PATTERN = /\b([A-Z][a-zA-Z\s]+,\s*[A-Z]{2}|\d{5})\b/;
+
+function extractContext(messages: Message[]): ChatContext {
+  const userText = messages
+    .filter(m => m.role === 'user')
+    .map(m => m.content)
+    .join(' ');
+
+  const allText = messages
+    .filter(m => m.id !== 'greeting')
+    .map(m => m.content)
+    .join(' ');
+
+  // Detect service — user messages first, then all text as fallback
+  let matchedService = { key: '', label: '' };
+  for (const svc of SERVICE_PATTERNS) {
+    if (svc.pattern.test(userText)) { matchedService = { key: svc.key, label: svc.label }; break; }
+  }
+  if (!matchedService.key) {
+    for (const svc of SERVICE_PATTERNS) {
+      if (svc.pattern.test(allText)) { matchedService = { key: svc.key, label: svc.label }; break; }
+    }
+  }
+
+  // Detect urgency
+  let urgency = 'routine';
+  if (URGENCY_PATTERNS.emergency.test(userText)) urgency = 'emergency';
+  else if (URGENCY_PATTERNS.soon.test(userText)) urgency = 'soon';
+
+  // Extract location
+  const locationMatch = userText.match(LOCATION_PATTERN);
+  const location = locationMatch ? locationMatch[1].trim() : '';
+
+  // Build details summary from user messages
+  const details = messages
+    .filter(m => m.role === 'user' && m.id !== 'greeting')
+    .map(m => m.content.trim())
+    .join('. ')
+    .replace(/\.{2,}/g, '.')
+    .trim();
+
+  return { serviceKey: matchedService.key, serviceLabel: matchedService.label, details, location, urgency };
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
+
 const Chatbot: React.FC<ChatbotProps> = ({ lang = 'en', onOpenQuote }) => {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -75,7 +151,6 @@ const Chatbot: React.FC<ChatbotProps> = ({ lang = 'en', onOpenQuote }) => {
     setInput('');
     setLoading(true);
 
-    // Build history for the API — exclude greeting, send last 10 turns max to keep payload small
     const history = updatedMessages
       .filter(m => m.id !== 'greeting')
       .slice(-10)
@@ -108,8 +183,15 @@ const Chatbot: React.FC<ChatbotProps> = ({ lang = 'en', onOpenQuote }) => {
   };
 
   const handleGetQuote = () => {
+    const context = extractContext(messages);
     setOpen(false);
-    if (onOpenQuote) { onOpenQuote(); } else { window.location.href = '/quote'; }
+    if (onOpenQuote) {
+      onOpenQuote(context);
+    } else {
+      // Fallback: store context and navigate
+      try { sessionStorage.setItem('plumblead_chat_context', JSON.stringify(context)); } catch {}
+      window.location.href = '/quote';
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(input); } };
@@ -127,7 +209,6 @@ const Chatbot: React.FC<ChatbotProps> = ({ lang = 'en', onOpenQuote }) => {
         .plc-cta{animation:plc-ctapop 0.3s ease}
       `}</style>
 
-      {/* Trigger button */}
       <button onClick={() => setOpen(!open)} aria-label={t.openLabel}
         style={{ position:'fixed',bottom:28,right:28,zIndex:9999,width:60,height:60,borderRadius:'50%',background:open?'#0D0D0D':'#F5A623',border:'3px solid #0D0D0D',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:24,boxShadow:'0 4px 20px rgba(0,0,0,0.25)',transition:'all 0.2s',animation:!open?'plc-pulse 3s infinite':'none' }}>
         {open ? <span style={{color:'#F5A623',fontSize:20,fontWeight:700}}>✕</span> : <span>🔧</span>}
@@ -136,11 +217,8 @@ const Chatbot: React.FC<ChatbotProps> = ({ lang = 'en', onOpenQuote }) => {
         )}
       </button>
 
-      {/* Chat panel */}
       {open && (
         <div className="plc-widget" style={{position:'fixed',bottom:100,right:28,zIndex:9998,width:360,maxHeight:580,background:'#FFF',border:'3px solid #0D0D0D',display:'flex',flexDirection:'column',fontFamily:'DM Sans, sans-serif',boxShadow:'0 8px 40px rgba(0,0,0,0.2)'}}>
-
-          {/* Header */}
           <div style={{background:'#0D0D0D',padding:'14px 18px',display:'flex',alignItems:'center',gap:12,borderBottom:'3px solid #F5A623'}}>
             <div style={{width:40,height:40,borderRadius:'50%',background:'#F5A623',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,flexShrink:0}}>🔧</div>
             <div style={{flex:1}}>
@@ -151,7 +229,6 @@ const Chatbot: React.FC<ChatbotProps> = ({ lang = 'en', onOpenQuote }) => {
             </div>
           </div>
 
-          {/* Messages */}
           <div style={{flex:1,overflowY:'auto',padding:'16px',display:'flex',flexDirection:'column',gap:12,maxHeight:380,background:'#F5F4F0'}}>
             {messages.map(msg => (
               <div key={msg.id}>
@@ -191,7 +268,6 @@ const Chatbot: React.FC<ChatbotProps> = ({ lang = 'en', onOpenQuote }) => {
             <div ref={messagesEndRef}/>
           </div>
 
-          {/* Quick suggestions */}
           {messages.filter(m=>m.role==='user').length===0 && (
             <div style={{padding:'10px 16px',background:'#FFF',borderTop:'1px solid #E8E6DF'}}>
               <div style={{fontSize:11,color:'#9E9B91',fontWeight:700,textTransform:'uppercase',letterSpacing:1,marginBottom:8}}>{t.suggestionLabel}</div>
@@ -204,7 +280,6 @@ const Chatbot: React.FC<ChatbotProps> = ({ lang = 'en', onOpenQuote }) => {
             </div>
           )}
 
-          {/* Input */}
           <div style={{padding:'12px 16px',background:'#FFF',borderTop:'2px solid #0D0D0D',display:'flex',gap:8,alignItems:'center'}}>
             <input ref={inputRef} type="text" value={input} onChange={e=>setInput(e.target.value)} onKeyDown={handleKeyDown}
               placeholder={t.placeholder} disabled={loading}
