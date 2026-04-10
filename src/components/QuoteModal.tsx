@@ -1,5 +1,6 @@
 // src/components/QuoteModal.tsx
 import React, { useState, useEffect } from 'react';
+import type { ChatContext } from './Chatbot';
 
 const API_BASE = 'https://plumblead-production.up.railway.app';
 
@@ -10,6 +11,7 @@ interface QuoteModalProps {
   clientName?: string;
   clientColor?: string;
   lang?: 'en' | 'es';
+  prefill?: ChatContext;
 }
 
 interface QuoteResult {
@@ -41,6 +43,7 @@ const QuoteModal: React.FC<QuoteModalProps> = ({
   clientName = 'Demo Contractor',
   clientColor = '#0ea5e9',
   lang = 'en',
+  prefill,
 }) => {
   const [step, setStep] = useState(1);
   const [service, setService] = useState('');
@@ -55,6 +58,7 @@ const QuoteModal: React.FC<QuoteModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<QuoteResult | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  const [prefillApplied, setPrefillApplied] = useState(false);
 
   useEffect(() => {
     if (isOpen) { document.body.style.overflow = 'hidden'; }
@@ -62,12 +66,28 @@ const QuoteModal: React.FC<QuoteModalProps> = ({
     return () => { document.body.style.overflow = ''; };
   }, [isOpen]);
 
+  // Apply prefill from chat when modal opens
+  useEffect(() => {
+    if (isOpen && prefill && !prefillApplied) {
+      if (prefill.serviceKey) {
+        const matched = SERVICES.find(s => s.key === prefill.serviceKey);
+        if (matched) { setService(matched.label); setServiceKey(matched.key); }
+      }
+      if (prefill.details) setDetails(prefill.details);
+      if (prefill.location) setLocation(prefill.location);
+      if (prefill.urgency) setUrgency(prefill.urgency);
+      // Skip service selection if we matched a service
+      if (prefill.serviceKey) setStep(2);
+      setPrefillApplied(true);
+    }
+  }, [isOpen, prefill]);
+
   useEffect(() => {
     if (!isOpen) {
       setTimeout(() => {
         setStep(1); setService(''); setServiceKey(''); setDetails(''); setLocation('');
         setName(''); setPhone(''); setEmail(''); setUrgency('routine');
-        setConsent(false); setResult(null); setSubmitted(false);
+        setConsent(false); setResult(null); setSubmitted(false); setPrefillApplied(false);
       }, 300);
     }
   }, [isOpen]);
@@ -114,9 +134,9 @@ const QuoteModal: React.FC<QuoteModalProps> = ({
 
   if (!isOpen) return null;
 
-  // Extract zip from location if homeowner typed one (e.g. "Monroe, WA 98272" or just "98272")
   const zipMatch = location.match(/\b\d{5}\b/);
   const waterReportUrl = `https://plumblead.ai/water-quality${zipMatch ? `?zip=${zipMatch[0]}` : ''}`;
+  const hasPrefill = !!(prefill?.serviceKey || prefill?.details);
 
   const inp: React.CSSProperties = {
     padding: '12px 14px', border: '2px solid #e2e8f0', borderRadius: 8,
@@ -129,47 +149,30 @@ const QuoteModal: React.FC<QuoteModalProps> = ({
       <style>{`
         @keyframes qm-fadein{from{opacity:0}to{opacity:1}}
         @keyframes qm-slidein{from{opacity:0;transform:translateY(24px) scale(0.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+        @keyframes qm-prefillpop{from{opacity:0;transform:scale(0.97)}to{opacity:1;transform:scale(1)}}
         .qm-overlay{animation:qm-fadein 0.2s ease}
         .qm-panel{animation:qm-slidein 0.25s ease}
+        .qm-prefill{animation:qm-prefillpop 0.3s ease}
       `}</style>
 
-      <div
-        className="qm-overlay"
-        onClick={onClose}
-        style={{
-          position: 'fixed', inset: 0,
-          background: 'rgba(0,0,0,0.6)',
-          zIndex: 10000,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '16px',
-          overflowY: 'auto',
-        }}
-      >
-        <div
-          className="qm-panel"
-          onClick={e => e.stopPropagation()}
-          style={{
-            background: '#fff',
-            width: '100%',
-            maxWidth: 520,
-            maxHeight: 'calc(100vh - 32px)',
-            overflowY: 'auto',
-            borderRadius: 16,
-            display: 'flex',
-            flexDirection: 'column',
-            fontFamily: 'system-ui,-apple-system,sans-serif',
-            boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
-          }}
-        >
-          {/* Modal header */}
-          <div style={{ background: clientColor, padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderRadius: '16px 16px 0 0', flexShrink: 0 }}>
+      <div className="qm-overlay" onClick={onClose}
+        style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 10000,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', overflowY: 'auto' }}>
+        <div className="qm-panel" onClick={e => e.stopPropagation()}
+          style={{ background: '#fff', width: '100%', maxWidth: 520, maxHeight: 'calc(100vh - 32px)',
+            overflowY: 'auto', borderRadius: 16, display: 'flex', flexDirection: 'column',
+            fontFamily: 'system-ui,-apple-system,sans-serif', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+
+          {/* Header */}
+          <div style={{ background: clientColor, padding: '16px 20px', display: 'flex', alignItems: 'center',
+            justifyContent: 'space-between', borderRadius: '16px 16px 0 0', flexShrink: 0 }}>
             <div>
               <div style={{ fontSize: 16, fontWeight: 800, color: '#fff' }}>{clientName}</div>
               <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)' }}>Instant Quote — Free, No Commitment</div>
             </div>
-            <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '50%', width: 32, height: 32, cursor: 'pointer', fontSize: 16, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+            <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.15)', border: 'none',
+              borderRadius: '50%', width: 32, height: 32, cursor: 'pointer', fontSize: 16, color: '#fff',
+              display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
           </div>
 
           {/* Progress */}
@@ -177,24 +180,27 @@ const QuoteModal: React.FC<QuoteModalProps> = ({
             <div style={{ display: 'flex', gap: 4, padding: '12px 20px 0', flexShrink: 0 }}>
               {['Service','Details','Estimate','Done'].map((label, i) => (
                 <div key={i} style={{ flex: 1, textAlign: 'center' }}>
-                  <div style={{ height: 3, background: step > i+1 ? '#10b981' : step === i+1 ? clientColor : '#e2e8f0', borderRadius: 2, marginBottom: 4, transition: 'background 0.3s' }} />
-                  <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, color: step >= i+1 ? clientColor : '#94a3b8' }}>{label}</div>
+                  <div style={{ height: 3, background: step > i+1 ? '#10b981' : step === i+1 ? clientColor : '#e2e8f0',
+                    borderRadius: 2, marginBottom: 4, transition: 'background 0.3s' }} />
+                  <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5,
+                    color: step >= i+1 ? clientColor : '#94a3b8' }}>{label}</div>
                 </div>
               ))}
             </div>
           )}
 
-          {/* Content */}
           <div style={{ padding: '20px', flex: 1 }}>
 
-            {/* Step 1 */}
+            {/* Step 1 — Service selection */}
             {step === 1 && (
               <div>
                 <p style={{ fontSize: 14, color: '#64748b', marginBottom: 16 }}>What can we help you with?</p>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                   {SERVICES.map(svc => (
                     <button key={svc.key} onClick={() => { setService(svc.label); setServiceKey(svc.key); setStep(2); }}
-                      style={{ padding: '14px 12px', background: '#fff', border: `2px solid ${service === svc.label ? clientColor : '#e2e8f0'}`, borderRadius: 10, textAlign: 'left', cursor: 'pointer' }}>
+                      style={{ padding: '14px 12px', background: service === svc.label ? '#eff6ff' : '#fff',
+                        border: `2px solid ${service === svc.label ? clientColor : '#e2e8f0'}`,
+                        borderRadius: 10, textAlign: 'left', cursor: 'pointer', transition: 'all 0.15s' }}>
                       <div style={{ fontSize: 18, marginBottom: 4 }}>{svc.icon}</div>
                       <div style={{ fontSize: 12, fontWeight: 700, color: '#0f172a', marginBottom: 2 }}>{svc.label}</div>
                       <div style={{ fontSize: 11, color: '#94a3b8' }}>{svc.hint}</div>
@@ -204,42 +210,69 @@ const QuoteModal: React.FC<QuoteModalProps> = ({
               </div>
             )}
 
-            {/* Step 2 */}
+            {/* Step 2 — Details (may be pre-filled from chat) */}
             {step === 2 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                <button onClick={() => setStep(1)} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: 13, padding: 0, textAlign: 'left' }}>← Back</button>
-                <div style={{ background: '#eff6ff', borderRadius: 8, padding: '8px 12px', fontSize: 13, fontWeight: 600, color: clientColor }}>Selected: {service}</div>
+                <button onClick={() => setStep(1)} style={{ background: 'none', border: 'none', color: '#64748b',
+                  cursor: 'pointer', fontSize: 13, padding: 0, textAlign: 'left' }}>← Back</button>
+
+                <div style={{ background: '#eff6ff', borderRadius: 8, padding: '8px 12px', fontSize: 13,
+                  fontWeight: 600, color: clientColor }}>Selected: {service}</div>
+
+                {/* Prefill notice */}
+                {hasPrefill && (
+                  <div className="qm-prefill" style={{ background: '#f0fdf4', border: '1px solid #bbf7d0',
+                    borderRadius: 8, padding: '10px 12px', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                    <span style={{ fontSize: 16, flexShrink: 0 }}>✨</span>
+                    <div style={{ fontSize: 12, color: '#166534', lineHeight: 1.5 }}>
+                      <strong>Pre-filled from your chat.</strong> We've summarized what you told us below — review and edit anything before getting your estimate.
+                    </div>
+                  </div>
+                )}
+
                 <div>
-                  <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Describe the issue</label>
-                  <textarea value={details} onChange={e => setDetails(e.target.value)} rows={3}
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#374151',
+                    textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Describe the issue</label>
+                  <textarea value={details} onChange={e => setDetails(e.target.value)} rows={4}
                     placeholder="e.g. Water heater leaking, 12 years old. Located in Monroe, WA."
-                    style={{ ...inp, resize: 'vertical' }} />
+                    style={{ ...inp, resize: 'vertical', background: details && hasPrefill ? '#fafff4' : '#fff' }} />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Your city / zip</label>
-                  <input value={location} onChange={e => setLocation(e.target.value)} placeholder="e.g. Monroe, WA or 98272" style={inp} />
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#374151',
+                    textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 6 }}>Your city / zip</label>
+                  <input value={location} onChange={e => setLocation(e.target.value)}
+                    placeholder="e.g. Monroe, WA or 98272"
+                    style={{ ...inp, background: location && hasPrefill ? '#fafff4' : '#fff' }} />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>Urgency</label>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#374151',
+                    textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>Urgency</label>
                   <div style={{ display: 'flex', gap: 8 }}>
                     {[['emergency','🚨 Emergency','#fee2e2','#dc2626'],['soon','⏰ This Week','#fef3c7','#d97706'],['routine','📅 No Rush','#f0fdf4','#16a34a']].map(([val,label,bg,col]) => (
                       <button key={val} onClick={() => setUrgency(val)}
-                        style={{ flex: 1, padding: '9px 6px', borderRadius: 8, border: `2px solid ${urgency === val ? col : '#e2e8f0'}`, background: urgency === val ? bg : '#fff', color: urgency === val ? col : '#64748b', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>{label}</button>
+                        style={{ flex: 1, padding: '9px 6px', borderRadius: 8,
+                          border: `2px solid ${urgency === val ? col : '#e2e8f0'}`,
+                          background: urgency === val ? bg : '#fff',
+                          color: urgency === val ? col : '#64748b',
+                          fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>{label}</button>
                     ))}
                   </div>
                 </div>
                 <button onClick={handleGetQuote} disabled={!details.trim() || loading}
-                  style={{ padding: '14px', background: details.trim() && !loading ? clientColor : '#e2e8f0', color: details.trim() && !loading ? '#fff' : '#94a3b8', border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: details.trim() && !loading ? 'pointer' : 'not-allowed' }}>
+                  style={{ padding: '14px', background: details.trim() && !loading ? clientColor : '#e2e8f0',
+                    color: details.trim() && !loading ? '#fff' : '#94a3b8', border: 'none', borderRadius: 10,
+                    fontSize: 15, fontWeight: 700, cursor: details.trim() && !loading ? 'pointer' : 'not-allowed' }}>
                   {loading ? 'Generating estimate...' : 'Get My Instant Estimate →'}
                 </button>
               </div>
             )}
 
-            {/* Step 3 */}
+            {/* Step 3 — Estimate + contact form */}
             {step === 3 && result && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 <div style={{ background: clientColor, borderRadius: 12, padding: 20, color: '#fff' }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'rgba(255,255,255,0.6)', marginBottom: 4 }}>Your Estimate</div>
+                  <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1,
+                    color: 'rgba(255,255,255,0.6)', marginBottom: 4 }}>Your Estimate</div>
                   <div style={{ fontSize: 36, fontWeight: 900, color: '#F5A623', lineHeight: 1, marginBottom: 10 }}>{result.estimateRange}</div>
                   <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.85)', lineHeight: 1.5 }}>{result.personalizedMessage}</p>
                 </div>
@@ -261,7 +294,10 @@ const QuoteModal: React.FC<QuoteModalProps> = ({
                     <label htmlFor="qm-consent" style={{ fontSize: 11, color: '#64748b', lineHeight: 1.5, cursor: 'pointer' }}>I agree to receive SMS updates from {clientName}. Reply STOP to opt out.</label>
                   </div>
                   <button onClick={handleSubmit} disabled={!name.trim() || !phone.trim() || !consent || loading}
-                    style={{ padding: '14px', background: name.trim() && phone.trim() && consent && !loading ? clientColor : '#e2e8f0', color: name.trim() && phone.trim() && consent && !loading ? '#fff' : '#94a3b8', border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 700, cursor: name.trim() && phone.trim() && consent && !loading ? 'pointer' : 'not-allowed' }}>
+                    style={{ padding: '14px', background: name.trim() && phone.trim() && consent && !loading ? clientColor : '#e2e8f0',
+                      color: name.trim() && phone.trim() && consent && !loading ? '#fff' : '#94a3b8',
+                      border: 'none', borderRadius: 10, fontSize: 15, fontWeight: 700,
+                      cursor: name.trim() && phone.trim() && consent && !loading ? 'pointer' : 'not-allowed' }}>
                     {loading ? 'Sending...' : 'Send My Request →'}
                   </button>
                 </div>
@@ -271,62 +307,39 @@ const QuoteModal: React.FC<QuoteModalProps> = ({
             {/* Step 4 — Success + Water Report CTA */}
             {step === 4 && (
               <div style={{ textAlign: 'center', padding: '8px 0' }}>
-                {/* Confirmation */}
-                <div style={{ width: 56, height: 56, background: '#10b981', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, margin: '0 auto 12px' }}>✓</div>
+                <div style={{ width: 56, height: 56, background: '#10b981', borderRadius: '50%',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24, margin: '0 auto 12px' }}>✓</div>
                 <h2 style={{ fontSize: 20, fontWeight: 800, marginBottom: 6 }}>Request Received!</h2>
                 <p style={{ fontSize: 13, color: '#64748b', lineHeight: 1.6, marginBottom: 12 }}>
                   Thanks {name.split(' ')[0]}! {clientName} will reach out within 60 seconds.
                 </p>
-
-                {/* Estimate recap */}
-                <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: '12px 14px', marginBottom: 14, textAlign: 'left' }}>
+                <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10,
+                  padding: '12px 14px', marginBottom: 14, textAlign: 'left' }}>
                   <div style={{ fontSize: 11, fontWeight: 700, color: '#166534', marginBottom: 2 }}>Your Estimate</div>
                   <div style={{ fontSize: 24, fontWeight: 800, color: '#166534' }}>{result?.estimateRange}</div>
                   <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>Final price confirmed before work begins</div>
                 </div>
-
-                {/* Water Report CTA */}
-                <div style={{
-                  background: 'linear-gradient(135deg, #0c4a6e 0%, #0369a1 100%)',
-                  borderRadius: 12,
-                  padding: '16px',
-                  textAlign: 'left',
-                  marginBottom: 12,
-                  position: 'relative',
-                  overflow: 'hidden',
-                }}>
-                  <div style={{ position: 'absolute', top: -10, right: -10, width: 70, height: 70, borderRadius: '50%', background: 'rgba(255,255,255,0.05)' }} />
+                <div style={{ background: 'linear-gradient(135deg, #0c4a6e 0%, #0369a1 100%)',
+                  borderRadius: 12, padding: '16px', textAlign: 'left', marginBottom: 12,
+                  position: 'relative', overflow: 'hidden' }}>
+                  <div style={{ position: 'absolute', top: -10, right: -10, width: 70, height: 70,
+                    borderRadius: '50%', background: 'rgba(255,255,255,0.05)' }} />
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                     <span style={{ fontSize: 18 }}>💧</span>
                     <div style={{ fontSize: 10, fontWeight: 700, color: '#7dd3fc', textTransform: 'uppercase', letterSpacing: 1 }}>Free Bonus — 10 Seconds</div>
                   </div>
-                  <div style={{ fontSize: 14, fontWeight: 800, color: '#fff', lineHeight: 1.3, marginBottom: 6 }}>
-                    What's in your water?
-                  </div>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: '#fff', lineHeight: 1.3, marginBottom: 6 }}>What's in your water?</div>
                   <p style={{ fontSize: 12, color: '#bae6fd', lineHeight: 1.5, marginBottom: 10 }}>
                     Get your free zip-code water quality report — hardness, contaminant risks, and what could save you money on appliances and plumbing.
                   </p>
-                  <a
-                    href={waterReportUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      display: 'block',
-                      padding: '10px 14px',
-                      background: '#facc15',
-                      color: '#0c4a6e',
-                      fontWeight: 800,
-                      fontSize: 13,
-                      textDecoration: 'none',
-                      borderRadius: 8,
-                      textAlign: 'center',
-                    }}
-                  >
+                  <a href={waterReportUrl} target="_blank" rel="noopener noreferrer"
+                    style={{ display: 'block', padding: '10px 14px', background: '#facc15', color: '#0c4a6e',
+                      fontWeight: 800, fontSize: 13, textDecoration: 'none', borderRadius: 8, textAlign: 'center' }}>
                     Get My Free Water Report →
                   </a>
                 </div>
-
-                <button onClick={onClose} style={{ width: '100%', padding: '12px', background: clientColor, color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
+                <button onClick={onClose} style={{ width: '100%', padding: '12px', background: clientColor,
+                  color: '#fff', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
                   Close
                 </button>
               </div>
