@@ -99,6 +99,10 @@ const T = {
     successFooter: 'Check your phone for a text from us with your personalized quote and next steps.',
     waterNudge: "Don't forget — your FREE water quality report!",
     waterNudgeSub: "Submit your info and we'll include a detailed water report for your zip code.",
+    waterCtaTitle: 'One more thing — find out what\'s in your water.',
+    waterCtaBody: 'Your zip code has a water quality profile. See hardness levels, contaminant risks, and what equipment could save you money each year.',
+    waterCtaBtn: 'Get My Free Water Report →',
+    waterCtaFree: 'FREE · No signup required · Takes 10 seconds',
     timeASAP: 'ASAP', timeMorning: 'Morning', timeAfternoon: 'Afternoon', timeEvening: 'Evening',
     loadingQuote: 'Generating your AI estimate...',
     aiQuoteLabel: 'AI-Powered Estimate',
@@ -129,6 +133,10 @@ const T = {
     successFooter: 'Revise su teléfono para un mensaje de nosotros con su presupuesto personalizado.',
     waterNudge: '¡No olvide su informe GRATUITO de calidad del agua!',
     waterNudgeSub: 'Envíe su información y le incluiremos un informe detallado del agua.',
+    waterCtaTitle: 'Una cosa más — sepa qué hay en su agua.',
+    waterCtaBody: 'Su código postal tiene un perfil de calidad del agua. Vea niveles de dureza, riesgos de contaminantes y qué equipos podrían ahorrarle dinero cada año.',
+    waterCtaBtn: 'Obtener Mi Informe Gratuito →',
+    waterCtaFree: 'GRATIS · Sin registro · Solo 10 segundos',
     timeASAP: 'Lo antes posible', timeMorning: 'Mañana', timeAfternoon: 'Tarde', timeEvening: 'Noche',
     loadingQuote: 'Generando su estimado con IA...',
     aiQuoteLabel: 'Estimado con Inteligencia Artificial',
@@ -142,13 +150,11 @@ const T = {
 
 const API_BASE = 'https://plumblead-production.up.railway.app';
 
-// Read clientId from URL params — demo pages pass ?client=xxx
 function getClientId() {
   if (typeof window === 'undefined') return 'demo';
   return new URLSearchParams(window.location.search).get('client') || 'demo';
 }
 
-// Read client display name from URL params
 function getClientName() {
   if (typeof window === 'undefined') return 'Demo Contractor';
   return new URLSearchParams(window.location.search).get('clientName') || 'Demo Contractor';
@@ -170,15 +176,14 @@ const QuoteTool: React.FC = () => {
     name: '', phone: '', email: '', language: 'en',
   });
 
-  const [countdown, setCountdown]       = useState(60);
+  const [countdown, setCountdown]         = useState(60);
   const [submitLoading, setSubmitLoading] = useState(false);
-  const [aiQuote, setAiQuote]           = useState<AIQuoteResult | null>(null);
-  const [quoteLoading, setQuoteLoading] = useState(false);
-  const [quoteError, setQuoteError]     = useState(false);
+  const [aiQuote, setAiQuote]             = useState<AIQuoteResult | null>(null);
+  const [quoteLoading, setQuoteLoading]   = useState(false);
+  const [quoteError, setQuoteError]       = useState(false);
 
   const t = T[state.language];
 
-  // ── Check contractor status on mount ─────────────────────────────────────
   useEffect(() => {
     fetch(`${API_BASE}/api/contractor-status?clientId=${encodeURIComponent(clientId)}`)
       .then(r => r.json())
@@ -250,8 +255,8 @@ const QuoteTool: React.FC = () => {
 
   const priceRange = PRICE_RANGES[state.service];
   const displayRange = aiQuote?.estimateRange || (priceRange ? `$${priceRange.low.toLocaleString()} – $${priceRange.high.toLocaleString()}` : '');
+  const waterReportUrl = `/water-quality${state.zipCode ? `?zip=${state.zipCode}` : ''}`;
 
-  // ── Loading state ─────────────────────────────────────────────────────────
   if (statusLoading) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 300, fontFamily: "'DM Sans', sans-serif", color: '#94a3b8' }}>
@@ -260,7 +265,6 @@ const QuoteTool: React.FC = () => {
     );
   }
 
-  // ── Graceful degradation — cancelled or inactive ──────────────────────────
   if (contractorStatus && (!contractorStatus.active || contractorStatus.subscriptionStatus === 'cancelled')) {
     const phone = contractorStatus.callbackPhone || '(833) 558-0877';
     return (
@@ -284,7 +288,6 @@ const QuoteTool: React.FC = () => {
     );
   }
 
-  // ── Normal render ─────────────────────────────────────────────────────────
   return (
     <div style={{ maxWidth: 640, margin: '0 auto', padding: '24px 16px', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }}>
       {/* Header */}
@@ -441,15 +444,78 @@ const QuoteTool: React.FC = () => {
         </div>
       )}
 
-      {/* Step 4 */}
+      {/* Step 4 — Success + Water Report CTA */}
       {state.currentStep === 4 && (
-        <div style={{ textAlign: 'center', padding: '40px 20px' }}>
-          <div style={{ fontSize: 64, marginBottom: 16 }}>✅</div>
-          <h2 style={{ fontSize: 24, color: '#10b981', marginBottom: 8 }}>{t.successTitle}</h2>
-          <p style={{ fontSize: 16, color: '#64748b', lineHeight: 1.6 }} dangerouslySetInnerHTML={{ __html: t.successMsg }} />
-          <div style={{ fontSize: 48, fontWeight: 800, color: countdown > 0 ? '#0ea5e9' : '#10b981', margin: '24px 0' }}>{countdown > 0 ? countdown : '✓'}</div>
-          <div style={{ fontSize: 14, color: '#94a3b8' }}>{t.seconds}</div>
-          <p style={{ fontSize: 14, color: '#64748b', marginTop: 24 }}>{t.successFooter}</p>
+        <div style={{ textAlign: 'center', padding: '32px 8px' }}>
+          {/* Confirmation */}
+          <div style={{ fontSize: 56, marginBottom: 12 }}>✅</div>
+          <h2 style={{ fontSize: 24, fontWeight: 800, color: '#10b981', marginBottom: 8 }}>{t.successTitle}</h2>
+          <p style={{ fontSize: 16, color: '#64748b', lineHeight: 1.6, marginBottom: 4 }} dangerouslySetInnerHTML={{ __html: t.successMsg }} />
+          <div style={{ fontSize: 52, fontWeight: 800, color: countdown > 0 ? '#0ea5e9' : '#10b981', margin: '16px 0 4px' }}>{countdown > 0 ? countdown : '✓'}</div>
+          <div style={{ fontSize: 13, color: '#94a3b8', marginBottom: 8 }}>{t.seconds}</div>
+          <p style={{ fontSize: 13, color: '#94a3b8', marginBottom: 32 }}>{t.successFooter}</p>
+
+          {/* Water Report CTA — the differentiator */}
+          <div style={{
+            background: 'linear-gradient(135deg, #0c4a6e 0%, #0369a1 100%)',
+            borderRadius: 16,
+            padding: '28px 24px',
+            textAlign: 'left',
+            position: 'relative',
+            overflow: 'hidden',
+            marginBottom: 16,
+          }}>
+            {/* Background accent */}
+            <div style={{ position: 'absolute', top: -20, right: -20, width: 120, height: 120, borderRadius: '50%', background: 'rgba(255,255,255,0.05)' }} />
+            <div style={{ position: 'absolute', bottom: -30, right: 20, width: 80, height: 80, borderRadius: '50%', background: 'rgba(255,255,255,0.03)' }} />
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+              <span style={{ fontSize: 28 }}>💧</span>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#7dd3fc', textTransform: 'uppercase', letterSpacing: 1.5 }}>Free Bonus Report</div>
+            </div>
+            <h3 style={{ fontSize: 20, fontWeight: 800, color: '#fff', lineHeight: 1.3, marginBottom: 10 }}>
+              {t.waterCtaTitle}
+            </h3>
+            <p style={{ fontSize: 14, color: '#bae6fd', lineHeight: 1.6, marginBottom: 20 }}>
+              {t.waterCtaBody}
+            </p>
+
+            {/* Mini stats row */}
+            <div style={{ display: 'flex', gap: 16, marginBottom: 20, flexWrap: 'wrap' }}>
+              {[
+                { icon: '🧂', label: 'Hard water?', value: 'Up to $5,700/yr in damage' },
+                { icon: '🚰', label: 'Softener install', value: '$800 – $3,000' },
+                { icon: '🔬', label: 'RO system', value: '$300 – $2,000' },
+              ].map((stat, i) => (
+                <div key={i} style={{ flex: 1, minWidth: 90, background: 'rgba(255,255,255,0.08)', borderRadius: 8, padding: '10px 12px' }}>
+                  <div style={{ fontSize: 18, marginBottom: 2 }}>{stat.icon}</div>
+                  <div style={{ fontSize: 10, color: '#7dd3fc', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>{stat.label}</div>
+                  <div style={{ fontSize: 12, color: '#fff', fontWeight: 700, marginTop: 2 }}>{stat.value}</div>
+                </div>
+              ))}
+            </div>
+
+            <a
+              href={waterReportUrl}
+              style={{
+                display: 'block',
+                width: '100%',
+                padding: '14px 20px',
+                background: '#facc15',
+                color: '#0c4a6e',
+                fontWeight: 800,
+                fontSize: 15,
+                textDecoration: 'none',
+                borderRadius: 10,
+                textAlign: 'center',
+                boxSizing: 'border-box',
+                letterSpacing: 0.3,
+              }}
+            >
+              {t.waterCtaBtn}
+            </a>
+            <div style={{ fontSize: 11, color: '#7dd3fc', textAlign: 'center', marginTop: 8 }}>{t.waterCtaFree}</div>
+          </div>
         </div>
       )}
 

@@ -286,6 +286,79 @@ const FaqItem: React.FC<{ question: string; answer: string; index: number }> = (
   );
 };
 
+// ─── Water Revenue Section ─────────────────────────────────────────────────────
+// Contractor-facing pitch: water report as a revenue tool
+
+const WaterRevenueSection: React.FC = () => (
+  <section style={{ background: '#0c4a6e', padding: '80px', borderTop: '4px solid #0ea5e9', borderBottom: '4px solid #0D0D0D' }}>
+    <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+        <span style={{ display: 'block', width: 24, height: 2, background: '#7dd3fc' }} />
+        <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: 2, fontWeight: 700, color: '#7dd3fc' }}>Revenue Multiplier</div>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 60, alignItems: 'center' }}>
+        {/* Left: headline + explanation */}
+        <div>
+          <h2 style={{ fontFamily: 'Bebas Neue, sans-serif', fontSize: 56, lineHeight: 1, textTransform: 'uppercase', color: '#fff', marginBottom: 20 }}>
+            Turn Water Quality<br/>
+            Into <span style={{ color: '#facc15' }}>Your Next</span><br/>
+            $3,000 Job
+          </h2>
+          <p style={{ fontSize: 17, color: '#bae6fd', lineHeight: 1.7, marginBottom: 24 }}>
+            PlumbLead.ai includes a free zip-code water quality report for every homeowner who requests a quote. No other lead platform does this. Here's why it matters for your bottom line:
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {[
+              { icon: '📍', text: 'After every quote, homeowners are shown their local water hardness, contaminant risks, and what treatment equipment could save them money.' },
+              { icon: '💰', text: 'Hard water areas generate automatic softener and RO system leads — $800–$3,000 jobs you didn\'t have to chase.' },
+              { icon: '🔁', text: 'Water treatment customers become recurring revenue: filter replacements, salt delivery, annual service calls.' },
+            ].map((item, i) => (
+              <div key={i} style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+                <span style={{ fontSize: 22, flexShrink: 0, marginTop: 2 }}>{item.icon}</span>
+                <p style={{ fontSize: 15, color: '#e0f2fe', lineHeight: 1.6, margin: 0 }}>{item.text}</p>
+              </div>
+            ))}
+          </div>
+          <div style={{ marginTop: 32, display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+            <a href="/water-quality" style={{ background: '#facc15', color: '#0c4a6e', fontWeight: 800, fontSize: 15, padding: '14px 28px', textDecoration: 'none', letterSpacing: 0.3 }}>
+              See the Report →
+            </a>
+            <a href="/submit-trial" style={{ background: 'transparent', color: '#7dd3fc', fontWeight: 600, fontSize: 15, padding: '14px 24px', textDecoration: 'none', border: '1px solid #1e6a9a' }}>
+              Start Free Trial
+            </a>
+          </div>
+        </div>
+
+        {/* Right: revenue breakdown cards */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          {[
+            { icon: '🧂', title: 'Water Softener', range: '$800 – $3,000', detail: 'Install + annual salt service', tag: 'Most Common' },
+            { icon: '🚰', title: 'RO System', range: '$300 – $2,000', detail: 'Under-sink or whole-home', tag: 'High Margin' },
+            { icon: '🔬', title: 'UV Purifier', range: '$500 – $1,500', detail: 'For surface water areas', tag: 'Upsell' },
+            { icon: '🏠', title: 'Whole-Home Filter', range: '$1,000 – $4,000', detail: 'PFAS + chloramine protection', tag: 'Premium' },
+          ].map((card, i) => (
+            <div key={i} style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, padding: '20px 18px' }}>
+              <div style={{ fontSize: 28, marginBottom: 8 }}>{card.icon}</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#facc15', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>{card.tag}</div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: '#fff', marginBottom: 4 }}>{card.title}</div>
+              <div style={{ fontSize: 18, fontWeight: 800, color: '#7dd3fc', marginBottom: 4 }}>{card.range}</div>
+              <div style={{ fontSize: 12, color: '#64b5d6' }}>{card.detail}</div>
+            </div>
+          ))}
+          {/* Bottom stat bar */}
+          <div style={{ gridColumn: '1 / -1', background: 'rgba(250,204,21,0.1)', border: '1px solid rgba(250,204,21,0.3)', borderRadius: 10, padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 16 }}>
+            <span style={{ fontSize: 28 }}>📊</span>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#facc15' }}>Hard water affects 85% of U.S. homes</div>
+              <div style={{ fontSize: 12, color: '#bae6fd' }}>Every homeowner in your service area is a potential water treatment customer. PlumbLead shows them the data — you close the job.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+);
+
 // ─── Main Landing Page ────────────────────────────────────────────────────────────────
 
 const LandingPage: React.FC = () => {
@@ -366,7 +439,7 @@ const LandingPage: React.FC = () => {
         <table style={{ width:'100%',borderCollapse:'collapse' }}>
           <thead><tr>{['Feature','PlumbLead.ai','Answering Service','DIY / In-House'].map((h,i)=>(<th key={i} style={{ padding:'16px 24px',textAlign:'left',fontSize:13,textTransform:'uppercase',letterSpacing:1.5,fontWeight:700,borderBottom:'3px solid #F5A623',color:i===1?'#F5A623':'#5C5A53' }}>{h}</th>))}</tr></thead>
           <tbody>
-            {[['Response time','Under 60 seconds','2–5 minutes','Hours (if at all)',true],['Available 24/7','✓ Always on','Depends on plan','✗ You sleep',false],['AI quote estimates','✓ Instant, accurate','✗ None','✗ None',true],['Lead qualification','✓ Automatic','✗ None','Manual, inconsistent',false],['CRM / n8n routing','✓ Native integration','✗ No','✗ Custom dev required',true],['Bilingual EN + ES','✓ Auto-detects','Extra cost','Depends on staff',false],['Monthly cost','From $97/mo','$300–$800/mo','Your time × $$$',true],['Contract required','✗ None. Cancel anytime','Usually 12 months','N/A',false]].map(([feature,pl,ans,diy,highlight],i)=>(
+            {[['Response time','Under 60 seconds','2–5 minutes','Hours (if at all)',true],['Available 24/7','✓ Always on','Depends on plan','✗ You sleep',false],['AI quote estimates','✓ Instant, accurate','✗ None','✗ None',true],['Water quality reports','✓ Included — drives water treatment leads','✗ None','✗ None',false],['Lead qualification','✓ Automatic','✗ None','Manual, inconsistent',true],['CRM / n8n routing','✓ Native integration','✗ No','✗ Custom dev required',false],['Bilingual EN + ES','✓ Auto-detects','Extra cost','Depends on staff',true],['Monthly cost','From $97/mo','$300–$800/mo','Your time × $$$',false],['Contract required','✗ None. Cancel anytime','Usually 12 months','N/A',true]].map(([feature,pl,ans,diy,highlight],i)=>(
               <tr key={i} style={{ background:highlight?'rgba(245,166,35,0.04)':'transparent' }}>
                 <td style={{ padding:'16px 24px',borderBottom:'1px solid #222',color:'#9E9B91',fontWeight:500,fontSize:15 }}>{feature}</td>
                 <td style={{ padding:'16px 24px',borderBottom:'1px solid #222',color:'#4CAF50',fontWeight:700,fontSize:15 }}>{pl}</td>
@@ -394,6 +467,9 @@ const LandingPage: React.FC = () => {
         </div>
       </section>
 
+      {/* ── Water Revenue Section ── */}
+      <WaterRevenueSection />
+
       <div style={{ background:'#0D0D0D',padding:'80px' }}>
         <div style={{ maxWidth:800,margin:'0 auto',textAlign:'center' }}>
           <div style={{ color:'#F5A623',fontSize:18,letterSpacing:2,marginBottom:24 }}>★ ★ ★ ★ ★</div>
@@ -413,15 +489,15 @@ const LandingPage: React.FC = () => {
         <QuoteTool lang={lang}/>
       </section>
 
-      {/* Pricing — 3 tiers with Agency at $497 as anchor */}
+      {/* Pricing */}
       <section id="pricing" style={{ background:'#F5F4F0',padding:'80px' }}>
         <div style={{ fontSize:11,textTransform:'uppercase',letterSpacing:2,fontWeight:700,color:'#C4841A',marginBottom:16,display:'flex',alignItems:'center',gap:8 }}><span style={{ display:'block',width:24,height:2,background:'#F5A623' }}/> Pricing</div>
         <h2 style={{ fontFamily:'Bebas Neue, sans-serif',fontSize:56,lineHeight:1,textTransform:'uppercase',marginBottom:40 }}>One Job Pays For <span style={{ color:'#C4841A' }}>Six Months</span></h2>
         <div style={{ display:'grid',gridTemplateColumns:'repeat(3,1fr)' }}>
           {[
-            { tier:'Starter', price:'$97',  features:['AI chat widget (200 leads/mo)','Instant quote estimates','Email lead delivery','English only','Standard response templates'],        featured:false, stripeUrl: STRIPE_STARTER },
-            { tier:'Pro',     price:'$197', features:['Unlimited leads','AI quote + lead scoring','CRM / n8n webhook routing','English + Spanish (auto)','Custom AI branding','Priority support'], featured:true,  stripeUrl: STRIPE_PRO },
-            { tier:'Agency',  price:'$497', features:['Up to 5 contractor accounts','White-label dashboard','Everything in Pro ×5','Reseller margin included','Dedicated onboarding call'],    featured:false, stripeUrl: STRIPE_AGENCY },
+            { tier:'Starter', price:'$97',  features:['AI chat widget (200 leads/mo)','Instant quote estimates','Water quality reports included','Email lead delivery','English only','Standard response templates'],        featured:false, stripeUrl: STRIPE_STARTER },
+            { tier:'Pro',     price:'$197', features:['Unlimited leads','AI quote + lead scoring','Water quality reports included','CRM / n8n webhook routing','English + Spanish (auto)','Missed call recovery','Priority support'], featured:true,  stripeUrl: STRIPE_PRO },
+            { tier:'Agency',  price:'$497', features:['Up to 5 contractor accounts','White-label dashboard','Everything in Pro ×5','Water quality for all locations','Reseller margin included','Dedicated onboarding call'],    featured:false, stripeUrl: STRIPE_AGENCY },
           ].map((plan,i)=>(
             <div key={i} style={{ padding:'40px 36px',border:plan.featured?'3px solid #F5A623':'2px solid #E8E6DF',background:plan.featured?'#0D0D0D':'#FFF',position:'relative',transform:plan.featured?'scaleY(1.02)':'none',zIndex:plan.featured?2:1,borderRight:!plan.featured&&i===0?'none':undefined,borderLeft:!plan.featured&&i===2?'none':undefined }}>
               {plan.featured&&<div style={{ position:'absolute',top:-14,left:'50%',transform:'translateX(-50%)',background:'#F5A623',color:'#000',fontWeight:700,fontSize:11,padding:'4px 16px',letterSpacing:1.5,textTransform:'uppercase',whiteSpace:'nowrap' }}>Most Popular</div>}
@@ -443,7 +519,7 @@ const LandingPage: React.FC = () => {
         <div style={{ fontSize:11,textTransform:'uppercase',letterSpacing:2,fontWeight:700,color:'#C4841A',marginBottom:16,display:'flex',alignItems:'center',gap:8 }}><span style={{ display:'block',width:24,height:2,background:'#F5A623' }}/> Common Questions</div>
         <h2 style={{ fontFamily:'Bebas Neue, sans-serif',fontSize:56,lineHeight:1,textTransform:'uppercase',marginBottom:40 }}>No <span style={{ color:'#C4841A' }}>Surprises.</span></h2>
         <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:0 }}>
-          {[['How long does setup take?','Under 30 minutes. You get a chat widget snippet — paste it on your site and you\'re live. No developer required. We handle your n8n webhook config on Pro.'],['Do I need to write scripts or train the AI?','No. The AI comes trained on plumbing services, pricing ranges, and technical knowledge out of the box. Pro users can customize tone in a simple settings page.'],['What happens after the AI talks to the lead?','Full conversation, lead score, quote estimate, and contact details go to your email, CRM, or n8n workflow. You get context to close — not just a name and number.'],['Does it work for Spanish-speaking customers?','Yes. The AI auto-detects language from the homeowner\'s first message and responds in kind. No configuration needed. Full bilingual on Pro plan.'],['Can I cancel at any time?','Yes. Month-to-month, no contracts. Cancel from your dashboard. We don\'t lock you in because we don\'t need to — the ROI keeps contractors from leaving.'],['What if the AI gives the wrong estimate?','The AI provides ballpark ranges with a disclaimer that final pricing is confirmed by you. It\'s designed to qualify and engage — not to replace your expertise.']].map(([q,a],i)=>(<FaqItem key={i} question={q} answer={a} index={i}/>))}
+          {[['How long does setup take?','Under 30 minutes. You get a chat widget snippet — paste it on your site and you\'re live. No developer required. We handle your n8n webhook config on Pro.'],['Do I need to write scripts or train the AI?','No. The AI comes trained on plumbing services, pricing ranges, and technical knowledge out of the box. Pro users can customize tone in a simple settings page.'],['What happens after the AI talks to the lead?','Full conversation, lead score, quote estimate, and contact details go to your email, CRM, or n8n workflow. You get context to close — not just a name and number.'],['Does it work for Spanish-speaking customers?','Yes. The AI auto-detects language from the homeowner\'s first message and responds in kind. No configuration needed. Full bilingual on Pro plan.'],['What\'s included in the water quality report?','Every homeowner gets a free zip-code water quality report showing hardness levels, contaminant risks (PFAS, chloramine, arsenic), and recommended equipment. This drives softener and RO leads to you — jobs you didn\'t have to find.'],['Can I cancel at any time?','Yes. Month-to-month, no contracts. Cancel from your dashboard. We don\'t lock you in because we don\'t need to — the ROI keeps contractors from leaving.']].map(([q,a],i)=>(<FaqItem key={i} question={q} answer={a} index={i}/>))}
         </div>
       </section>
 
