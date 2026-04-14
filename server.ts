@@ -51,7 +51,11 @@ const pool = new Pool({
 });
 
 // ─── Water data loader ────────────────────────────────────────────────────────
-// Loads AZ + WA water data at startup; keyed by zip code string
+// Loads AZ + WA water data at startup; builds a flat zip-keyed lookup map.
+// Handles three JSON shapes:
+//   1. Flat zip-keyed:  { "85383": { hardness_gpg: {...}, ... }, ... }
+//   2. Array:           [ { zip: "85383", ... }, ... ]
+//   3. City-keyed:      { cities: { phoenix: { zip_codes: ["85001",...], hardness_gpg: {...} } } }
 let waterDataByZip: Record<string, any> = {};
 
 function loadWaterData() {
@@ -60,13 +64,29 @@ function loadWaterData() {
     const waPath = path.join(__dirname, 'src/data/wa-water-data.json');
     const azRaw  = fs.existsSync(azPath) ? JSON.parse(fs.readFileSync(azPath, 'utf8')) : {};
     const waRaw  = fs.existsSync(waPath) ? JSON.parse(fs.readFileSync(waPath, 'utf8')) : {};
-    // Both files may be { "85383": {...}, ... } or [ { zip: "85383", ... }, ... ]
+
     const normalize = (raw: any): Record<string, any> => {
+      // Shape 1: array of records with zip field
       if (Array.isArray(raw)) {
         return Object.fromEntries(raw.map((r: any) => [String(r.zip || r.zip_code || r.zipCode), r]));
       }
+      // Shape 2: city-keyed object with cities map and zip_codes arrays per city
+      if (raw && typeof raw === 'object' && raw.cities && typeof raw.cities === 'object') {
+        const result: Record<string, any> = {};
+        for (const [, cityData] of Object.entries(raw.cities as Record<string, any>)) {
+          const zips: string[] = cityData.zip_codes || [];
+          // Build a flat record for each zip — strip the zip_codes array to avoid bloat
+          const { zip_codes: _zc, ...cityRecord } = cityData;
+          for (const zip of zips) {
+            result[String(zip)] = cityRecord;
+          }
+        }
+        return result;
+      }
+      // Shape 3: already flat zip-keyed object
       return raw;
     };
+
     waterDataByZip = { ...normalize(azRaw), ...normalize(waRaw) };
     console.log(`Water data loaded: ${Object.keys(waterDataByZip).length} zip codes`);
   } catch (err) {
