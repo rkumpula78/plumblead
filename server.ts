@@ -3,8 +3,11 @@ import { GoogleGenAI } from "@google/genai";
 import dotenv from 'dotenv';
 import cors from 'cors';
 import { generateAIQuote, QuoteRequest, QuoteResponse } from './src/services/geminiService';
+import { buildPlumberBrief, PlumberBrief } from './src/services/aquaopsService';
 import fetch from 'node-fetch';
 import { Pool } from 'pg';
+import * as path from 'path';
+import * as fs from 'fs';
 
 dotenv.config();
 
@@ -27,19 +30,15 @@ const ai                  = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY
 const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || '';
 const TWILIO_ACCOUNT_SID  = process.env.TWILIO_ACCOUNT_SID  || '';
 const TWILIO_AUTH_TOKEN   = process.env.TWILIO_AUTH_TOKEN   || '';
-// (623) 263-2823 — verified local number connected to PlumbLead messaging service
-// (833) 558-0877 is toll-free support line only (verification rejected — do not use for SMS)
 const TWILIO_FROM_NUMBER  = process.env.TWILIO_FROM_NUMBER  || '+16232632823';
 const BACKEND_URL         = process.env.BACKEND_URL         || 'https://plumblead-production.up.railway.app';
 const FRONTEND_URL        = process.env.FRONTEND_URL        || 'https://plumblead.ai';
 
-// Price IDs → plan names (used by webhook to set plan on payment)
 const STRIPE_PRICE_TO_PLAN: Record<string, string> = {
   'price_1THvKdDATJBYD8CNUCHZNQ8B': 'starter',
   'price_1THvH7DATJBYD8CNVP8UjHVM': 'pro',
   'price_1TJoOyDATJBYD8CNQiijLaxf': 'agency',
 };
-// Plan names → price IDs (used by checkout session creation)
 const PLAN_TO_PRICE_ID: Record<string, string> = {
   starter: 'price_1THvKdDATJBYD8CNUCHZNQ8B',
   pro:     'price_1THvH7DATJBYD8CNVP8UjHVM',
@@ -51,6 +50,31 @@ const pool = new Pool({
   ssl: process.env.DATABASE_URL?.includes('railway') ? { rejectUnauthorized: false } : false,
 });
 
+// ─── Water data loader ────────────────────────────────────────────────────────
+// Loads AZ + WA water data at startup; keyed by zip code string
+let waterDataByZip: Record<string, any> = {};
+
+function loadWaterData() {
+  try {
+    const azPath = path.join(__dirname, 'src/data/az-water-data.json');
+    const waPath = path.join(__dirname, 'src/data/wa-water-data.json');
+    const azRaw  = fs.existsSync(azPath) ? JSON.parse(fs.readFileSync(azPath, 'utf8')) : {};
+    const waRaw  = fs.existsSync(waPath) ? JSON.parse(fs.readFileSync(waPath, 'utf8')) : {};
+    // Both files may be { "85383": {...}, ... } or [ { zip: "85383", ... }, ... ]
+    const normalize = (raw: any): Record<string, any> => {
+      if (Array.isArray(raw)) {
+        return Object.fromEntries(raw.map((r: any) => [String(r.zip || r.zip_code || r.zipCode), r]));
+      }
+      return raw;
+    };
+    waterDataByZip = { ...normalize(azRaw), ...normalize(waRaw) };
+    console.log(`Water data loaded: ${Object.keys(waterDataByZip).length} zip codes`);
+  } catch (err) {
+    console.warn('Failed to load water data:', err);
+  }
+}
+
+// ─── DB init ──────────────────────────────────────────────────────────────────
 async function initDb() {
   try {
     await pool.query(`
@@ -174,7 +198,6 @@ async function getContractorStatus(clientId: string): Promise<{ active: boolean;
   } catch { return { active: true, subscriptionStatus: 'active', callbackPhone: null }; }
 }
 
-// ─── Business hours check ─────────────────────────────────────────────────────
 function isWithinBusinessHours(businessHours: any): boolean {
   if (!businessHours?.enabled) return true;
   const now = new Date();
@@ -188,7 +211,6 @@ function isWithinBusinessHours(businessHours: any): boolean {
   return timeStr >= schedule.start && timeStr <= schedule.end;
 }
 
-// ─── Twilio SMS helper ────────────────────────────────────────────────────────
 async function sendTwilioSms(to: string, body: string, from: string = TWILIO_FROM_NUMBER): Promise<void> {
   if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN) { console.error('Twilio credentials not configured'); return; }
   const cleanTo = to.replace(/\D/g, '');
@@ -210,10 +232,62 @@ function requireAdminKey(req: express.Request, res: express.Response, next: expr
   next();
 }
 
+// ─── Build enriched plumber SMS ───────────────────────────────────────────────
+function buildPlumberSms(
+  lead: Record<string, any>,
+  brief: PlumberBrief | null
+): string {
+  const name       = lead.name        || 'New lead';
+  const phone      = lead.phone       || '';
+  const service    = lead.serviceLabel || lead.serviceType || 'Plumbing';
+  const urgency    = lead.urgency      || '';
+  const zip        = lead.zipCode      || lead.zip || '';
+  const score      = lead.leadScore    || '';
+  const dashUrl    = `${FRONTEND_URL}/dashboard`;
+
+  const urgencyTag = urgency === 'emergency' ? '🚨 EMERGENCY' :
+                     urgency === 'soon'      ? '⚡ Soon'      : '📋 Routine';
+
+  let sms = `${urgencyTag} — ${service}\n`;
+  sms    += `${name} | ${phone} | ${zip}`;
+  if (score) sms += ` | ${score}`;
+  sms    += '\n';
+
+  if (brief?.waterProfile && brief.waterProfile.hardness_gpg > 0) {
+    const wp = brief.waterProfile;
+    sms += `\nWater: ${wp.hardness_gpg} GPG ${wp.hardness_label}`;
+    if (wp.pfas_concern)       sms += ' · PFAS';
+    if (wp.chloramine_concern) sms += ' · Chloramine';
+    if (wp.arsenic_concern)    sms += ' · Arsenic';
+  } else if (brief?.waterProfile && brief.waterProfile.primary_issues.length) {
+    sms += `\nWater issues: ${brief.waterProfile.primary_issues.slice(0, 2).join(', ')}`;
+  }
+
+  if (brief?.primaryRecommendation) {
+    const p = brief.primaryRecommendation;
+    sms += `\nRec: ${p.name}`;
+    sms += `\nDealer: $${p.dealer_price} | Retail: $${p.retail_low}–$${p.retail_high}`;
+    sms += `\nOrder: ${p.order_url}`;
+  }
+
+  sms += `\n\nDashboard: ${dashUrl}`;
+  return sms;
+}
+
 // ─── Health ───────────────────────────────────────────────────────────────────
 app.get('/api/health', async (_req, res) => {
-  try { await pool.query('SELECT 1'); res.json({ status: 'ok', db: 'connected', timestamp: new Date().toISOString(), smsFrom: TWILIO_FROM_NUMBER }); }
-  catch { res.json({ status: 'ok', db: 'not connected', timestamp: new Date().toISOString() }); }
+  try {
+    await pool.query('SELECT 1');
+    res.json({
+      status: 'ok', db: 'connected',
+      timestamp: new Date().toISOString(),
+      smsFrom: TWILIO_FROM_NUMBER,
+      waterZips: Object.keys(waterDataByZip).length,
+      aquaops: process.env.H3AQUAOPS_API_PASS ? 'configured' : 'local-catalog',
+    });
+  } catch {
+    res.json({ status: 'ok', db: 'not connected', timestamp: new Date().toISOString() });
+  }
 });
 
 // ─── Contractor status ────────────────────────────────────────────────────────
@@ -266,37 +340,24 @@ app.patch('/api/contractors/:clientId/call-settings', requireAdminKey, async (re
 app.post('/api/stripe/checkout', async (req, res) => {
   const { clientId, plan, email } = req.body;
   if (!clientId || !plan) return res.status(400).json({ error: 'clientId and plan are required.' });
-
   const priceId = PLAN_TO_PRICE_ID[plan];
   if (!priceId) return res.status(400).json({ error: `Plan '${plan}' is not configured. Contact support.` });
-
   const stripeKey = process.env.STRIPE_SECRET_KEY;
   if (!stripeKey) return res.status(500).json({ error: 'Stripe not configured.' });
-
   try {
     const stripe = require('stripe')(stripeKey);
-    const contractorRes = await pool.query(
-      `SELECT client_name, email AS contractor_email, stripe_customer_id FROM contractors WHERE client_id = $1`,
-      [clientId]
-    );
+    const contractorRes = await pool.query(`SELECT client_name, email AS contractor_email, stripe_customer_id FROM contractors WHERE client_id = $1`, [clientId]);
     const contractor = contractorRes.rows[0];
     if (!contractor) return res.status(404).json({ error: 'Contractor not found. Complete onboarding first.' });
-
     let customerId: string | undefined = contractor.stripe_customer_id || undefined;
     if (!customerId) {
-      const customer = await stripe.customers.create({
-        email: email || contractor.contractor_email || undefined,
-        name: contractor.client_name,
-        metadata: { clientId },
-      });
+      const customer = await stripe.customers.create({ email: email || contractor.contractor_email || undefined, name: contractor.client_name, metadata: { clientId } });
       customerId = customer.id;
       await pool.query(`UPDATE contractors SET stripe_customer_id=$1 WHERE client_id=$2`, [customerId, clientId]);
       console.log(`Stripe: created customer ${customerId} for ${clientId}`);
     }
-
     const session = await stripe.checkout.sessions.create({
-      customer: customerId,
-      mode: 'subscription',
+      customer: customerId, mode: 'subscription',
       line_items: [{ price: priceId, quantity: 1 }],
       metadata: { clientId, plan },
       subscription_data: { metadata: { clientId, plan } },
@@ -304,13 +365,9 @@ app.post('/api/stripe/checkout', async (req, res) => {
       cancel_url: `${FRONTEND_URL}/checkout?clientId=${encodeURIComponent(clientId)}&cancelled=true`,
       allow_promotion_codes: true,
     });
-
     console.log(`Stripe checkout session created for ${clientId} (${plan}): ${session.id}`);
     res.json({ url: session.url });
-  } catch (err: any) {
-    console.error('Stripe checkout error:', err);
-    res.status(500).json({ error: err.message || 'Failed to create checkout session.' });
-  }
+  } catch (err: any) { console.error('Stripe checkout error:', err); res.status(500).json({ error: err.message || 'Failed to create checkout session.' }); }
 });
 
 // ─── Stripe: Webhook ──────────────────────────────────────────────────────────
@@ -324,13 +381,11 @@ app.post('/api/stripe/webhook', async (req, res) => {
     try { event = JSON.parse(req.body.toString()); }
     catch { return res.status(400).json({ error: 'Invalid JSON' }); }
   }
-
   const obj = event.data?.object;
   const customerId = obj?.customer;
   const priceId = obj?.items?.data?.[0]?.price?.id || obj?.plan?.id;
   const subId = obj?.id;
   const metaClientId = obj?.metadata?.clientId || obj?.subscription_data?.metadata?.clientId;
-
   try {
     switch (event.type) {
       case 'customer.subscription.created':
@@ -338,17 +393,9 @@ app.post('/api/stripe/webhook', async (req, res) => {
         const plan = STRIPE_PRICE_TO_PLAN[priceId] || 'starter';
         const subStatus = obj.status === 'active' ? 'active' : 'past_due';
         if (metaClientId) {
-          await pool.query(
-            `UPDATE contractors SET plan=$1, subscription_status=$2, active=true, stripe_customer_id=$3, stripe_subscription_id=$4
-             WHERE client_id=$5 OR stripe_customer_id=$3 OR stripe_subscription_id=$4`,
-            [plan, subStatus, customerId, subId, metaClientId]
-          );
+          await pool.query(`UPDATE contractors SET plan=$1, subscription_status=$2, active=true, stripe_customer_id=$3, stripe_subscription_id=$4 WHERE client_id=$5 OR stripe_customer_id=$3 OR stripe_subscription_id=$4`, [plan, subStatus, customerId, subId, metaClientId]);
         } else {
-          await pool.query(
-            `UPDATE contractors SET plan=$1, subscription_status=$2, active=true, stripe_customer_id=$3, stripe_subscription_id=$4
-             WHERE stripe_customer_id=$3 OR stripe_subscription_id=$4`,
-            [plan, subStatus, customerId, subId]
-          );
+          await pool.query(`UPDATE contractors SET plan=$1, subscription_status=$2, active=true, stripe_customer_id=$3, stripe_subscription_id=$4 WHERE stripe_customer_id=$3 OR stripe_subscription_id=$4`, [plan, subStatus, customerId, subId]);
         }
         console.log(`Stripe: ${event.type} — clientId=${metaClientId||'unknown'}, plan=${plan}, status=${subStatus}`);
         break;
@@ -366,10 +413,7 @@ app.post('/api/stripe/webhook', async (req, res) => {
         const sessionCustomerId = obj?.customer;
         const sessionSubId = obj?.subscription;
         if (sessionClientId && sessionCustomerId) {
-          await pool.query(
-            `UPDATE contractors SET stripe_customer_id=$1, stripe_subscription_id=COALESCE($2, stripe_subscription_id) WHERE client_id=$3`,
-            [sessionCustomerId, sessionSubId||null, sessionClientId]
-          );
+          await pool.query(`UPDATE contractors SET stripe_customer_id=$1, stripe_subscription_id=COALESCE($2, stripe_subscription_id) WHERE client_id=$3`, [sessionCustomerId, sessionSubId||null, sessionClientId]);
           console.log(`Stripe: checkout complete — linked ${sessionClientId} to customer ${sessionCustomerId}`);
         }
         break;
@@ -384,54 +428,30 @@ app.post('/api/voice/incoming', async (req, res) => {
   const calledNumber = (req.body.To || '').replace(/\D/g, '');
   let contractor: any = null;
   try {
-    const result = await pool.query(
-      `SELECT client_id, client_name, callback_phone, missed_call_sms, business_hours FROM contractors WHERE REGEXP_REPLACE(twilio_number, '\\D', '', 'g') = $1 AND active = true`,
-      [calledNumber]
-    );
+    const result = await pool.query(`SELECT client_id, client_name, callback_phone, missed_call_sms, business_hours FROM contractors WHERE REGEXP_REPLACE(twilio_number, '\\D', '', 'g') = $1 AND active = true`, [calledNumber]);
     if (result.rows.length) contractor = result.rows[0];
   } catch (err) { console.error('Voice lookup error:', err); }
-
   const forwardTo = contractor?.callback_phone?.replace(/\D/g, '') || null;
   const businessHours = contractor?.business_hours || null;
   const callerNumber = req.body.From || '';
   const clientId = contractor?.client_id || '';
   const missedUrl = `${BACKEND_URL}/api/voice/missed?clientId=${encodeURIComponent(clientId)}&callerNumber=${encodeURIComponent(callerNumber)}`;
-
   res.set('Content-Type', 'text/xml');
-
-  if (!forwardTo) {
-    res.send(`<?xml version="1.0" encoding="UTF-8"?><Response><Say>Thank you for calling. We were unable to connect your call. Please try again shortly.</Say></Response>`);
-    return;
-  }
-
+  if (!forwardTo) { res.send(`<?xml version="1.0" encoding="UTF-8"?><Response><Say>Thank you for calling. We were unable to connect your call. Please try again shortly.</Say></Response>`); return; }
   const inHours = isWithinBusinessHours(businessHours);
   const afterHoursMode = businessHours?.afterHoursMode || 'ring_then_sms';
-
   if (!inHours && afterHoursMode === 'sms_only') {
-    console.log(`After-hours call for ${clientId} — skipping ring, firing SMS`);
     res.send(`<?xml version="1.0" encoding="UTF-8"?><Response><Redirect method="POST">${missedUrl}&amp;dialStatus=no-answer</Redirect></Response>`);
     return;
   }
-
-  res.send(`<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-  <Dial timeout="20" action="${missedUrl}" method="POST">
-    <Number>${forwardTo}</Number>
-  </Dial>
-</Response>`);
+  res.send(`<?xml version="1.0" encoding="UTF-8"?>\n<Response>\n  <Dial timeout="20" action="${missedUrl}" method="POST">\n    <Number>${forwardTo}</Number>\n  </Dial>\n</Response>`);
 });
 
 // ─── Voice: Missed call ───────────────────────────────────────────────────────
 app.post('/api/voice/missed', async (req, res) => {
   const { clientId, callerNumber } = req.query as Record<string, string>;
   const dialStatus = req.body.DialCallStatus || req.query.dialStatus || '';
-
-  if (['completed', 'in-progress'].includes(dialStatus)) {
-    res.set('Content-Type', 'text/xml');
-    res.send(`<?xml version="1.0" encoding="UTF-8"?><Response></Response>`);
-    return;
-  }
-
+  if (['completed', 'in-progress'].includes(dialStatus)) { res.set('Content-Type', 'text/xml'); res.send(`<?xml version="1.0" encoding="UTF-8"?><Response></Response>`); return; }
   let contractorName = 'Your plumber';
   let quoteUrl = 'https://plumblead.ai/quote';
   try {
@@ -441,13 +461,10 @@ app.post('/api/voice/missed', async (req, res) => {
         contractorName = result.rows[0].client_name;
         quoteUrl = `https://plumblead.ai/quote?client=${encodeURIComponent(result.rows[0].client_id)}`;
       } else if (result.rows.length && !result.rows[0].missed_call_sms) {
-        res.set('Content-Type', 'text/xml');
-        res.send(`<?xml version="1.0" encoding="UTF-8"?><Response></Response>`);
-        return;
+        res.set('Content-Type', 'text/xml'); res.send(`<?xml version="1.0" encoding="UTF-8"?><Response></Response>`); return;
       }
     }
   } catch (err) { console.error('Missed call lookup error:', err); }
-
   const callerDigits = (callerNumber || '').replace(/\D/g, '');
   if (callerDigits.length >= 10) {
     const smsBody = `Hi! We missed your call at ${contractorName}. Get an instant quote online in under 60 seconds — no wait, no hold music: ${quoteUrl}`;
@@ -458,7 +475,6 @@ app.post('/api/voice/missed', async (req, res) => {
       if (n8nUrl) fetch(n8nUrl, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ phone:callerDigits, source:'missed-call', clientId:clientId||'unknown', submittedAt:new Date().toISOString() }) }).catch(err=>console.error('n8n error:',err));
     } catch (err) { console.error('Missed call SMS error:', err); }
   }
-
   res.set('Content-Type', 'text/xml');
   res.send(`<?xml version="1.0" encoding="UTF-8"?><Response></Response>`);
 });
@@ -489,7 +505,6 @@ app.post('/api/chat', async (req, res) => {
   const { message, history=[], lang='en', sessionId='plumblead-user' } = req.body;
   const isSpanish = lang === 'es';
   const systemInstruction = `You are a friendly plumbing assistant for PlumbLead.ai. Your job is to quickly qualify the homeowner's issue and guide them to get a free quote.\n\nSTRICT RULES:\n- Keep responses SHORT — 2-4 sentences maximum. Never use headers, bullet points, or long lists.\n- Ask ONE clarifying question per response to narrow down the problem.\n- After 1-2 exchanges, encourage them to use the Instant Quote tool for a free estimate.\n- Be warm and helpful, not clinical or encyclopedic.\n- Never break character or mention other AI systems.\n- IMPORTANT: Respond entirely in ${isSpanish?'Spanish':'English'}.`;
-
   if (openClawApiEndpoint && openClawApiKey) {
     try {
       const msgs = [{role:'system',content:systemInstruction},...history.map((m:any)=>({role:m.role,content:m.content})),{role:'user',content:message}];
@@ -516,30 +531,95 @@ async function qualifyLeadWithGemini(serviceType:string,details:string,location:
   } catch { return {leadScore:serviceType.toLowerCase().includes('emergency')||serviceType.toLowerCase().includes('leak')?'High Urgency':'Routine',crossSellOpportunities:[]}; }
 }
 
+// ─── Quote ────────────────────────────────────────────────────────────────────
 app.post('/api/quote', async (req, res) => {
-  const {serviceType,details,location,language='en',sessionId='plumblead-quote-user'}=req.body;
+  const {serviceType,details,location,language='en',sessionId='plumblead-quote-user',zipCode}=req.body;
   const qr:QuoteRequest={serviceType,details,location,language};
   let ls='',cso:string[]=[],rd=details;
-  if(openClawApiEndpoint&&openClawApiKey){
-    try{
-      const qp=`You are a PlumbLead.ai Lead Qualifier. Return ONLY valid JSON:\n{ "leadScore": "Emergency|High Urgency|Routine", "crossSellOpportunities": ["string"], "geminiPromptRefinement": "optional" }\nService: ${serviceType}\nDetails: ${details}\nLocation: ${location}`;
-      const r=await fetch(openClawApiEndpoint,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${openClawApiKey}`},body:JSON.stringify({model:'openclaw:plumblead',messages:[{role:'system',content:'Return only valid JSON.'},{role:'user',content:qp}],user:sessionId})});
-      if(r.ok){const d=await r.json() as any;const raw=(d.choices?.[0]?.message?.content||d.output||'').trim().replace(/^```json\s*/i,'').replace(/^```\s*/i,'').replace(/\s*```$/i,'').trim();if(raw){const p=JSON.parse(raw);if(p.leadScore)ls=p.leadScore;if(Array.isArray(p.crossSellOpportunities))cso=p.crossSellOpportunities;if(p.geminiPromptRefinement)rd=`${details}\n\nAdditional context: ${p.geminiPromptRefinement}`;}}
-    }catch(err){console.error('OpenClaw error:',err);}
+
+  // Parallel: AI qualification + AquaOps brief
+  const zip = zipCode || '';
+  const waterData = zip ? waterDataByZip[zip] : null;
+
+  const [qualResult, brief] = await Promise.allSettled([
+    (async () => {
+      if(openClawApiEndpoint&&openClawApiKey){
+        try{
+          const qp=`You are a PlumbLead.ai Lead Qualifier. Return ONLY valid JSON:\n{ "leadScore": "Emergency|High Urgency|Routine", "crossSellOpportunities": ["string"], "geminiPromptRefinement": "optional" }\nService: ${serviceType}\nDetails: ${details}\nLocation: ${location}`;
+          const r=await fetch(openClawApiEndpoint,{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${openClawApiKey}`},body:JSON.stringify({model:'openclaw:plumblead',messages:[{role:'system',content:'Return only valid JSON.'},{role:'user',content:qp}],user:sessionId})});
+          if(r.ok){const d=await r.json() as any;const raw=(d.choices?.[0]?.message?.content||d.output||'').trim().replace(/^```json\s*/i,'').replace(/^```\s*/i,'').replace(/\s*```$/i,'').trim();if(raw){const p=JSON.parse(raw);return p;}}
+        }catch(err){console.error('OpenClaw error:',err);}
+      }
+      return await qualifyLeadWithGemini(serviceType,details,location);
+    })(),
+    buildPlumberBrief(zip, waterData, serviceType),
+  ]);
+
+  if(qualResult.status==='fulfilled'){
+    const p=qualResult.value as any;
+    if(p.leadScore)ls=p.leadScore;
+    if(Array.isArray(p.crossSellOpportunities))cso=p.crossSellOpportunities;
+    if(p.geminiPromptRefinement)rd=`${details}\n\nAdditional context: ${p.geminiPromptRefinement}`;
   }
-  if(!ls){try{const q=await qualifyLeadWithGemini(serviceType,details,location);ls=q.leadScore;cso=q.crossSellOpportunities;}catch{ls='Routine';}}
-  try{const qresp:QuoteResponse=await generateAIQuote({...qr,details:rd});return res.json({...qresp,leadScore:ls,crossSellOpportunities:cso});}
-  catch(err){return res.status(500).json({error:'Failed to generate quote.',leadScore:ls,crossSellOpportunities:cso});}
+  if(!ls){ls=serviceType.toLowerCase().includes('emergency')||serviceType.toLowerCase().includes('leak')?'High Urgency':'Routine';}
+
+  const plumberBrief = brief.status==='fulfilled' ? brief.value : null;
+
+  // Merge AquaOps cross-sell into crossSellOpportunities if not already populated
+  if(plumberBrief?.primaryRecommendation && !cso.length){
+    cso=[plumberBrief.primaryRecommendation.name, ...plumberBrief.additionalRecommendations.map(p=>p.name)];
+  }
+
+  try{
+    const qresp:QuoteResponse=await generateAIQuote({...qr,details:rd});
+    return res.json({...qresp,leadScore:ls,crossSellOpportunities:cso,plumberBrief});
+  }catch(err){
+    return res.status(500).json({error:'Failed to generate quote.',leadScore:ls,crossSellOpportunities:cso,plumberBrief});
+  }
 });
 
+// ─── Leads ────────────────────────────────────────────────────────────────────
 app.post('/api/leads', async (req, res) => {
   const clientId=req.body.clientId||'demo';
   const status=await getContractorStatus(clientId);
   if(!status.active||status.subscriptionStatus==='cancelled') return res.status(403).json({error:'Service unavailable',message:'This service is currently paused.',callbackPhone:status.callbackPhone});
-  let stored:StoredLead;
-  try{stored=await saveLead(req.body);}catch(err){console.error('Failed to save lead:',err);return res.json({message:'Lead received.'}); }
+
+  // Build AquaOps brief for enriched plumber notification
+  const zip        = req.body.zipCode || req.body.zip || '';
+  const waterData  = zip ? waterDataByZip[zip] : null;
+  const serviceType = req.body.serviceLabel || req.body.serviceType || '';
+
+  let brief: PlumberBrief | null = null;
+  try {
+    brief = await buildPlumberBrief(zip, waterData, serviceType);
+  } catch(err) {
+    console.warn('AquaOps brief failed — continuing without:', err);
+  }
+
+  // Attach brief summary to lead payload for dashboard + n8n
+  const enrichedPayload = {
+    ...req.body,
+    ...(brief && {
+      waterProfile:          brief.waterProfile,
+      plumberBriefText:      brief.briefText,
+      primaryEquipmentRec:   brief.primaryRecommendation ? {
+        sku:         brief.primaryRecommendation.sku,
+        name:        brief.primaryRecommendation.name,
+        dealerPrice: brief.primaryRecommendation.dealer_price,
+        retailLow:   brief.primaryRecommendation.retail_low,
+        retailHigh:  brief.primaryRecommendation.retail_high,
+        orderUrl:    brief.primaryRecommendation.order_url,
+      } : null,
+    }),
+  };
+
+  let stored: StoredLead;
+  try{stored=await saveLead(enrichedPayload);}catch(err){console.error('Failed to save lead:',err);return res.json({message:'Lead received.'});}
+
+  // Forward enriched payload to n8n
   const n8nUrl=process.env.N8N_WEBHOOK_URL;
-  if(n8nUrl) fetch(n8nUrl,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...req.body,leadId:stored.id})}).catch(err=>console.error('n8n error:',err));
+  if(n8nUrl) fetch(n8nUrl,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...enrichedPayload,leadId:stored.id,plumberSms:buildPlumberSms(req.body,brief)})}).catch(err=>console.error('n8n error:',err));
+
   res.json({message:'Lead received.',leadId:stored.id});
 });
 
@@ -554,6 +634,19 @@ app.patch('/api/leads/:id', requireAdminKey, async (req, res) => {
   const {status,jobValue,statusNote}=req.body;
   try{const u=await patchLead(id,{status,jobValue,statusNote});if(!u)return res.status(404).json({error:'Lead not found'});res.json({lead:u});}
   catch{res.status(500).json({error:'Failed to update lead.'}); }
+});
+
+// ─── AquaOps: Product lookup endpoint (admin) ─────────────────────────────────
+app.get('/api/aquaops/recommend', requireAdminKey, async (req, res) => {
+  const { zip, serviceType='Water Heater' } = req.query as Record<string,string>;
+  if (!zip) return res.status(400).json({ error: 'zip is required' });
+  const waterData = waterDataByZip[zip] || null;
+  try {
+    const brief = await buildPlumberBrief(zip, waterData, serviceType);
+    res.json(brief);
+  } catch(err:any) {
+    res.status(500).json({ error: err.message || 'Failed to build brief' });
+  }
 });
 
 app.get('/api/contractors', requireAdminKey, async (_req, res) => {
@@ -624,6 +717,7 @@ app.post('/api/scrape-contractor', requireAdminKey, async (req, res) => {
   }catch(err:any){res.status(500).json({error:err.message||'Scrape failed.'});}
 });
 
+loadWaterData();
 initDb().then(() => {
   app.listen(port, () => console.log(`PlumbLead.ai server running on port ${port} | SMS from: ${TWILIO_FROM_NUMBER}`));
 });

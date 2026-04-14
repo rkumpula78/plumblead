@@ -1,11 +1,9 @@
 // src/services/geminiService.ts
 
 import { GoogleGenAI } from "@google/genai";
+import { PlumberBrief } from "./aquaopsService";
 
-// Initialize Gemini API
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
-
-// Make the AI model configurable via environment variable
 const QUOTE_AI_MODEL = process.env.PLUMBLEAD_QUOTE_AI_MODEL || "gemini-2.0-flash";
 
 export interface QuoteRequest {
@@ -19,6 +17,7 @@ export interface QuoteResponse {
   estimateRange: string;
   personalizedMessage: string;
   suggestedNextSteps: string[];
+  plumberBrief?: PlumberBrief;  // attached by server.ts after aquaops lookup
 }
 
 export async function generateAIQuote(request: QuoteRequest): Promise<QuoteResponse> {
@@ -53,17 +52,12 @@ Return ONLY a valid JSON object with exactly these fields (no markdown, no extra
       contents: prompt,
     });
 
-    // response.text is a property in @google/genai v0.7, not a method
     const rawText = response.text ?? "";
-
-    // Strip markdown code fences if present
     const clean = rawText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-
     const result = JSON.parse(clean || "{}");
 
-    // Validate shape — fall back to safe defaults if AI returns unexpected structure
     return {
-      estimateRange: result.estimateRange || "Contact for estimate",
+      estimateRange:      result.estimateRange      || "Contact for estimate",
       personalizedMessage: result.personalizedMessage || "Please contact a licensed plumber for an accurate assessment.",
       suggestedNextSteps: Array.isArray(result.suggestedNextSteps) ? result.suggestedNextSteps : [],
     };
