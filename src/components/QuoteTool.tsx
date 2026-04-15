@@ -156,8 +156,8 @@ function getClientId() {
 }
 
 function getClientName() {
-  if (typeof window === 'undefined') return 'Demo Contractor';
-  return new URLSearchParams(window.location.search).get('clientName') || 'Demo Contractor';
+  if (typeof window === 'undefined') return 'Your Local Plumber';
+  return new URLSearchParams(window.location.search).get('clientName') || 'Your Local Plumber';
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
@@ -296,7 +296,7 @@ const QuoteTool: React.FC = () => {
           <button onClick={() => setState(prev => ({ ...prev, language: 'en' }))} style={{ padding: '4px 10px', border: '2px solid #0ea5e9', background: state.language === 'en' ? '#0ea5e9' : '#fff', color: state.language === 'en' ? '#fff' : '#0ea5e9', borderRadius: '4px 0 0 4px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>English</button>
           <button onClick={() => setState(prev => ({ ...prev, language: 'es' }))} style={{ padding: '4px 10px', border: '2px solid #0ea5e9', background: state.language === 'es' ? '#0ea5e9' : '#fff', color: state.language === 'es' ? '#fff' : '#0ea5e9', borderRadius: '0 4px 4px 0', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>Español</button>
         </div>
-        <div style={{ fontSize: 14, fontWeight: 600, color: '#0ea5e9', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Demo Contractor</div>
+        <div style={{ fontSize: 14, fontWeight: 600, color: '#0ea5e9', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>{clientName}</div>
         <h1 style={{ fontSize: 28, fontWeight: 700, color: '#0f172a', lineHeight: 1.2 }}>{t.mainTitle}</h1>
         <p style={{ fontSize: 16, color: '#64748b', marginTop: 8 }}>{t.mainSubtitle}</p>
       </div>
