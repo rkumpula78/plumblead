@@ -14,6 +14,7 @@ import Terms from './components/Terms';
 import Privacy from './components/Privacy';
 import AdminOnboard from './components/AdminOnboard';
 import AdminContractors from './components/AdminContractors';
+import AdminHub from './components/AdminHub';
 import CheckoutPage from './components/CheckoutPage';
 import CheckoutSuccess from './components/CheckoutSuccess';
 
@@ -59,6 +60,7 @@ function App() {
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/demo/promax" element={<ProMaxDemo />} />
         <Route path="/demo/gps" element={<GPSPlumbingDemo />} />
+        <Route path="/admin" element={<AdminHub />} />
         <Route path="/admin/onboard" element={<AdminOnboard />} />
         <Route path="/admin/contractors" element={<AdminContractors />} />
         <Route path="/checkout" element={<CheckoutPage />} />
