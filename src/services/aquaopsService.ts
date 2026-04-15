@@ -460,9 +460,9 @@ function buildRecommendations(
 // ─── H3 live API client ────────────────────────────────────────────────────────
 
 const H3_BASE_URL  = process.env.H3AQUAOPS_API_URL  || 'https://h3api.connectable.to';
-const H3_API_KEY   = process.env.H3AQUAOPS_API_KEY  || '9mjfTLGUJFAhhojBFmNudYLxWFkMNJRQ5cYKVL3utCY';
-const H3_API_USER  = process.env.H3AQUAOPS_API_USER || 'rkumpula';
-const H3_API_PASS  = process.env.H3AQUAOPS_API_PASS || 'h3aquaops2026';
+const H3_API_KEY   = process.env.H3AQUAOPS_API_KEY  || '';
+const H3_API_USER  = process.env.H3AQUAOPS_API_USER || '';
+const H3_API_PASS  = process.env.H3AQUAOPS_API_PASS || '';
 
 async function callH3Api(endpoint: string, body: object): Promise<any | null> {
   try {
@@ -511,19 +511,40 @@ export async function buildPlumberBrief(
     };
   }
 
-  const gpg: number        = waterData.hardness_gpg ?? waterData.hardness ?? waterData.water_hardness_gpg ?? 0;
-  const ph: number         = waterData.ph ?? 7.5;
-  const tds: number        = waterData.tds_ppm ?? waterData.tds ?? 0;
-  const iron: number       = waterData.iron_mg_l ?? waterData.iron ?? 0;
-  const chlorine: number   = waterData.chlorine_mg_l ?? waterData.free_chlorine ?? waterData.chlorine ?? 0.8;
+  // ── Extract numeric value from flat number OR nested {low, high, avg} object ──
+  // AZ water JSON uses {low, high, avg} objects; WA uses flat numbers.
+  // Always extract .avg (or .low as fallback) to get a usable number.
+  const extractNum = (val: any, fallback: number = 0): number => {
+    if (typeof val === 'number') return val;
+    if (val && typeof val === 'object') {
+      if (typeof val.avg === 'number') return val.avg;
+      if (typeof val.low === 'number') return val.low;
+    }
+    return fallback;
+  };
+
+  const gpg      = extractNum(waterData.hardness_gpg ?? waterData.hardness ?? waterData.water_hardness_gpg);
+  const ph       = extractNum(waterData.ph, 7.5);
+  const tds      = extractNum(waterData.tds_ppm ?? waterData.tds);
+  const iron     = extractNum(waterData.iron_mg_l ?? waterData.iron);
+  const chlorine = extractNum(waterData.chlorine_mg_l ?? waterData.free_chlorine ?? waterData.chlorine, 0.8);
+
   const chloramine: boolean = !!(waterData.chloramine_concern ?? waterData.chloramine ?? false);
   const source: 'municipal' | 'well' | 'unknown' =
     (waterData.water_source as any) ?? (waterData.source_type as any) ?? 'municipal';
 
+  // ── City/state: AZ JSON uses `name` field; WA may use `city` ──
+  const city  = waterData.city || waterData.name || waterData.municipality || '';
+  const state = waterData.state ||
+    (waterData.source && typeof waterData.source === 'string'
+      ? (waterData.source.includes('AZ') || waterData.source.includes('Arizona') ? 'AZ'
+        : waterData.source.includes('WA') || waterData.source.includes('Washington') ? 'WA' : '')
+      : '');
+
   const profile: WaterProfile = {
     zip,
-    city:               waterData.city          || waterData.municipality || '',
-    state:              waterData.state          || '',
+    city,
+    state,
     hardness_gpg:       gpg,
     hardness_mg_l:      H3PlumberProEngine.gpgToMgL(gpg),
     ph,
