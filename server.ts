@@ -8,9 +8,6 @@ import fetch from 'node-fetch';
 import { Pool } from 'pg';
 
 // ─── Water data — imported at compile time via resolveJsonModule ──────────────
-// tsconfig.server.json has resolveJsonModule:true, so TypeScript bakes these
-// JSON files directly into dist-server/server.js. No filesystem access at
-// runtime — eliminates all __dirname / process.cwd() path issues on Railway.
 import azWaterRaw from './src/data/az-water-data.json';
 import waWaterRaw from './src/data/wa-water-data.json';
 
@@ -55,9 +52,7 @@ const pool = new Pool({
   ssl: process.env.DATABASE_URL?.includes('railway') ? { rejectUnauthorized: false } : false,
 });
 
-// ─── Water data — build flat zip-keyed lookup at startup ──────────────────────
-// Handles city-keyed shape: { cities: { phoenix: { zip_codes: [...], ... } } }
-
+// ─── Water data — build flat zip-keyed lookup at module load ──────────────────
 function normalizeWaterJson(raw: any): Record<string, any> {
   if (Array.isArray(raw)) {
     return Object.fromEntries(raw.map((r: any) => [String(r.zip || r.zip_code || r.zipCode), r]));
@@ -78,7 +73,6 @@ const waterDataByZip: Record<string, any> = {
   ...normalizeWaterJson(azWaterRaw),
   ...normalizeWaterJson(waWaterRaw),
 };
-
 console.log(`Water data loaded: ${Object.keys(waterDataByZip).length} zip codes`);
 
 // ─── DB init ──────────────────────────────────────────────────────────────────
@@ -272,7 +266,7 @@ function buildPlumberSms(
 
   if (brief?.primaryRecommendation) {
     const p = brief.primaryRecommendation;
-    sms += `\nRec: ${p.name}`;
+    sms += `\nRec: ${p.equipment_name}`;
     sms += `\nDealer: $${p.dealer_price} | Retail: $${p.retail_low}–$${p.retail_high}`;
     sms += `\nOrder: ${p.order_url}`;
   }
@@ -503,7 +497,7 @@ app.post('/api/contractors/:clientId/provision-number', requireAdminKey, async (
     const buyData = await buyRes.json() as any;
     if (!buyData.phone_number) return res.status(500).json({ error:'Failed to purchase number.', detail:buyData });
     await pool.query(`UPDATE contractors SET twilio_number=$1, missed_call_sms=true WHERE client_id=$2`, [buyData.phone_number, clientId]);
-    res.json({ message:'Number provisioned.', twilioNumber:buyData.phone_number, clientId, nextStep:`Give ${buyData.phone_number} to the contractor for their website and Google Business profile.` });
+    res.json({ message:'Number provisioned.', twilioNumber:buyData.phone_number, clientId });
   } catch (err: any) { res.status(500).json({ error: err.message||'Failed to provision.' }); }
 });
 
@@ -572,7 +566,7 @@ app.post('/api/quote', async (req, res) => {
   const plumberBrief = brief.status==='fulfilled' ? brief.value : null;
 
   if(plumberBrief?.primaryRecommendation && !cso.length){
-    cso=[plumberBrief.primaryRecommendation.name, ...plumberBrief.additionalRecommendations.map(p=>p.name)];
+    cso=[plumberBrief.primaryRecommendation.equipment_name, ...plumberBrief.additionalRecommendations.map((p:any)=>p.equipment_name)];
   }
 
   try{
@@ -607,7 +601,7 @@ app.post('/api/leads', async (req, res) => {
       plumberBriefText:      brief.briefText,
       primaryEquipmentRec:   brief.primaryRecommendation ? {
         sku:         brief.primaryRecommendation.sku,
-        name:        brief.primaryRecommendation.name,
+        name:        brief.primaryRecommendation.equipment_name,
         dealerPrice: brief.primaryRecommendation.dealer_price,
         retailLow:   brief.primaryRecommendation.retail_low,
         retailHigh:  brief.primaryRecommendation.retail_high,
