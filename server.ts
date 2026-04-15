@@ -53,7 +53,6 @@ const pool = new Pool({
 });
 
 // ─── Water data — build flat zip-keyed lookup at module load ──────────────────
-// stateCode is injected during normalization since the JSON files don't carry a state field.
 function normalizeWaterJson(raw: any, stateCode: string): Record<string, any> {
   if (Array.isArray(raw)) {
     return Object.fromEntries(raw.map((r: any) => [String(r.zip || r.zip_code || r.zipCode), { state: stateCode, ...r }]));
@@ -75,6 +74,61 @@ const waterDataByZip: Record<string, any> = {
   ...normalizeWaterJson(waWaterRaw, 'WA'),
 };
 console.log(`Water data loaded: ${Object.keys(waterDataByZip).length} zip codes`);
+
+// ─── Contractor configs — seeded for ProMax and GPS, used by /api/contractor-config ─
+const CONTRACTOR_CONFIGS: Record<string, object> = {
+  'promax-water-heaters': {
+    clientId: 'promax-water-heaters',
+    clientName: 'ProMax Water Heaters & Plumbing',
+    clientPhone: '(425) 495-1961',
+    clientColor: '#1B4F8A',
+    clientAccent: '#F5A623',
+    address: '17461 147th St SE #6A, Monroe, WA 98272',
+    serviceArea: 'Monroe, WA — Snohomish & King Counties',
+    defaultZip: '98272',
+    trustBadges: ['100% Satisfaction Guarantee', 'Upfront Pricing', 'Same-Day Available', 'Licensed Journeymen'],
+    services: [
+      { key: 'water-heater-tank',     label: 'Water Heater (Tank)',     icon: '🔥', hint: '$1,200 – $2,800' },
+      { key: 'water-heater-tankless', label: 'Tankless Water Heater',   icon: '⚡', hint: '$2,500 – $5,500' },
+      { key: 'water-heater-heatpump', label: 'Heat Pump Water Heater',  icon: '🌡️', hint: '$2,800 – $5,000' },
+      { key: 'water-heater-repair',   label: 'Water Heater Repair',     icon: '🔧', hint: '$150 – $600' },
+      { key: 'leak-detection',        label: 'Leak Detection',          icon: '💧', hint: '$200 – $500' },
+      { key: 'repiping',              label: 'Repiping',                icon: '🏠', hint: '$4,000 – $12,000' },
+      { key: 'drain-cleaning',        label: 'Drain Cleaning',          icon: '🚿', hint: '$150 – $400' },
+      { key: 'toilet-repair',         label: 'Toilet Repair / Install', icon: '🚽', hint: '$150 – $500' },
+      { key: 'sump-pump',             label: 'Sump Pump',               icon: '⛽', hint: '$500 – $1,500' },
+      { key: 'faucet-fixture',        label: 'Faucets & Fixtures',      icon: '🚰', hint: '$150 – $400' },
+      { key: 'main-water-line',       label: 'Main Water Line',         icon: '🔩', hint: '$1,500 – $5,000' },
+      { key: 'other',                 label: 'Other Plumbing',          icon: '🛠️', hint: 'Varies' },
+    ],
+  },
+  'gps-plumbing': {
+    clientId: 'gps-plumbing',
+    clientName: 'GPS Plumbing Inc.',
+    clientPhone: '(425) 458-8548',
+    clientColor: '#1A5C2A',
+    clientAccent: '#F5A623',
+    address: '26016 132nd St SE, Monroe, WA 98272',
+    serviceArea: 'Monroe, WA — Snohomish & King Counties',
+    defaultZip: '98272',
+    emergencyBanner: '🚨 24/7 Emergency Service Available',
+    trustBadges: ['100% Satisfaction Guarantee', '24/7 Emergency Service', 'Family Owned & Operated'],
+    services: [
+      { key: 'water-heater-tank',     label: 'Water Heater Replacement', icon: '🔥', hint: '$1,200 – $2,800' },
+      { key: 'water-heater-tankless', label: 'Tankless Water Heater',    icon: '⚡', hint: '$2,500 – $5,500' },
+      { key: 'water-heater-repair',   label: 'Water Heater Repair',      icon: '🔧', hint: '$150 – $600' },
+      { key: 'emergency-leak',        label: '🚨 Emergency / Leak',      icon: '🚨', hint: 'Call immediately' },
+      { key: 'drain-cleaning',        label: 'Drain Cleaning',           icon: '🚿', hint: '$150 – $400' },
+      { key: 'toilet-repair',         label: 'Toilet Repair / Install',  icon: '🚽', hint: '$150 – $500' },
+      { key: 'faucet-fixture',        label: 'Faucets & Fixtures',       icon: '🚰', hint: '$150 – $400' },
+      { key: 'low-water-pressure',    label: 'Low Water Pressure',       icon: '💧', hint: '$200 – $800' },
+      { key: 'sewer-line',            label: 'Sewer Line',               icon: '🔩', hint: '$2,000 – $8,000' },
+      { key: 'property-manager',      label: 'Property Management',      icon: '🏢', hint: 'Custom pricing' },
+      { key: 'repiping',              label: 'Repiping',                 icon: '🏠', hint: '$4,000 – $12,000' },
+      { key: 'other',                 label: 'Other Plumbing',           icon: '🛠️', hint: 'Varies' },
+    ],
+  },
+};
 
 // ─── DB init ──────────────────────────────────────────────────────────────────
 async function initDb() {
@@ -119,7 +173,8 @@ async function initDb() {
         ADD COLUMN IF NOT EXISTS stripe_subscription_id TEXT,
         ADD COLUMN IF NOT EXISTS twilio_number        TEXT,
         ADD COLUMN IF NOT EXISTS missed_call_sms      BOOLEAN NOT NULL DEFAULT false,
-        ADD COLUMN IF NOT EXISTS business_hours       JSONB;
+        ADD COLUMN IF NOT EXISTS business_hours       JSONB,
+        ADD COLUMN IF NOT EXISTS config               JSONB;
     `);
     await pool.query(`
       INSERT INTO contractors (client_id, client_name, active, plan)
@@ -134,6 +189,13 @@ async function initDb() {
       SET dashboard_code = client_id || '-' || EXTRACT(YEAR FROM NOW())::TEXT
       WHERE dashboard_code IS NULL;
     `);
+    // Seed DemoShell configs for existing contractors
+    for (const [clientId, cfg] of Object.entries(CONTRACTOR_CONFIGS)) {
+      await pool.query(
+        `UPDATE contractors SET config = $1 WHERE client_id = $2 AND config IS NULL`,
+        [JSON.stringify(cfg), clientId]
+      );
+    }
     console.log('Database ready.');
   } catch (err) {
     console.error('Database init error:', err);
@@ -290,6 +352,39 @@ app.get('/api/health', async (_req, res) => {
   } catch {
     res.json({ status: 'ok', db: 'not connected', timestamp: new Date().toISOString() });
   }
+});
+
+// ─── Contractor config (public — used by DynamicDemo) ────────────────────────
+// Returns the DemoConfig JSON for a given clientId.
+// Priority: config JSONB column in DB > in-memory CONTRACTOR_CONFIGS seed.
+// No auth required — public-facing widget data only.
+app.get('/api/contractor-config', async (req, res) => {
+  const clientId = (req.query.clientId as string || '').trim();
+  if (!clientId) return res.status(400).json({ error: 'clientId is required' });
+
+  try {
+    const result = await pool.query(
+      `SELECT config, client_name, active, subscription_status FROM contractors WHERE client_id = $1`,
+      [clientId]
+    );
+    if (result.rows.length) {
+      const row = result.rows[0];
+      if (!row.active || row.subscription_status === 'cancelled') {
+        return res.status(404).json({ error: 'Demo page not available.' });
+      }
+      if (row.config) {
+        return res.json(row.config);
+      }
+    }
+  } catch (err) {
+    console.error('contractor-config DB error:', err);
+  }
+
+  // Fall back to in-memory seed (covers ProMax + GPS even before DB is migrated)
+  const seedConfig = CONTRACTOR_CONFIGS[clientId];
+  if (seedConfig) return res.json(seedConfig);
+
+  return res.status(404).json({ error: 'Contractor not found.' });
 });
 
 // ─── Contractor status ────────────────────────────────────────────────────────
@@ -652,13 +747,13 @@ app.get('/api/contractors', requireAdminKey, async (_req, res) => {
 });
 
 app.post('/api/contractors', requireAdminKey, async (req, res) => {
-  const {clientId,companyName,phone,callbackPhone,email,address,city,state,zipCodes,crmSystem,bilingual,plan,services,notes}=req.body;
+  const {clientId,companyName,phone,callbackPhone,email,address,city,state,zipCodes,crmSystem,bilingual,plan,services,notes,config}=req.body;
   if(!clientId||!companyName||!phone) return res.status(400).json({error:'clientId, companyName, and phone are required.'});
   const dc=`${clientId}-${new Date().getFullYear()}`;
   try{
     const r=await pool.query(
-      `INSERT INTO contractors (client_id,client_name,active,plan,subscription_status,phone,callback_phone,email,address,city,state,zip_codes,crm_system,bilingual,services,notes,dashboard_code) VALUES ($1,$2,true,$3,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) ON CONFLICT (client_id) DO UPDATE SET client_name=EXCLUDED.client_name,plan=EXCLUDED.plan,phone=EXCLUDED.phone,callback_phone=EXCLUDED.callback_phone,email=EXCLUDED.email,address=EXCLUDED.address,city=EXCLUDED.city,state=EXCLUDED.state,zip_codes=EXCLUDED.zip_codes,crm_system=EXCLUDED.crm_system,bilingual=EXCLUDED.bilingual,services=EXCLUDED.services,notes=EXCLUDED.notes,dashboard_code=COALESCE(contractors.dashboard_code,EXCLUDED.dashboard_code) RETURNING *`,
-      [clientId,companyName,plan||'trial',phone,callbackPhone||phone,email||null,address||null,city||null,state||null,zipCodes||null,crmSystem||null,bilingual||false,JSON.stringify(services||[]),notes||null,dc]
+      `INSERT INTO contractors (client_id,client_name,active,plan,subscription_status,phone,callback_phone,email,address,city,state,zip_codes,crm_system,bilingual,services,notes,dashboard_code,config) VALUES ($1,$2,true,$3,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) ON CONFLICT (client_id) DO UPDATE SET client_name=EXCLUDED.client_name,plan=EXCLUDED.plan,phone=EXCLUDED.phone,callback_phone=EXCLUDED.callback_phone,email=EXCLUDED.email,address=EXCLUDED.address,city=EXCLUDED.city,state=EXCLUDED.state,zip_codes=EXCLUDED.zip_codes,crm_system=EXCLUDED.crm_system,bilingual=EXCLUDED.bilingual,services=EXCLUDED.services,notes=EXCLUDED.notes,dashboard_code=COALESCE(contractors.dashboard_code,EXCLUDED.dashboard_code),config=COALESCE(EXCLUDED.config,contractors.config) RETURNING *`,
+      [clientId,companyName,plan||'trial',phone,callbackPhone||phone,email||null,address||null,city||null,state||null,zipCodes||null,crmSystem||null,bilingual||false,JSON.stringify(services||[]),notes||null,dc,config?JSON.stringify(config):null]
     );
     res.json({contractor:r.rows[0]});
   }catch(err){console.error('Contractor create error:',err);res.status(500).json({error:'Failed to save contractor.'}); }
@@ -669,6 +764,8 @@ app.patch('/api/contractors/:clientId', requireAdminKey, async (req, res) => {
   const allowed=['active','plan','subscription_status','notes','phone','callback_phone','email','city','state','zip_codes','crm_system','bilingual','missed_call_sms'];
   const sets:string[]=[]; const values:unknown[]=[]; let i=1;
   for(const col of allowed){if(req.body[col]!==undefined){sets.push(`${col} = $${i++}`);values.push(req.body[col]);}}
+  // Handle config JSONB separately
+  if(req.body.config!==undefined){sets.push(`config = $${i++}`);values.push(JSON.stringify(req.body.config));}
   if(!sets.length) return res.status(400).json({error:'Nothing to update'});
   values.push(clientId);
   try{const r=await pool.query(`UPDATE contractors SET ${sets.join(', ')} WHERE client_id=$${i} RETURNING *`,values);if(!r.rows.length)return res.status(404).json({error:'Contractor not found'});res.json({contractor:r.rows[0]});}
