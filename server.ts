@@ -6,8 +6,13 @@ import { generateAIQuote, QuoteRequest, QuoteResponse } from './src/services/gem
 import { buildPlumberBrief, PlumberBrief } from './src/services/aquaopsService';
 import fetch from 'node-fetch';
 import { Pool } from 'pg';
-import * as path from 'path';
-import * as fs from 'fs';
+
+// ─── Water data — imported at compile time via resolveJsonModule ──────────────
+// tsconfig.server.json has resolveJsonModule:true, so TypeScript bakes these
+// JSON files directly into dist-server/server.js. No filesystem access at
+// runtime — eliminates all __dirname / process.cwd() path issues on Railway.
+import azWaterRaw from './src/data/az-water-data.json';
+import waWaterRaw from './src/data/wa-water-data.json';
 
 dotenv.config();
 
@@ -50,46 +55,31 @@ const pool = new Pool({
   ssl: process.env.DATABASE_URL?.includes('railway') ? { rejectUnauthorized: false } : false,
 });
 
-// ─── Water data loader ────────────────────────────────────────────────────────
-// nixpacks.toml copies src/data/*.json into dist-server/src/data/ at build time,
-// so __dirname (/app/dist-server) + 'src/data/...' resolves correctly at runtime.
-// Handles three JSON shapes:
-//   1. Flat zip-keyed:  { "85383": { hardness_gpg: {...}, ... }, ... }
-//   2. Array:           [ { zip: "85383", ... }, ... ]
-//   3. City-keyed:      { cities: { phoenix: { zip_codes: ["85001",...], ... } } }
-let waterDataByZip: Record<string, any> = {};
+// ─── Water data — build flat zip-keyed lookup at startup ──────────────────────
+// Handles city-keyed shape: { cities: { phoenix: { zip_codes: [...], ... } } }
 
-function loadWaterData() {
-  try {
-    const azPath = path.join(__dirname, 'src/data/az-water-data.json');
-    const waPath = path.join(__dirname, 'src/data/wa-water-data.json');
-    const azRaw  = fs.existsSync(azPath) ? JSON.parse(fs.readFileSync(azPath, 'utf8')) : {};
-    const waRaw  = fs.existsSync(waPath) ? JSON.parse(fs.readFileSync(waPath, 'utf8')) : {};
-
-    const normalize = (raw: any): Record<string, any> => {
-      if (Array.isArray(raw)) {
-        return Object.fromEntries(raw.map((r: any) => [String(r.zip || r.zip_code || r.zipCode), r]));
-      }
-      if (raw && typeof raw === 'object' && raw.cities && typeof raw.cities === 'object') {
-        const result: Record<string, any> = {};
-        for (const [, cityData] of Object.entries(raw.cities as Record<string, any>)) {
-          const zips: string[] = cityData.zip_codes || [];
-          const { zip_codes: _zc, ...cityRecord } = cityData;
-          for (const zip of zips) {
-            result[String(zip)] = cityRecord;
-          }
-        }
-        return result;
-      }
-      return raw;
-    };
-
-    waterDataByZip = { ...normalize(azRaw), ...normalize(waRaw) };
-    console.log(`Water data loaded: ${Object.keys(waterDataByZip).length} zip codes`);
-  } catch (err) {
-    console.warn('Failed to load water data:', err);
+function normalizeWaterJson(raw: any): Record<string, any> {
+  if (Array.isArray(raw)) {
+    return Object.fromEntries(raw.map((r: any) => [String(r.zip || r.zip_code || r.zipCode), r]));
   }
+  if (raw && typeof raw === 'object' && raw.cities && typeof raw.cities === 'object') {
+    const result: Record<string, any> = {};
+    for (const [, cityData] of Object.entries(raw.cities as Record<string, any>)) {
+      const zips: string[] = (cityData as any).zip_codes || [];
+      const { zip_codes: _zc, ...cityRecord } = cityData as any;
+      for (const zip of zips) { result[String(zip)] = cityRecord; }
+    }
+    return result;
+  }
+  return raw as Record<string, any>;
 }
+
+const waterDataByZip: Record<string, any> = {
+  ...normalizeWaterJson(azWaterRaw),
+  ...normalizeWaterJson(waWaterRaw),
+};
+
+console.log(`Water data loaded: ${Object.keys(waterDataByZip).length} zip codes`);
 
 // ─── DB init ──────────────────────────────────────────────────────────────────
 async function initDb() {
@@ -313,7 +303,7 @@ app.get('/api/contractor-status', async (req, res) => {
   try {
     const status = await getContractorStatus(clientId);
     res.json({ active: status.active, subscriptionStatus: status.subscriptionStatus, callbackPhone: status.active ? null : status.callbackPhone });
-  } catch { res.json({ active: true, subscriptionStatus: 'active', callbackPhone: null }); }  
+  } catch { res.json({ active: true, subscriptionStatus: 'active', callbackPhone: null }); }
 });
 
 // ─── Dashboard auth ───────────────────────────────────────────────────────────
@@ -729,7 +719,6 @@ app.post('/api/scrape-contractor', requireAdminKey, async (req, res) => {
   }catch(err:any){res.status(500).json({error:err.message||'Scrape failed.'});}
 });
 
-loadWaterData();
 initDb().then(() => {
   app.listen(port, () => console.log(`PlumbLead.ai server running on port ${port} | SMS from: ${TWILIO_FROM_NUMBER}`));
 });
