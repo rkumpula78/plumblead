@@ -53,16 +53,17 @@ const pool = new Pool({
 });
 
 // ─── Water data — build flat zip-keyed lookup at module load ──────────────────
-function normalizeWaterJson(raw: any): Record<string, any> {
+// stateCode is injected during normalization since the JSON files don't carry a state field.
+function normalizeWaterJson(raw: any, stateCode: string): Record<string, any> {
   if (Array.isArray(raw)) {
-    return Object.fromEntries(raw.map((r: any) => [String(r.zip || r.zip_code || r.zipCode), r]));
+    return Object.fromEntries(raw.map((r: any) => [String(r.zip || r.zip_code || r.zipCode), { state: stateCode, ...r }]));
   }
   if (raw && typeof raw === 'object' && raw.cities && typeof raw.cities === 'object') {
     const result: Record<string, any> = {};
     for (const [, cityData] of Object.entries(raw.cities as Record<string, any>)) {
       const zips: string[] = (cityData as any).zip_codes || [];
       const { zip_codes: _zc, ...cityRecord } = cityData as any;
-      for (const zip of zips) { result[String(zip)] = cityRecord; }
+      for (const zip of zips) { result[String(zip)] = { state: stateCode, ...cityRecord }; }
     }
     return result;
   }
@@ -70,8 +71,8 @@ function normalizeWaterJson(raw: any): Record<string, any> {
 }
 
 const waterDataByZip: Record<string, any> = {
-  ...normalizeWaterJson(azWaterRaw),
-  ...normalizeWaterJson(waWaterRaw),
+  ...normalizeWaterJson(azWaterRaw, 'AZ'),
+  ...normalizeWaterJson(waWaterRaw, 'WA'),
 };
 console.log(`Water data loaded: ${Object.keys(waterDataByZip).length} zip codes`);
 
