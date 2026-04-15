@@ -51,8 +51,8 @@ const pool = new Pool({
 });
 
 // ─── Water data loader ────────────────────────────────────────────────────────
-// Uses process.cwd() (always /app on Railway) instead of __dirname which
-// resolves to /app/dist-server/ after TypeScript compilation.
+// nixpacks.toml copies src/data/*.json into dist-server/src/data/ at build time,
+// so __dirname (/app/dist-server) + 'src/data/...' resolves correctly at runtime.
 // Handles three JSON shapes:
 //   1. Flat zip-keyed:  { "85383": { hardness_gpg: {...}, ... }, ... }
 //   2. Array:           [ { zip: "85383", ... }, ... ]
@@ -61,9 +61,8 @@ let waterDataByZip: Record<string, any> = {};
 
 function loadWaterData() {
   try {
-    const root   = process.cwd();
-    const azPath = path.join(root, 'src/data/az-water-data.json');
-    const waPath = path.join(root, 'src/data/wa-water-data.json');
+    const azPath = path.join(__dirname, 'src/data/az-water-data.json');
+    const waPath = path.join(__dirname, 'src/data/wa-water-data.json');
     const azRaw  = fs.existsSync(azPath) ? JSON.parse(fs.readFileSync(azPath, 'utf8')) : {};
     const waRaw  = fs.existsSync(waPath) ? JSON.parse(fs.readFileSync(waPath, 'utf8')) : {};
 
@@ -314,7 +313,7 @@ app.get('/api/contractor-status', async (req, res) => {
   try {
     const status = await getContractorStatus(clientId);
     res.json({ active: status.active, subscriptionStatus: status.subscriptionStatus, callbackPhone: status.active ? null : status.callbackPhone });
-  } catch { res.json({ active: true, subscriptionStatus: 'active', callbackPhone: null }); }
+  } catch { res.json({ active: true, subscriptionStatus: 'active', callbackPhone: null }); }  
 });
 
 // ─── Dashboard auth ───────────────────────────────────────────────────────────
