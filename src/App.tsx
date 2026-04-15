@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import LandingPage from './components/LandingPage';
 import QuoteTool from './components/QuoteTool';
 import WaterQualityReport from './components/WaterQualityReport';
@@ -8,8 +8,7 @@ import SubmitTrial from './components/SubmitTrial';
 import WidgetDemo from './components/WidgetDemo';
 import Chatbot from './components/Chatbot';
 import QuoteModal from './components/QuoteModal';
-import ProMaxDemo from './components/demos/ProMaxDemo';
-import GPSPlumbingDemo from './components/demos/GPSPlumbingDemo';
+import DynamicDemo from './components/demos/DynamicDemo';
 import Terms from './components/Terms';
 import Privacy from './components/Privacy';
 import AdminOnboard from './components/AdminOnboard';
@@ -58,8 +57,14 @@ function App() {
         <Route path="/widget-demo" element={<WidgetDemo />} />
         <Route path="/terms" element={<Terms />} />
         <Route path="/privacy" element={<Privacy />} />
-        <Route path="/demo/promax" element={<ProMaxDemo />} />
-        <Route path="/demo/gps" element={<GPSPlumbingDemo />} />
+
+        {/* Config-driven demo pages — one route handles all contractors */}
+        <Route path="/demo/:clientId" element={<DynamicDemo />} />
+
+        {/* Legacy slug redirects — keep existing links working */}
+        <Route path="/demo/promax" element={<Navigate to="/demo/promax-water-heaters" replace />} />
+        <Route path="/demo/gps" element={<Navigate to="/demo/gps-plumbing" replace />} />
+
         <Route path="/admin" element={<AdminHub />} />
         <Route path="/admin/onboard" element={<AdminOnboard />} />
         <Route path="/admin/contractors" element={<AdminContractors />} />
