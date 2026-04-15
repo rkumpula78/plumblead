@@ -1,8 +1,9 @@
+# cache-bust: v2
 [phases.install]
 cmds = ["npm install"]
 
 [phases.build]
-cmds = ["npm run build:server", "mkdir -p dist-server/src/data && cp src/data/*.json dist-server/src/data/"]
+cmds = ["npm run build:server"]
 
 [start]
 cmd = "npm start"
