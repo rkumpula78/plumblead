@@ -51,31 +51,30 @@ const pool = new Pool({
 });
 
 // ─── Water data loader ────────────────────────────────────────────────────────
-// Loads AZ + WA water data at startup; builds a flat zip-keyed lookup map.
+// Uses process.cwd() (always /app on Railway) instead of __dirname which
+// resolves to /app/dist-server/ after TypeScript compilation.
 // Handles three JSON shapes:
 //   1. Flat zip-keyed:  { "85383": { hardness_gpg: {...}, ... }, ... }
 //   2. Array:           [ { zip: "85383", ... }, ... ]
-//   3. City-keyed:      { cities: { phoenix: { zip_codes: ["85001",...], hardness_gpg: {...} } } }
+//   3. City-keyed:      { cities: { phoenix: { zip_codes: ["85001",...], ... } } }
 let waterDataByZip: Record<string, any> = {};
 
 function loadWaterData() {
   try {
-    const azPath = path.join(__dirname, 'src/data/az-water-data.json');
-    const waPath = path.join(__dirname, 'src/data/wa-water-data.json');
+    const root   = process.cwd();
+    const azPath = path.join(root, 'src/data/az-water-data.json');
+    const waPath = path.join(root, 'src/data/wa-water-data.json');
     const azRaw  = fs.existsSync(azPath) ? JSON.parse(fs.readFileSync(azPath, 'utf8')) : {};
     const waRaw  = fs.existsSync(waPath) ? JSON.parse(fs.readFileSync(waPath, 'utf8')) : {};
 
     const normalize = (raw: any): Record<string, any> => {
-      // Shape 1: array of records with zip field
       if (Array.isArray(raw)) {
         return Object.fromEntries(raw.map((r: any) => [String(r.zip || r.zip_code || r.zipCode), r]));
       }
-      // Shape 2: city-keyed object with cities map and zip_codes arrays per city
       if (raw && typeof raw === 'object' && raw.cities && typeof raw.cities === 'object') {
         const result: Record<string, any> = {};
         for (const [, cityData] of Object.entries(raw.cities as Record<string, any>)) {
           const zips: string[] = cityData.zip_codes || [];
-          // Build a flat record for each zip — strip the zip_codes array to avoid bloat
           const { zip_codes: _zc, ...cityRecord } = cityData;
           for (const zip of zips) {
             result[String(zip)] = cityRecord;
@@ -83,7 +82,6 @@ function loadWaterData() {
         }
         return result;
       }
-      // Shape 3: already flat zip-keyed object
       return raw;
     };
 
@@ -557,7 +555,6 @@ app.post('/api/quote', async (req, res) => {
   const qr:QuoteRequest={serviceType,details,location,language};
   let ls='',cso:string[]=[],rd=details;
 
-  // Parallel: AI qualification + AquaOps brief
   const zip = zipCode || '';
   const waterData = zip ? waterDataByZip[zip] : null;
 
@@ -585,7 +582,6 @@ app.post('/api/quote', async (req, res) => {
 
   const plumberBrief = brief.status==='fulfilled' ? brief.value : null;
 
-  // Merge AquaOps cross-sell into crossSellOpportunities if not already populated
   if(plumberBrief?.primaryRecommendation && !cso.length){
     cso=[plumberBrief.primaryRecommendation.name, ...plumberBrief.additionalRecommendations.map(p=>p.name)];
   }
@@ -604,7 +600,6 @@ app.post('/api/leads', async (req, res) => {
   const status=await getContractorStatus(clientId);
   if(!status.active||status.subscriptionStatus==='cancelled') return res.status(403).json({error:'Service unavailable',message:'This service is currently paused.',callbackPhone:status.callbackPhone});
 
-  // Build AquaOps brief for enriched plumber notification
   const zip        = req.body.zipCode || req.body.zip || '';
   const waterData  = zip ? waterDataByZip[zip] : null;
   const serviceType = req.body.serviceLabel || req.body.serviceType || '';
@@ -616,7 +611,6 @@ app.post('/api/leads', async (req, res) => {
     console.warn('AquaOps brief failed — continuing without:', err);
   }
 
-  // Attach brief summary to lead payload for dashboard + n8n
   const enrichedPayload = {
     ...req.body,
     ...(brief && {
@@ -636,7 +630,6 @@ app.post('/api/leads', async (req, res) => {
   let stored: StoredLead;
   try{stored=await saveLead(enrichedPayload);}catch(err){console.error('Failed to save lead:',err);return res.json({message:'Lead received.'});}
 
-  // Forward enriched payload to n8n
   const n8nUrl=process.env.N8N_WEBHOOK_URL;
   if(n8nUrl) fetch(n8nUrl,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...enrichedPayload,leadId:stored.id,plumberSms:buildPlumberSms(req.body,brief)})}).catch(err=>console.error('n8n error:',err));
 
