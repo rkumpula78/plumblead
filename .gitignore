@@ -2,3 +2,25 @@
 *.zip
 node_modules/
 .DS_Store
+
+# Build outputs
+dist/
+
+# Local docs / spreadsheets
+*.docx
+*.xlsx
+*.csv
+
+# Update folders
+*\ updates/
+
+# Build outputs
+dist/
+
+# Local docs / spreadsheets
+*.docx
+*.xlsx
+*.csv
+
+# Update folders
+*\ updates/
