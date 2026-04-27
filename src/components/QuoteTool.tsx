@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import SmsConsent from './SmsConsent';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -34,37 +35,37 @@ interface ContractorStatus {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const PRICE_RANGES: Record<string, { low: number; high: number; label: string }> = {
-  'emergency-leak':       { low: 150,  high: 800,   label: 'Emergency / Leak Repair' },
-  'drain-cleaning':       { low: 150,  high: 400,   label: 'Drain Cleaning' },
-  'water-heater-tank':    { low: 1200, high: 3500,  label: 'Water Heater (Tank)' },
-  'water-heater-tankless':{ low: 2500, high: 5000,  label: 'Water Heater (Tankless)' },
-  'faucet-fixture':       { low: 150,  high: 500,   label: 'Faucet / Fixture Install' },
-  'toilet':               { low: 150,  high: 600,   label: 'Toilet Repair / Replace' },
-  'garbage-disposal':     { low: 200,  high: 500,   label: 'Garbage Disposal' },
-  'sewer-line':           { low: 1500, high: 7000,  label: 'Sewer Line Repair' },
-  'slab-leak':            { low: 2000, high: 5000,  label: 'Slab Leak Repair' },
-  'repipe':               { low: 4000, high: 15000, label: 'Whole House Repipe' },
-  'gas-line':             { low: 300,  high: 1500,  label: 'Gas Line Work' },
-  'water-softener':       { low: 800,  high: 3000,  label: 'Water Softener Install' },
-  'filtration':           { low: 300,  high: 2000,  label: 'Water Filtration / RO System' },
-  'water-test':           { low: 0,    high: 0,     label: 'Free Water Quality Report' },
+  'emergency-leak': { low: 150, high: 800, label: 'Emergency / Leak Repair' },
+  'drain-cleaning': { low: 150, high: 400, label: 'Drain Cleaning' },
+  'water-heater-tank': { low: 1200, high: 3500, label: 'Water Heater (Tank)' },
+  'water-heater-tankless': { low: 2500, high: 5000, label: 'Water Heater (Tankless)' },
+  'faucet-fixture': { low: 150, high: 500, label: 'Faucet / Fixture Install' },
+  'toilet': { low: 150, high: 600, label: 'Toilet Repair / Replace' },
+  'garbage-disposal': { low: 200, high: 500, label: 'Garbage Disposal' },
+  'sewer-line': { low: 1500, high: 7000, label: 'Sewer Line Repair' },
+  'slab-leak': { low: 2000, high: 5000, label: 'Slab Leak Repair' },
+  'repipe': { low: 4000, high: 15000, label: 'Whole House Repipe' },
+  'gas-line': { low: 300, high: 1500, label: 'Gas Line Work' },
+  'water-softener': { low: 800, high: 3000, label: 'Water Softener Install' },
+  'filtration': { low: 300, high: 2000, label: 'Water Filtration / RO System' },
+  'water-test': { low: 0, high: 0, label: 'Free Water Quality Report' },
 };
 
 const SERVICES = [
-  { key: 'emergency-leak',        icon: '🚨', label: 'Emergency / Leak',       priceHint: '$150 – $800' },
-  { key: 'drain-cleaning',        icon: '🚿', label: 'Drain Cleaning',          priceHint: '$150 – $400' },
-  { key: 'water-heater-tank',     icon: '🔥', label: 'Water Heater (Tank)',     priceHint: '$1,200 – $3,500' },
+  { key: 'emergency-leak', icon: '🚨', label: 'Emergency / Leak', priceHint: '$150 – $800' },
+  { key: 'drain-cleaning', icon: '🚿', label: 'Drain Cleaning', priceHint: '$150 – $400' },
+  { key: 'water-heater-tank', icon: '🔥', label: 'Water Heater (Tank)', priceHint: '$1,200 – $3,500' },
   { key: 'water-heater-tankless', icon: '⚡', label: 'Water Heater (Tankless)', priceHint: '$2,500 – $5,000' },
-  { key: 'toilet',                icon: '🚽', label: 'Toilet Repair/Replace',   priceHint: '$150 – $600' },
-  { key: 'faucet-fixture',        icon: '🔧', label: 'Faucet / Fixture',        priceHint: '$150 – $500' },
-  { key: 'garbage-disposal',      icon: '♻️', label: 'Garbage Disposal',        priceHint: '$200 – $500' },
-  { key: 'sewer-line',            icon: '🏗️', label: 'Sewer Line',              priceHint: '$1,500 – $7,000' },
-  { key: 'slab-leak',             icon: '💧', label: 'Slab Leak',               priceHint: '$2,000 – $5,000' },
-  { key: 'gas-line',              icon: '🔥', label: 'Gas Line Work',           priceHint: '$300 – $1,500' },
-  { key: 'repipe',                icon: '🏠', label: 'Whole House Repipe',      priceHint: '$4,000 – $15,000' },
-  { key: 'water-softener',        icon: '💎', label: 'Water Softener',          priceHint: '$800 – $3,000' },
-  { key: 'water-test',            icon: '🧪', label: 'Free Water Quality Report', priceHint: 'FREE — Enter Your Zip', highlight: true },
-  { key: 'filtration',            icon: '🚰', label: 'Water Filtration / RO',   priceHint: '$300 – $2,000' },
+  { key: 'toilet', icon: '🚽', label: 'Toilet Repair/Replace', priceHint: '$150 – $600' },
+  { key: 'faucet-fixture', icon: '🔧', label: 'Faucet / Fixture', priceHint: '$150 – $500' },
+  { key: 'garbage-disposal', icon: '♻️', label: 'Garbage Disposal', priceHint: '$200 – $500' },
+  { key: 'sewer-line', icon: '🏗️', label: 'Sewer Line', priceHint: '$1,500 – $7,000' },
+  { key: 'slab-leak', icon: '💧', label: 'Slab Leak', priceHint: '$2,000 – $5,000' },
+  { key: 'gas-line', icon: '🔥', label: 'Gas Line Work', priceHint: '$300 – $1,500' },
+  { key: 'repipe', icon: '🏠', label: 'Whole House Repipe', priceHint: '$4,000 – $15,000' },
+  { key: 'water-softener', icon: '💎', label: 'Water Softener', priceHint: '$800 – $3,000' },
+  { key: 'water-test', icon: '🧪', label: 'Free Water Quality Report', priceHint: 'FREE — Enter Your Zip', highlight: true },
+  { key: 'filtration', icon: '🚰', label: 'Water Filtration / RO', priceHint: '$300 – $2,000' },
 ];
 
 const SERVICES_ES: Record<string, string> = {
@@ -176,11 +177,12 @@ const QuoteTool: React.FC = () => {
     name: '', phone: '', email: '', language: 'en',
   });
 
-  const [countdown, setCountdown]         = useState(60);
+  const [countdown, setCountdown] = useState(60);
   const [submitLoading, setSubmitLoading] = useState(false);
-  const [aiQuote, setAiQuote]             = useState<AIQuoteResult | null>(null);
-  const [quoteLoading, setQuoteLoading]   = useState(false);
-  const [quoteError, setQuoteError]       = useState(false);
+  const [aiQuote, setAiQuote] = useState<AIQuoteResult | null>(null);
+  const [quoteLoading, setQuoteLoading] = useState(false);
+  const [quoteError, setQuoteError] = useState(false);
+  const [smsConsent, setSmsConsent] = useState(false);
 
   const t = T[state.language];
 
@@ -228,6 +230,7 @@ const QuoteTool: React.FC = () => {
   const submitLead = async () => {
     if (!state.name.trim() || !state.phone.trim()) { alert('Please enter your name and phone number'); return; }
     if (state.phone.replace(/\D/g, '').length < 10) { alert('Please enter a valid phone number'); return; }
+    if (!smsConsent) { alert('Please agree to receive SMS updates to continue.'); return; }
     setSubmitLoading(true);
     const payload = {
       name: state.name, phone: state.phone, email: state.email,
@@ -238,6 +241,8 @@ const QuoteTool: React.FC = () => {
       leadScore: aiQuote?.leadScore || '',
       source: 'quote-tool', campaign: '', clientId,
       clientName, lang: state.language,
+      sms_consent: true,
+      sms_consent_timestamp: new Date().toISOString(),
       submittedAt: new Date().toISOString(),
     };
     try {
@@ -439,6 +444,7 @@ const QuoteTool: React.FC = () => {
               ))}
             </div>
           </div>
+          <SmsConsent checked={smsConsent} onChange={setSmsConsent} contractorName={clientName !== 'Your Local Plumber' ? clientName : undefined} />
           <button onClick={submitLead} disabled={submitLoading} style={{ width: '100%', padding: 16, background: submitLoading ? '#94a3b8' : '#0ea5e9', color: '#fff', border: 'none', borderRadius: 10, fontSize: 16, fontWeight: 700, cursor: submitLoading ? 'not-allowed' : 'pointer', marginBottom: 8 }}>{submitLoading ? 'Sending...' : t.submitBtn}</button>
           <button onClick={() => goToStep(2)} style={{ width: '100%', padding: 12, background: 'transparent', color: '#64748b', border: 'none', fontSize: 14, cursor: 'pointer' }}>{t.back}</button>
         </div>

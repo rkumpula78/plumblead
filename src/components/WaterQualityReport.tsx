@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import azWaterData from '../data/az-water-data.json';
 import waWaterData from '../data/wa-water-data.json';
+import SmsConsent from './SmsConsent';
 
 const API_BASE = 'https://plumblead-production.up.railway.app';
 
@@ -280,15 +281,15 @@ function getWaterReport(zipCode: string): WaterReport | null {
 // ─── Priority colors ──────────────────────────────────────────────────────────
 
 const PRIORITY_STYLE: Record<string, { border: string; bg: string; tagBg: string; tagColor: string }> = {
-  high:   { border: '#ef4444', bg: '#fff',    tagBg: '#fef2f2', tagColor: '#dc2626' },
-  medium: { border: '#0ea5e9', bg: '#fff',    tagBg: '#eff6ff', tagColor: '#1d4ed8' },
-  info:   { border: '#e2e8f0', bg: '#f8fafc', tagBg: '#f1f5f9', tagColor: '#475569' },
+  high: { border: '#ef4444', bg: '#fff', tagBg: '#fef2f2', tagColor: '#dc2626' },
+  medium: { border: '#0ea5e9', bg: '#fff', tagBg: '#eff6ff', tagColor: '#1d4ed8' },
+  info: { border: '#e2e8f0', bg: '#f8fafc', tagBg: '#f1f5f9', tagColor: '#475569' },
 };
 
 const ISSUE_SEVERITY_COLOR: Record<string, string> = {
-  high:   '#ef4444',
+  high: '#ef4444',
   medium: '#f97316',
-  info:   '#64748b',
+  info: '#64748b',
 };
 
 // ─── Water Test Kit Section ───────────────────────────────────────────────────
@@ -353,10 +354,12 @@ const WaterLeadCapture: React.FC<LeadFormProps> = ({ zipCode, report }) => {
   const [email, setEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [smsConsent, setSmsConsent] = useState(false);
 
   const handleSubmit = async () => {
     if (!name.trim() || !phone.trim()) { alert('Please enter your name and phone number'); return; }
     if (phone.replace(/\D/g, '').length < 10) { alert('Please enter a valid phone number'); return; }
+    if (!smsConsent) { alert('Please agree to receive SMS updates to continue.'); return; }
     setLoading(true);
     try {
       await fetch(`${API_BASE}/api/leads`, {
@@ -372,6 +375,8 @@ const WaterLeadCapture: React.FC<LeadFormProps> = ({ zipCode, report }) => {
           recommendations: report.recommendation.map(r => r.product).join(', '),
           issues: report.issues.map(i => i.title).join(', '),
           city: report.city, state: report.state,
+          sms_consent: true,
+          sms_consent_timestamp: new Date().toISOString(),
           submittedAt: new Date().toISOString(),
         }),
       });
@@ -399,6 +404,7 @@ const WaterLeadCapture: React.FC<LeadFormProps> = ({ zipCode, report }) => {
         <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Your name" style={{ padding: '12px 14px', border: '2px solid #e2e8f0', borderRadius: 8, fontSize: 15, outline: 'none', fontFamily: 'inherit' }} />
         <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="Phone number" style={{ padding: '12px 14px', border: '2px solid #e2e8f0', borderRadius: 8, fontSize: 15, outline: 'none', fontFamily: 'inherit' }} />
         <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Email (optional)" style={{ padding: '12px 14px', border: '2px solid #e2e8f0', borderRadius: 8, fontSize: 15, outline: 'none', fontFamily: 'inherit' }} />
+        <SmsConsent checked={smsConsent} onChange={setSmsConsent} />
         <button onClick={handleSubmit} disabled={loading} style={{ padding: '14px', background: loading ? '#94a3b8' : '#0ea5e9', color: '#fff', border: 'none', borderRadius: 8, fontSize: 16, fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer' }}>
           {loading ? 'Sending...' : 'Get My Free Water Consultation 🔒'}
         </button>

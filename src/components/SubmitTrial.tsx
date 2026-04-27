@@ -2,6 +2,7 @@
 // PlumbLead.ai — Free trial signup for plumbing contractors
 
 import React, { useState, useEffect } from 'react';
+import SmsConsent from './SmsConsent';
 
 const API_BASE = 'https://plumblead-production.up.railway.app';
 
@@ -78,7 +79,8 @@ const SubmitTrial: React.FC = () => {
     const payload = {
       ...form,
       crm: form.crm === 'other' ? form.crmOther : form.crm,
-      smsConsent: true,
+      sms_consent: true,
+      sms_consent_timestamp: new Date().toISOString(),
       submittedAt: new Date().toISOString(),
       source: 'submit-trial',
       type: 'trial_signup',
@@ -303,12 +305,7 @@ const SubmitTrial: React.FC = () => {
             </div>
 
             {/* SMS consent */}
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '14px 16px', background: '#FFF', border: '2px solid #E8E6DF' }}>
-              <input type="checkbox" id="sms-consent" checked={smsConsent} onChange={e => setSmsConsent(e.target.checked)} style={{ marginTop: 3, accentColor: '#F5A623', width: 16, height: 16, flexShrink: 0, cursor: 'pointer' }} />
-              <label htmlFor="sms-consent" style={{ fontSize: 12, color: '#5C5A53', lineHeight: 1.5, cursor: 'pointer' }}>
-                I agree to receive SMS updates about my PlumbLead.ai trial setup and account notifications. Message &amp; data rates may apply. Reply STOP to opt out at any time.
-              </label>
-            </div>
+            <SmsConsent checked={smsConsent} onChange={setSmsConsent} />
 
             {submitState === 'error' && (
               <div style={{ background: '#1A0000', border: '1px solid #D83030', padding: '12px 16px', fontSize: 14, color: '#E57373' }}>{errorMsg}</div>
