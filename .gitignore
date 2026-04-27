@@ -24,3 +24,14 @@ dist/
 
 # Update folders
 *\ updates/
+
+# Build outputs
+dist/
+
+# Local runbooks and tracking docs (kept locally, not in repo)
+*.docx
+*.xlsx
+*.csv
+
+# Outreach update folders
+4 7 updates/
